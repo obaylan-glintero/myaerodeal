@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Mail, Lock, User, Loader, Building } from 'lucide-react';
+import { Mail, Lock, User, Loader, Building, Tag } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../contexts/ThemeContext';
 import logoLight from '../../assets/MyAeroDeal_light.png';
@@ -14,6 +14,7 @@ const AuthPage = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [couponCode, setCouponCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -262,7 +263,10 @@ const AuthPage = () => {
                 'Authorization': `Bearer ${session.access_token}`,
                 'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
                 'Content-Type': 'application/json'
-              }
+              },
+              body: JSON.stringify({
+                coupon_code: couponCode?.trim() || null
+              })
             }
           );
 
@@ -557,6 +561,33 @@ const AuthPage = () => {
                   placeholder="••••••••"
                 />
               </div>
+            </div>
+          )}
+
+          {/* Coupon Code (Sign Up Only) - Optional */}
+          {!isLogin && !invitationToken && (
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
+                Promo Code <span style={{ color: colors.textSecondary, fontSize: '0.875rem' }}>(Optional)</span>
+              </label>
+              <div className="relative">
+                <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2" size={20} style={{ color: colors.textSecondary }} />
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  className="w-full pl-10 pr-4 py-3 rounded-lg"
+                  style={{
+                    backgroundColor: colors.secondary,
+                    color: colors.textPrimary,
+                    border: `1px solid ${colors.border}`
+                  }}
+                  placeholder="Enter promo code"
+                />
+              </div>
+              <p className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                Have a promo code? Enter it to get special pricing.
+              </p>
             </div>
           )}
 

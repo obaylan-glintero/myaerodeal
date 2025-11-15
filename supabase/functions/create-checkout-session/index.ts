@@ -14,6 +14,15 @@ serve(async (req) => {
   }
 
   try {
+    // Get request body (for coupon code)
+    let couponCode = null
+    try {
+      const body = await req.json()
+      couponCode = body?.coupon_code
+    } catch (e) {
+      // No body or invalid JSON - that's okay, coupon is optional
+    }
+
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
@@ -80,16 +89,17 @@ serve(async (req) => {
       : origin
 
     console.log('Origin:', origin, 'Using baseUrl:', baseUrl)
+    console.log('Coupon code received:', couponCode)
 
-    // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    // Build checkout session options
+    const sessionOptions: any = {
       line_items: [
         {
           price: Deno.env.get('STRIPE_PRICE_ID'),
           quantity: 1,
         },
       ],
-      mode: 'subscription', // or 'payment' for one-time
+      mode: 'subscription',
       success_url: `${baseUrl}/payment-success`,
       cancel_url: `${baseUrl}/payment-cancel`,
       customer_email: company.email || profile.email,
@@ -99,7 +109,41 @@ serve(async (req) => {
         company_name: company.name,
         user_id: user.id,
       },
-    })
+    }
+
+    // Add coupon/promotion code if provided
+    if (couponCode && couponCode.trim()) {
+      try {
+        // Try to retrieve the coupon to validate it exists
+        await stripe.coupons.retrieve(couponCode)
+        sessionOptions.discounts = [{
+          coupon: couponCode
+        }]
+        console.log('✅ Valid coupon code applied:', couponCode)
+      } catch (error) {
+        // If coupon doesn't exist, try as promotion code
+        try {
+          const promotionCodes = await stripe.promotionCodes.list({
+            code: couponCode,
+            active: true,
+            limit: 1
+          })
+          if (promotionCodes.data.length > 0) {
+            sessionOptions.discounts = [{
+              promotion_code: promotionCodes.data[0].id
+            }]
+            console.log('✅ Valid promotion code applied:', couponCode)
+          } else {
+            console.log('⚠️ Invalid coupon/promotion code, proceeding without discount')
+          }
+        } catch (promoError) {
+          console.log('⚠️ Error checking promotion code:', promoError.message)
+        }
+      }
+    }
+
+    // Create Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create(sessionOptions)
 
     return new Response(
       JSON.stringify({ url: session.url, sessionId: session.id }),
