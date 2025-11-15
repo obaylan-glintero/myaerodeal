@@ -104,6 +104,8 @@ serve(async (req) => {
       cancel_url: `${baseUrl}/payment-cancel`,
       customer_email: company.email || profile.email,
       client_reference_id: company.id,
+      // Only collect payment method if required (skip for 100% off coupons)
+      payment_method_collection: 'if_required',
       metadata: {
         company_id: company.id,
         company_name: company.name,

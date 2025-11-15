@@ -16,12 +16,96 @@ const DealsView = ({ openModal }) => {
 
   const handleViewDocument = (deal) => {
     if (deal.documentData) {
-      const newWindow = window.open();
       if (deal.documentType && deal.documentType.includes('pdf')) {
-        newWindow.document.write(
-          `<iframe src="${deal.documentData}" width="100%" height="100%" style="border:none;"></iframe>`
-        );
+        // Detect Safari iOS - it has poor inline PDF support
+        const isSafariIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent);
+
+        if (isSafariIOS) {
+          // Safari iOS: Direct download works better than inline viewing
+          const link = document.createElement('a');
+          link.href = deal.documentData;
+          link.download = deal.document || 'document.pdf';
+          link.click();
+        } else {
+          // Other browsers: Open PDF in new window with proper HTML structure
+          const newWindow = window.open('', '_blank');
+          if (newWindow) {
+            newWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>${deal.document || 'Document'}</title>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
+                  html, body { width: 100%; height: 100%; overflow: hidden; }
+                  .container { width: 100%; height: 100%; display: flex; flex-direction: column; }
+                  .toolbar {
+                    background: #0A1628;
+                    color: white;
+                    padding: 12px 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                  }
+                  .toolbar h3 { font-size: 14px; font-weight: 500; }
+                  .toolbar a {
+                    color: #D4AF37;
+                    text-decoration: none;
+                    font-size: 13px;
+                    padding: 6px 12px;
+                    border: 1px solid #D4AF37;
+                    border-radius: 4px;
+                    transition: all 0.2s;
+                  }
+                  .toolbar a:hover {
+                    background: #D4AF37;
+                    color: #0A1628;
+                  }
+                  .pdf-container {
+                    flex: 1;
+                    width: 100%;
+                    overflow: auto;
+                    background: #525252;
+                  }
+                  embed {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                  }
+                  object {
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                  }
+                  @media (max-width: 768px) {
+                    .toolbar { padding: 10px 15px; }
+                    .toolbar h3 { font-size: 12px; }
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="container">
+                  <div class="toolbar">
+                    <h3>${deal.document || 'Document'}</h3>
+                    <a href="${deal.documentData}" download="${deal.document || 'document.pdf'}">Download PDF</a>
+                  </div>
+                  <div class="pdf-container">
+                    <object data="${deal.documentData}" type="application/pdf">
+                      <embed src="${deal.documentData}" type="application/pdf" />
+                    </object>
+                  </div>
+                </div>
+              </body>
+              </html>
+            `);
+            newWindow.document.close();
+          }
+        }
       } else {
+        // For other file types, trigger download
         const link = document.createElement('a');
         link.href = deal.documentData;
         link.download = deal.document;
