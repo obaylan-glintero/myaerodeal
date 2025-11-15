@@ -25,78 +25,90 @@ const AircraftView = ({ openModal }) => {
   const handleViewSpec = (ac) => {
     if (ac.specSheetData) {
       if (ac.specSheetType && ac.specSheetType.includes('pdf')) {
-        // Detect mobile devices
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-        if (isMobile) {
-          // Mobile: Open PDF directly in new tab (triggers native viewer or download)
-          window.open(ac.specSheetData, '_blank');
-        } else {
-          // Desktop: Open PDF in new window with iframe
-          const newWindow = window.open('', '_blank');
-          if (newWindow) {
-            newWindow.document.write(`
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <title>${ac.specSheet || 'Document'}</title>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                  * { margin: 0; padding: 0; box-sizing: border-box; }
-                  html, body { width: 100%; height: 100%; overflow: hidden; }
-                  .container { width: 100%; height: 100%; display: flex; flex-direction: column; }
-                  .toolbar {
-                    background: #0A1628;
-                    color: white;
-                    padding: 12px 20px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                  }
-                  .toolbar h3 { font-size: 14px; font-weight: 500; }
-                  .toolbar button {
-                    color: #D4AF37;
-                    background: transparent;
-                    text-decoration: none;
-                    font-size: 13px;
-                    padding: 6px 12px;
-                    border: 1px solid #D4AF37;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                  }
-                  .toolbar button:hover {
-                    background: #D4AF37;
-                    color: #0A1628;
-                  }
-                  iframe {
-                    flex: 1;
-                    width: 100%;
-                    border: none;
-                    background: #525252;
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <div class="toolbar">
-                    <h3>${ac.specSheet || 'Document'}</h3>
-                    <button onclick="
-                      const link = document.createElement('a');
-                      link.href = '${ac.specSheetData}';
-                      link.download = '${ac.specSheet || 'document.pdf'}';
-                      link.click();
-                    ">Download PDF</button>
-                  </div>
-                  <iframe src="${ac.specSheetData}" type="application/pdf"></iframe>
-                </div>
-              </body>
-              </html>
-            `);
-            newWindow.document.close();
+        try {
+          // Convert data URL to Blob for better browser compatibility
+          const base64Data = ac.specSheetData.split(',')[1];
+          const binaryData = atob(base64Data);
+          const bytes = new Uint8Array(binaryData.length);
+          for (let i = 0; i < binaryData.length; i++) {
+            bytes[i] = binaryData.charCodeAt(i);
           }
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(blob);
+
+          // Detect mobile devices
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+          if (isMobile) {
+            // Mobile: Open blob URL directly (triggers native viewer)
+            window.open(blobUrl, '_blank');
+          } else {
+            // Desktop: Create viewer window with iframe
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+              newWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <title>${ac.specSheet || 'Document'}</title>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    html, body { width: 100%; height: 100%; overflow: hidden; }
+                    .container { width: 100%; height: 100%; display: flex; flex-direction: column; }
+                    .toolbar {
+                      background: #0A1628;
+                      color: white;
+                      padding: 12px 20px;
+                      display: flex;
+                      justify-content: space-between;
+                      align-items: center;
+                      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                      z-index: 10;
+                    }
+                    .toolbar h3 { font-size: 14px; font-weight: 500; }
+                    .toolbar button {
+                      color: #D4AF37;
+                      background: transparent;
+                      text-decoration: none;
+                      font-size: 13px;
+                      padding: 6px 12px;
+                      border: 1px solid #D4AF37;
+                      border-radius: 4px;
+                      cursor: pointer;
+                      transition: all 0.2s;
+                    }
+                    .toolbar button:hover {
+                      background: #D4AF37;
+                      color: #0A1628;
+                    }
+                    iframe {
+                      flex: 1;
+                      width: 100%;
+                      height: 100%;
+                      border: none;
+                      background: #525252;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <div class="toolbar">
+                      <h3>${ac.specSheet || 'Document'}</h3>
+                      <button onclick="window.open('${blobUrl}', '_blank')">Download PDF</button>
+                    </div>
+                    <iframe src="${blobUrl}"></iframe>
+                  </div>
+                </body>
+                </html>
+              `);
+              newWindow.document.close();
+            }
+          }
+        } catch (error) {
+          console.error('Error viewing PDF:', error);
+          alert('Error opening PDF. Please try downloading it instead.');
         }
       } else {
         // For other file types, trigger download
