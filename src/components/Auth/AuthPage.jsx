@@ -180,16 +180,24 @@ const AuthPage = () => {
           setMessage('Account created! Check your email to confirm.');
         } else {
           // No invitation - create account and redirect to Stripe payment
+          console.log('🚀 Starting registration process...');
+
           // Step 1: Create Supabase auth user
+          console.log('Step 1: Creating auth user...');
           const { data: authData, error: signUpError } = await signUp(email, password, {
             first_name: firstName,
             last_name: lastName,
             company_name: companyName
           });
 
-          if (signUpError) throw signUpError;
+          if (signUpError) {
+            console.error('❌ Step 1 failed - Auth user creation:', signUpError);
+            throw signUpError;
+          }
+          console.log('✅ Step 1 complete - User created:', authData.user.id);
 
           // Step 2: Create company record (approved=false, will be approved after payment)
+          console.log('Step 2: Creating company record...');
           const { data: companyData, error: companyError } = await supabase
             .from('companies')
             .insert({
@@ -200,9 +208,14 @@ const AuthPage = () => {
             .select()
             .single();
 
-          if (companyError) throw companyError;
+          if (companyError) {
+            console.error('❌ Step 2 failed - Company creation:', companyError);
+            throw companyError;
+          }
+          console.log('✅ Step 2 complete - Company created:', companyData.id);
 
           // Step 3: Create user profile linking to company
+          console.log('Step 3: Creating user profile...');
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
@@ -214,7 +227,11 @@ const AuthPage = () => {
               role: 'admin'
             });
 
-          if (profileError) throw profileError;
+          if (profileError) {
+            console.error('❌ Step 3 failed - Profile creation:', profileError);
+            throw profileError;
+          }
+          console.log('✅ Step 3 complete - Profile created');
 
           // Step 4: Redirect to Stripe checkout
           setMessage('Redirecting to payment...');
@@ -262,6 +279,8 @@ const AuthPage = () => {
         }
       }
     } catch (err) {
+      console.error('💥 Registration error:', err);
+      console.error('Error details:', err.message, err);
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
