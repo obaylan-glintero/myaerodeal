@@ -4,7 +4,7 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import logo from '../../assets/logo.svg';
+import logo from '../../assets/MyAeroDeal_dark.png';
 
 const DealsView = ({ openModal }) => {
   const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask, currentUserProfile } = useStore();
@@ -364,7 +364,7 @@ const DealTaskActions = ({ deal, tasks }) => {
       try {
         const img = new Image();
         img.src = logo;
-        doc.addImage(img, 'SVG', 14, 10, 20, 20);
+        doc.addImage(img, 'PNG', 14, 10, 30, 20);
       } catch (e) {
         console.error('Error adding logo to PDF:', e);
       }
@@ -372,11 +372,11 @@ const DealTaskActions = ({ deal, tasks }) => {
       doc.setTextColor(10, 22, 40); // #0A1628 - Deep Navy
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('MyAeroDeal', 40, 20);
+      doc.text('MyAeroDeal', 50, 20);
 
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text('Deal Task Checklist', 40, 30);
+      doc.text('Deal Task Checklist', 50, 30);
 
       // Deal information
       doc.setTextColor(0, 0, 0);

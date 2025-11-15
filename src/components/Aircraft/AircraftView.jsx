@@ -3,7 +3,7 @@ import { Plus, Edit2, Trash2, MessageSquare, Send, FileText, Download, Search, F
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
-import logo from '../../assets/logo.svg';
+import logo from '../../assets/MyAeroDeal_dark.png';
 
 const AircraftView = ({ openModal }) => {
   const { aircraft, leads, deleteAircraft, addNoteToAircraft, currentUserProfile } = useStore();
@@ -69,7 +69,7 @@ const AircraftView = ({ openModal }) => {
     try {
       const img = new Image();
       img.src = logo;
-      doc.addImage(img, 'SVG', margin, 10, 20, 20);
+      doc.addImage(img, 'PNG', margin, 10, 30, 20);
     } catch (e) {
       console.error('Error adding logo to PDF:', e);
     }
@@ -77,7 +77,7 @@ const AircraftView = ({ openModal }) => {
     doc.setTextColor(212, 175, 55); // colors.secondary
     doc.setFontSize(24);
     doc.setFont(undefined, 'bold');
-    doc.text('Marketing Report', margin + 25, 25);
+    doc.text('Marketing Report', margin + 35, 25);
     doc.setFontSize(12);
     doc.setFont(undefined, 'normal');
     doc.text('MyAeroDeal', pageWidth - margin - 30, 25);
