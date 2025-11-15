@@ -227,6 +227,8 @@ const AuthPage = () => {
           }
 
           // Call Edge Function to create checkout session
+          console.log('Calling Edge Function:', `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`);
+
           const response = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`,
             {
@@ -239,14 +241,24 @@ const AuthPage = () => {
             }
           );
 
-          const { url, error: checkoutError } = await response.json();
+          console.log('Edge Function response status:', response.status);
 
-          if (checkoutError || !url) {
-            throw new Error(checkoutError || 'Failed to create checkout session');
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Edge Function error:', errorText);
+            throw new Error(`Failed to create checkout session: ${response.status} - ${errorText}`);
+          }
+
+          const data = await response.json();
+          console.log('Edge Function response:', data);
+
+          if (data.error || !data.url) {
+            throw new Error(data.error || 'Failed to create checkout session - no URL returned');
           }
 
           // Redirect to Stripe Checkout
-          window.location.href = url;
+          console.log('Redirecting to Stripe:', data.url);
+          window.location.href = data.url;
         }
       }
     } catch (err) {
