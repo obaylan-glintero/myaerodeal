@@ -219,11 +219,11 @@ const AuthPage = () => {
           // Step 4: Redirect to Stripe checkout
           setMessage('Redirecting to payment...');
 
-          // Get auth token for Edge Function
-          const { data: { session } } = await supabase.auth.getSession();
+          // Get auth token from signUp response
+          const session = authData.session;
 
           if (!session) {
-            throw new Error('No active session');
+            throw new Error('No active session. Email confirmation may be required.');
           }
 
           // Call Edge Function to create checkout session
