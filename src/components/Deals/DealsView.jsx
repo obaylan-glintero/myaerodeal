@@ -272,6 +272,7 @@ const DealsView = ({ openModal }) => {
               <DealTaskActions
                 deal={deal}
                 tasks={tasks.filter(t => t.relatedTo?.type === 'deal' && t.relatedTo?.id === deal.id)}
+                currentUserProfile={currentUserProfile}
               />
 
               <TasksSection
@@ -347,7 +348,7 @@ const DealsView = ({ openModal }) => {
   );
 };
 
-const DealTaskActions = ({ deal, tasks }) => {
+const DealTaskActions = ({ deal, tasks, currentUserProfile }) => {
   const { colors } = useTheme();
   const [showGantt, setShowGantt] = useState(false);
 
