@@ -38,7 +38,7 @@ ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Companies can view own payments"
 ON payments FOR SELECT
 USING (company_id IN (
-  SELECT company_id FROM user_profiles WHERE user_id = auth.uid()
+  SELECT company_id FROM profiles WHERE id = auth.uid()
 ));
 
 -- Only authenticated users can insert payments (via Edge Functions)
@@ -53,8 +53,8 @@ DROP POLICY IF EXISTS "Users can only access their company data" ON leads;
 CREATE POLICY "Users can only access their company data"
 ON leads FOR ALL
 USING (company_id = (
-  SELECT company_id FROM user_profiles
-  WHERE user_id = auth.uid()
+  SELECT company_id FROM profiles
+  WHERE id = auth.uid()
   AND (SELECT subscription_status FROM companies WHERE id = company_id) = 'active'
 ));
 
