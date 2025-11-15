@@ -360,19 +360,34 @@ export const useStore = create((set, get) => ({
         createdAt: task.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
       });
 
-      // Check if this is a new company with no data
+      // Check if this is a new company with no data AND sample data hasn't been created yet
       const hasNoData =
         (!leadsResult.data || leadsResult.data.length === 0) &&
         (!aircraftResult.data || aircraftResult.data.length === 0) &&
         (!dealsResult.data || dealsResult.data.length === 0) &&
         (!tasksResult.data || tasksResult.data.length === 0);
 
-      if (hasNoData) {
-        console.log('🌱 New company detected - creating sample data...');
+      // Only create sample data if:
+      // 1. Company has no data
+      // 2. Sample data hasn't been created before (sample_data_created is false or null)
+      const shouldCreateSampleData = hasNoData && !company?.sample_data_created;
+
+      if (hasNoData && company?.sample_data_created) {
+        console.log('ℹ️ Company has no data, but sample data was already created once. Not recreating.');
+      }
+
+      if (shouldCreateSampleData) {
+        console.log('🌱 New company detected - creating sample data for the first time...');
 
         // Create sample data for the new company
         try {
           await get().createSampleDataForNewCompany(user.id, profile.company_id);
+
+          // Mark sample data as created so it doesn't happen again
+          await supabase
+            .from('companies')
+            .update({ sample_data_created: true })
+            .eq('id', profile.company_id);
 
           // Re-fetch data after creating samples
           console.log('📊 Re-fetching data after sample creation...');
@@ -391,7 +406,7 @@ export const useStore = create((set, get) => ({
             loading: false
           });
 
-          console.log('✅ Sample data created and loaded!');
+          console.log('✅ Sample data created and loaded! This will only happen once.');
         } catch (sampleError) {
           console.error('❌ Error creating sample data:', sampleError);
           // Continue with empty data if sample creation fails
@@ -514,7 +529,7 @@ export const useStore = create((set, get) => ({
       .subscribe();
   },
 
-  // Create sample data for new companies
+  // Create sample data for new companies (only runs once per company)
   createSampleDataForNewCompany: async (userId, companyId) => {
     console.log('🌱 Creating sample data for company:', companyId);
 
