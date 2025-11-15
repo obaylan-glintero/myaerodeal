@@ -560,28 +560,42 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
   return (
     <div className="space-y-4">
       <style>{placeholderStyle}</style>
-      <input
-        type="text"
-        placeholder="Deal Name *"
-        value={formData.dealName || ''}
-        onChange={(e) => setFormData({ ...formData, dealName: e.target.value })}
-        className="w-full px-4 py-2 border rounded-lg"
-        style={inputStyle}
-      />
-      <input
-        type="text"
-        placeholder="Client Name *"
-        value={formData.clientName || (modalType === 'dealFromLead' ? editingItem?.name : '')}
-        onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-        className="w-full px-4 py-2 border rounded-lg"
-        style={inputStyle}
-      />
-      <SearchableDropdown
-        options={leads}
-        value={formData.relatedLead || (modalType === 'dealFromLead' ? editingItem?.id : '')}
-        onChange={(value) => setFormData({ ...formData, relatedLead: value || null })}
-        placeholder="Search by name, company, budget..."
-        searchPlaceholder="Search by name, company, budget..."
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+          Deal Name *
+        </label>
+        <input
+          type="text"
+          placeholder="Enter deal name"
+          value={formData.dealName || ''}
+          onChange={(e) => setFormData({ ...formData, dealName: e.target.value })}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={inputStyle}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+          Client Name *
+        </label>
+        <input
+          type="text"
+          placeholder="Enter client name"
+          value={formData.clientName || (modalType === 'dealFromLead' ? editingItem?.name : '')}
+          onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={inputStyle}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+          Related Lead
+        </label>
+        <SearchableDropdown
+          options={leads}
+          value={formData.relatedLead || (modalType === 'dealFromLead' ? editingItem?.id : '')}
+          onChange={(value) => setFormData({ ...formData, relatedLead: value || null })}
+          placeholder="Search by name, company, budget..."
+          searchPlaceholder="Search by name, company, budget..."
         getOptionValue={(lead) => lead.id}
         getOptionLabel={(lead) => {
           const budgetStr = lead.budgetKnown && lead.budget
@@ -602,15 +616,20 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
           </div>
         )}
       />
-      <SearchableDropdown
-        options={aircraft}
-        value={formData.relatedAircraft || ''}
-        onChange={(value) => {
-          console.log('✈️ Aircraft selected:', value);
-          setFormData({ ...formData, relatedAircraft: value || null });
-        }}
-        placeholder="Select Aircraft"
-        searchPlaceholder="Search by model, reg, or MSN..."
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+          Related Aircraft
+        </label>
+        <SearchableDropdown
+          options={aircraft}
+          value={formData.relatedAircraft || ''}
+          onChange={(value) => {
+            console.log('✈️ Aircraft selected:', value);
+            setFormData({ ...formData, relatedAircraft: value || null });
+          }}
+          placeholder="Select Aircraft"
+          searchPlaceholder="Search by model, reg, or MSN..."
         getOptionValue={(ac) => ac.id}
         getOptionLabel={(ac) => `${ac.manufacturer} ${ac.model} (${ac.registration || 'N/A'}, ${ac.serialNumber || 'N/A'}) - $${(ac.price / 1000000).toFixed(1)}M`}
         renderOption={(ac) => (
@@ -624,14 +643,20 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
           </div>
         )}
       />
-      <input
-        type="number"
-        placeholder="Deal Value (USD) *"
-        value={formData.dealValue || ''}
-        onChange={(e) => setFormData({ ...formData, dealValue: Number(e.target.value) })}
-        className="w-full px-4 py-2 border rounded-lg"
-        style={inputStyle}
-      />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+          Deal Value (USD) *
+        </label>
+        <input
+          type="number"
+          placeholder="Enter deal value"
+          value={formData.dealValue || ''}
+          onChange={(e) => setFormData({ ...formData, dealValue: Number(e.target.value) })}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={inputStyle}
+        />
+      </div>
       <div>
         <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
           Estimated Closing Date
@@ -644,30 +669,40 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
           style={inputStyle}
         />
       </div>
-      <select
-        value={formData.status || 'LOI Signed'}
-        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-        className="w-full px-4 py-2 border rounded-lg"
-        style={inputStyle}
-      >
-        <option value="LOI Signed">LOI Signed</option>
-        <option value="Deposit Paid">Deposit Paid</option>
-        <option value="APA Drafted">APA Drafted</option>
-        <option value="APA Signed">APA Signed</option>
-        <option value="PPI Started">PPI Started</option>
-        <option value="Defect Rectifications">Defect Rectifications</option>
-        <option value="Closing">Closing</option>
-        <option value="Closed Won">Closed Won</option>
-        <option value="Closed Lost">Closed Lost</option>
-      </select>
-      <input
-        type="text"
-        placeholder="Next Step"
-        value={formData.nextStep || ''}
-        onChange={(e) => setFormData({ ...formData, nextStep: e.target.value })}
-        className="w-full px-4 py-2 border rounded-lg"
-        style={inputStyle}
-      />
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+          Deal Stage
+        </label>
+        <select
+          value={formData.status || 'LOI Signed'}
+          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={inputStyle}
+        >
+          <option value="LOI Signed">LOI Signed</option>
+          <option value="Deposit Paid">Deposit Paid</option>
+          <option value="APA Drafted">APA Drafted</option>
+          <option value="APA Signed">APA Signed</option>
+          <option value="PPI Started">PPI Started</option>
+          <option value="Defect Rectifications">Defect Rectifications</option>
+          <option value="Closing">Closing</option>
+          <option value="Closed Won">Closed Won</option>
+          <option value="Closed Lost">Closed Lost</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+          Next Step
+        </label>
+        <input
+          type="text"
+          placeholder="Enter next step"
+          value={formData.nextStep || ''}
+          onChange={(e) => setFormData({ ...formData, nextStep: e.target.value })}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={inputStyle}
+        />
+      </div>
       <div>
         <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
           Next Follow-up Date
