@@ -360,13 +360,59 @@ export const useStore = create((set, get) => ({
         createdAt: task.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
       });
 
-      set({
-        leads: leadsResult.data?.map(convertLeadFromDB) || [],
-        aircraft: aircraftResult.data?.map(convertAircraftFromDB) || [],
-        deals: dealsResult.data?.map(convertDealFromDB) || [],
-        tasks: tasksResult.data?.map(convertTaskFromDB) || [],
-        loading: false
-      });
+      // Check if this is a new company with no data
+      const hasNoData =
+        (!leadsResult.data || leadsResult.data.length === 0) &&
+        (!aircraftResult.data || aircraftResult.data.length === 0) &&
+        (!dealsResult.data || dealsResult.data.length === 0) &&
+        (!tasksResult.data || tasksResult.data.length === 0);
+
+      if (hasNoData) {
+        console.log('🌱 New company detected - creating sample data...');
+
+        // Create sample data for the new company
+        try {
+          await get().createSampleDataForNewCompany(user.id, profile.company_id);
+
+          // Re-fetch data after creating samples
+          console.log('📊 Re-fetching data after sample creation...');
+          const [newLeadsResult, newAircraftResult, newDealsResult, newTasksResult] = await Promise.all([
+            supabase.from('leads').select('*').order('created_at', { ascending: false }),
+            supabase.from('aircraft').select('*').order('created_at', { ascending: false }),
+            supabase.from('deals').select('*').order('created_at', { ascending: false }),
+            supabase.from('tasks').select('*').order('created_at', { ascending: false })
+          ]);
+
+          set({
+            leads: newLeadsResult.data?.map(convertLeadFromDB) || [],
+            aircraft: newAircraftResult.data?.map(convertAircraftFromDB) || [],
+            deals: newDealsResult.data?.map(convertDealFromDB) || [],
+            tasks: newTasksResult.data?.map(convertTaskFromDB) || [],
+            loading: false
+          });
+
+          console.log('✅ Sample data created and loaded!');
+        } catch (sampleError) {
+          console.error('❌ Error creating sample data:', sampleError);
+          // Continue with empty data if sample creation fails
+          set({
+            leads: [],
+            aircraft: [],
+            deals: [],
+            tasks: [],
+            loading: false
+          });
+        }
+      } else {
+        // Company has existing data
+        set({
+          leads: leadsResult.data?.map(convertLeadFromDB) || [],
+          aircraft: aircraftResult.data?.map(convertAircraftFromDB) || [],
+          deals: dealsResult.data?.map(convertDealFromDB) || [],
+          tasks: tasksResult.data?.map(convertTaskFromDB) || [],
+          loading: false
+        });
+      }
 
       // Set up real-time subscriptions
       get().setupRealtimeSubscriptions(user.id);
@@ -466,6 +512,142 @@ export const useStore = create((set, get) => ({
         }
       )
       .subscribe();
+  },
+
+  // Create sample data for new companies
+  createSampleDataForNewCompany: async (userId, companyId) => {
+    console.log('🌱 Creating sample data for company:', companyId);
+
+    try {
+      // Insert sample leads
+      console.log('📝 Inserting sample leads...');
+      const leadsToInsert = DEMO_DATA.leads.map(lead => ({
+        user_id: userId,
+        company_id: companyId,
+        name: lead.name,
+        company: lead.company,
+        aircraft_type: lead.aircraftType,
+        budget: lead.budget,
+        budget_known: lead.budgetKnown,
+        year_preference: lead.yearPreference,
+        status: lead.status,
+        notes: lead.notes,
+        presentations: [],
+        timestamped_notes: [],
+        source: 'Initial Sample',
+        email: `${lead.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+        phone: '+1 (555) 123-4567'
+      }));
+
+      const { data: insertedLeads, error: leadsError } = await supabase
+        .from('leads')
+        .insert(leadsToInsert)
+        .select();
+
+      if (leadsError) {
+        console.error('❌ Error inserting sample leads:', leadsError);
+        throw leadsError;
+      }
+
+      console.log('✅ Inserted', insertedLeads?.length || 0, 'sample leads');
+
+      // Insert sample aircraft
+      console.log('✈️ Inserting sample aircraft...');
+      const aircraftToInsert = DEMO_DATA.aircraft.map(aircraft => ({
+        user_id: userId,
+        company_id: companyId,
+        manufacturer: aircraft.manufacturer,
+        model: aircraft.model,
+        yom: aircraft.yom,
+        serial_number: aircraft.serialNumber,
+        registration: aircraft.registration,
+        category: aircraft.category,
+        location: aircraft.location,
+        price: aircraft.price,
+        access_type: aircraft.accessType,
+        presentations: [],
+        timestamped_notes: []
+      }));
+
+      const { data: insertedAircraft, error: aircraftError } = await supabase
+        .from('aircraft')
+        .insert(aircraftToInsert)
+        .select();
+
+      if (aircraftError) {
+        console.error('❌ Error inserting sample aircraft:', aircraftError);
+        throw aircraftError;
+      }
+
+      console.log('✅ Inserted', insertedAircraft?.length || 0, 'sample aircraft');
+
+      // Insert sample deals (using the IDs from inserted leads and aircraft)
+      if (insertedLeads && insertedLeads.length > 0 && insertedAircraft && insertedAircraft.length > 0) {
+        console.log('💼 Inserting sample deals...');
+        const dealsToInsert = DEMO_DATA.deals.map(deal => ({
+          user_id: userId,
+          company_id: companyId,
+          deal_name: deal.dealName,
+          client_name: deal.clientName,
+          related_lead: insertedLeads[0].id, // Link to first inserted lead
+          related_aircraft: insertedAircraft[0].id, // Link to first inserted aircraft
+          deal_value: deal.dealValue,
+          estimated_closing: deal.estimatedClosing,
+          status: deal.status,
+          next_step: deal.nextStep,
+          follow_up_date: deal.followUpDate,
+          history: deal.history || [],
+          timestamped_notes: []
+        }));
+
+        const { data: insertedDeals, error: dealsError } = await supabase
+          .from('deals')
+          .insert(dealsToInsert)
+          .select();
+
+        if (dealsError) {
+          console.error('❌ Error inserting sample deals:', dealsError);
+          throw dealsError;
+        }
+
+        console.log('✅ Inserted', insertedDeals?.length || 0, 'sample deals');
+
+        // Insert sample tasks (related to the inserted deal and lead)
+        if (insertedDeals && insertedDeals.length > 0) {
+          console.log('✅ Inserting sample tasks...');
+          const tasksToInsert = DEMO_DATA.tasks.map(task => ({
+            user_id: userId,
+            company_id: companyId,
+            title: task.title,
+            description: task.description,
+            due_date: task.dueDate,
+            related_to: task.relatedTo?.type === 'deal'
+              ? { type: 'deal', id: insertedDeals[0].id }
+              : { type: 'lead', id: insertedLeads[task.relatedTo?.id === 2 ? 1 : 0]?.id },
+            status: task.status,
+            priority: task.priority,
+            auto_generated: task.autoGenerated
+          }));
+
+          const { data: insertedTasks, error: tasksError } = await supabase
+            .from('tasks')
+            .insert(tasksToInsert)
+            .select();
+
+          if (tasksError) {
+            console.error('❌ Error inserting sample tasks:', tasksError);
+            throw tasksError;
+          }
+
+          console.log('✅ Inserted', insertedTasks?.length || 0, 'sample tasks');
+        }
+      }
+
+      console.log('🎉 Sample data creation complete!');
+    } catch (error) {
+      console.error('❌ Error in createSampleDataForNewCompany:', error);
+      throw error;
+    }
   },
 
   // Refresh functions for real-time updates
