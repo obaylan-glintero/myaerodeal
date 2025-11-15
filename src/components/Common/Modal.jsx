@@ -632,14 +632,18 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
         className="w-full px-4 py-2 border rounded-lg"
         style={inputStyle}
       />
-      <input
-        type="date"
-        placeholder="Estimated Closing Date"
-        value={formData.estimatedClosing || ''}
-        onChange={(e) => setFormData({ ...formData, estimatedClosing: e.target.value })}
-        className="w-full px-4 py-2 border rounded-lg"
-        style={inputStyle}
-      />
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+          Estimated Closing Date
+        </label>
+        <input
+          type="date"
+          value={formData.estimatedClosing || ''}
+          onChange={(e) => setFormData({ ...formData, estimatedClosing: e.target.value })}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={inputStyle}
+        />
+      </div>
       <select
         value={formData.status || 'LOI Signed'}
         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -664,14 +668,18 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
         className="w-full px-4 py-2 border rounded-lg"
         style={inputStyle}
       />
-      <input
-        type="date"
-        placeholder="Follow-up Date"
-        value={formData.followUpDate || ''}
-        onChange={(e) => setFormData({ ...formData, followUpDate: e.target.value })}
-        className="w-full px-4 py-2 border rounded-lg"
-        style={inputStyle}
-      />
+      <div>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
+          Next Follow-up Date
+        </label>
+        <input
+          type="date"
+          value={formData.followUpDate || ''}
+          onChange={(e) => setFormData({ ...formData, followUpDate: e.target.value })}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={inputStyle}
+        />
+      </div>
       <div className="border-2 border-dashed rounded-lg p-6 text-center" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
         <Upload className="mx-auto mb-2" size={32} style={{ color: colors.textSecondary }} />
         <p className="text-sm mb-2" style={{ color: colors.textPrimary }}>Upload Deal Document (Contract, LOI, etc.)</p>

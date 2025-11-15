@@ -1290,7 +1290,9 @@ export const useStore = create((set, get) => ({
       set({ deals: [...deals, newDeal] });
       saveToLocalStorage();
       if (newDeal.nextStep && newDeal.followUpDate) {
-        createAutoTask('deal', newDeal.id, newDeal.nextStep, newDeal.followUpDate);
+        // Create task with format "Next Step - Deal Name"
+        const taskTitle = `${newDeal.nextStep} - ${newDeal.dealName}`;
+        createAutoTask('deal', newDeal.id, taskTitle, newDeal.followUpDate);
       }
       return newDeal;
     }
@@ -1395,7 +1397,9 @@ export const useStore = create((set, get) => ({
       }
 
       if (newDeal.nextStep && newDeal.followUpDate) {
-        createAutoTask('deal', newDeal.id, newDeal.nextStep, newDeal.followUpDate);
+        // Create task with format "Next Step - Deal Name"
+        const taskTitle = `${newDeal.nextStep} - ${newDeal.dealName}`;
+        createAutoTask('deal', newDeal.id, taskTitle, newDeal.followUpDate);
       }
 
       return newDeal;
