@@ -20,7 +20,7 @@ serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     })
 
-    // Initialize Supabase client
+    // Initialize Supabase client with user's auth token (for authentication)
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -31,20 +31,26 @@ serve(async (req) => {
       }
     )
 
+    // Initialize Supabase admin client (bypasses RLS for reading profile/company)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
     // Get the authorization header
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
       throw new Error('No authorization header')
     }
 
-    // Get user from auth token
+    // Get user from auth token (validates authentication)
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !user) {
       throw new Error('User not authenticated')
     }
 
-    // Get user profile to find company_id
-    const { data: profile, error: profileError } = await supabaseClient
+    // Get user profile using admin client (bypasses RLS)
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('company_id, email')
       .eq('id', user.id)
@@ -54,8 +60,8 @@ serve(async (req) => {
       throw new Error('Profile not found')
     }
 
-    // Get company details
-    const { data: company, error: companyError } = await supabaseClient
+    // Get company details using admin client (bypasses RLS)
+    const { data: company, error: companyError } = await supabaseAdmin
       .from('companies')
       .select('id, name, email')
       .eq('id', profile.company_id)
