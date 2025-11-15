@@ -182,6 +182,10 @@ const AuthPage = () => {
           // No invitation - create account and redirect to Stripe payment
           console.log('🚀 Starting registration process...');
 
+          // Set flag IMMEDIATELY to prevent dashboard loading
+          sessionStorage.setItem('payment_redirect_pending', 'true');
+          console.log('🔒 Set payment_redirect_pending flag');
+
           // Step 1: Create Supabase auth user
           console.log('Step 1: Creating auth user...');
           const { data: authData, error: signUpError } = await signUp(email, password, {
@@ -192,6 +196,7 @@ const AuthPage = () => {
 
           if (signUpError) {
             console.error('❌ Step 1 failed - Auth user creation:', signUpError);
+            sessionStorage.removeItem('payment_redirect_pending'); // Clear flag on error
             throw signUpError;
           }
           console.log('✅ Step 1 complete - User created:', authData.user.id);
@@ -210,6 +215,7 @@ const AuthPage = () => {
 
           if (companyError) {
             console.error('❌ Step 2 failed - Company creation:', companyError);
+            sessionStorage.removeItem('payment_redirect_pending'); // Clear flag on error
             throw companyError;
           }
           console.log('✅ Step 2 complete - Company created:', companyData.id);
@@ -229,6 +235,7 @@ const AuthPage = () => {
 
           if (profileError) {
             console.error('❌ Step 3 failed - Profile creation:', profileError);
+            sessionStorage.removeItem('payment_redirect_pending'); // Clear flag on error
             throw profileError;
           }
           console.log('✅ Step 3 complete - Profile created');
@@ -236,9 +243,6 @@ const AuthPage = () => {
           // Step 4: Redirect to Stripe checkout
           console.log('Step 4: Preparing Stripe redirect...');
           setMessage('Redirecting to payment...');
-
-          // Add flag to prevent app initialization during redirect
-          sessionStorage.setItem('payment_redirect_pending', 'true');
 
           // Get auth token from signUp response
           const session = authData.session;
@@ -285,6 +289,7 @@ const AuthPage = () => {
     } catch (err) {
       console.error('💥 Registration error:', err);
       console.error('Error details:', err.message, err);
+      sessionStorage.removeItem('payment_redirect_pending'); // Clear flag on any error
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
