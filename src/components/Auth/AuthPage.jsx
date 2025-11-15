@@ -234,7 +234,11 @@ const AuthPage = () => {
           console.log('✅ Step 3 complete - Profile created');
 
           // Step 4: Redirect to Stripe checkout
+          console.log('Step 4: Preparing Stripe redirect...');
           setMessage('Redirecting to payment...');
+
+          // Add flag to prevent app initialization during redirect
+          sessionStorage.setItem('payment_redirect_pending', 'true');
 
           // Get auth token from signUp response
           const session = authData.session;

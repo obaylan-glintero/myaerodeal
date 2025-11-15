@@ -5,6 +5,10 @@ function PaymentSuccess() {
   const { colors } = useTheme();
 
   useEffect(() => {
+    // Clear payment redirect flag
+    sessionStorage.removeItem('payment_redirect_pending');
+    console.log('✅ Payment successful - cleared redirect flag');
+
     // Auto-redirect to app after 5 seconds
     const timer = setTimeout(() => {
       window.location.href = '/';

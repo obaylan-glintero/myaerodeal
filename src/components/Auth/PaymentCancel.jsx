@@ -1,8 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 function PaymentCancel() {
   const { colors } = useTheme();
+
+  useEffect(() => {
+    // Clear payment redirect flag
+    sessionStorage.removeItem('payment_redirect_pending');
+    console.log('⚠️ Payment cancelled - cleared redirect flag');
+  }, []);
 
   const handleRetry = () => {
     // Navigate back to auth page to retry payment

@@ -30,12 +30,35 @@ function AppContent() {
   const loading = useStore(state => state.loading);
   const { user } = useAuth();
 
+  // Check if payment redirect is pending
+  const paymentRedirectPending = sessionStorage.getItem('payment_redirect_pending');
+
+  // If payment redirect is pending, show loading screen and don't initialize
   useEffect(() => {
+    if (paymentRedirectPending) {
+      console.log('⏳ Payment redirect pending, skipping app initialization...');
+      return; // Don't initialize
+    }
+
     if (user) {
       // Re-initialize when user changes (including after login)
       initialize();
     }
-  }, [user?.id, initialize]); // Re-initialize when user ID changes
+  }, [user?.id, initialize, paymentRedirectPending]); // Re-initialize when user ID changes
+
+  // Show loading screen if payment redirect is pending
+  if (paymentRedirectPending) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: colors.background }}>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 mx-auto mb-4" style={{ borderColor: colors.primary }}></div>
+            <p className="text-lg" style={{ color: colors.textSecondary }}>Redirecting to payment...</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   const openModal = (type, item = null) => {
     setModalType(type);
