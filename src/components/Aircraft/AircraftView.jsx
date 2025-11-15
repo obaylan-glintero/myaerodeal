@@ -3,9 +3,10 @@ import { Plus, Edit2, Trash2, MessageSquare, Send, FileText, Download, Search, F
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
+import logo from '../../assets/logo.svg';
 
 const AircraftView = ({ openModal }) => {
-  const { aircraft, leads, deleteAircraft, addNoteToAircraft } = useStore();
+  const { aircraft, leads, deleteAircraft, addNoteToAircraft, currentUserProfile } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -63,13 +64,23 @@ const AircraftView = ({ openModal }) => {
     // Header
     doc.setFillColor(26, 43, 69); // colors.primary
     doc.rect(0, 0, pageWidth, 40, 'F');
+
+    // Add logo to header (left side)
+    try {
+      const img = new Image();
+      img.src = logo;
+      doc.addImage(img, 'SVG', margin, 10, 20, 20);
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+
     doc.setTextColor(212, 175, 55); // colors.secondary
     doc.setFontSize(24);
     doc.setFont(undefined, 'bold');
-    doc.text('Marketing Report', margin, 25);
+    doc.text('Marketing Report', margin + 25, 25);
     doc.setFontSize(12);
     doc.setFont(undefined, 'normal');
-    doc.text('AeroBrokerOne', pageWidth - margin - 40, 25);
+    doc.text('MyAeroDeal', pageWidth - margin - 30, 25);
 
     // Reset text color
     doc.setTextColor(0, 0, 0);
@@ -183,10 +194,14 @@ const AircraftView = ({ openModal }) => {
 
     // Footer
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const userName = currentUserProfile?.first_name && currentUserProfile?.last_name
+      ? `${currentUserProfile.first_name} ${currentUserProfile.last_name}`
+      : 'User';
     doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
     doc.text(`Report Generated: ${currentDate}`, margin, pageHeight - 10);
-    doc.text('AeroBrokerOne CRM', pageWidth - margin - 40, pageHeight - 10);
+    doc.text(`Exported by: ${userName}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text('MyAeroDeal CRM', pageWidth - margin - 30, pageHeight - 10);
 
     // Save the PDF
     const fileName = `Marketing_Report_${ac.manufacturer}_${ac.model}_${ac.serialNumber || ac.registration || 'Aircraft'}.pdf`;

@@ -4,9 +4,10 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import logo from '../../assets/logo.svg';
 
 const DealsView = ({ openModal }) => {
-  const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask } = useStore();
+  const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask, currentUserProfile } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -359,14 +360,23 @@ const DealTaskActions = ({ deal, tasks }) => {
       doc.setFillColor(201, 165, 90); // #C9A55A - Refined Gold
       doc.rect(0, 0, pageWidth, 40, 'F');
 
+      // Add logo to header (left side)
+      try {
+        const img = new Image();
+        img.src = logo;
+        doc.addImage(img, 'SVG', 14, 10, 20, 20);
+      } catch (e) {
+        console.error('Error adding logo to PDF:', e);
+      }
+
       doc.setTextColor(10, 22, 40); // #0A1628 - Deep Navy
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('AeroBrokerOne', 14, 20);
+      doc.text('MyAeroDeal', 40, 20);
 
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text('Deal Task Checklist', 14, 30);
+      doc.text('Deal Task Checklist', 40, 30);
 
       // Deal information
       doc.setTextColor(0, 0, 0);
@@ -459,16 +469,25 @@ const DealTaskActions = ({ deal, tasks }) => {
       }
 
       // Footer
+      const userName = currentUserProfile?.first_name && currentUserProfile?.last_name
+        ? `${currentUserProfile.first_name} ${currentUserProfile.last_name}`
+        : 'User';
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(128, 128, 128);
         doc.text(
-          `AeroBrokerOne - Page ${i} of ${pageCount}`,
+          `MyAeroDeal - Page ${i} of ${pageCount}`,
           pageWidth / 2,
           doc.internal.pageSize.getHeight() - 10,
           { align: 'center' }
+        );
+        doc.text(
+          `Exported by: ${userName}`,
+          pageWidth - 14,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: 'right' }
         );
       }
 

@@ -100,7 +100,7 @@ const AIAssistant = ({ setActiveTab, openModal }) => {
         parts: [{ text: msg.content }]
       }));
 
-      const systemPrompt = `You are an expert AI assistant for AeroBrokerOne, a private jet brokerage CRM system. You help aircraft brokers manage their business efficiently.
+      const systemPrompt = `You are an expert AI assistant for MyAeroDeal, a private jet brokerage CRM system. You help aircraft brokers manage their business efficiently.
 
 Current CRM Statistics:
 • Leads: ${stats.totalLeads} total (${stats.inquiryLeads} inquiry, ${stats.presentedLeads} presented, ${stats.interestedLeads} interested)
