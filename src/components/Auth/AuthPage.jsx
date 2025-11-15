@@ -179,29 +179,74 @@ const AuthPage = () => {
           if (error) throw error;
           setMessage('Account created! Check your email to confirm.');
         } else {
-          // No invitation - create registration request for approval
-          const { error } = await supabase
-            .from('company_registration_requests')
+          // No invitation - create account and redirect to Stripe payment
+          // Step 1: Create Supabase auth user
+          const { data: authData, error: signUpError } = await signUp(email, password, {
+            first_name: firstName,
+            last_name: lastName,
+            company_name: companyName
+          });
+
+          if (signUpError) throw signUpError;
+
+          // Step 2: Create company record (approved=false, will be approved after payment)
+          const { data: companyData, error: companyError } = await supabase
+            .from('companies')
             .insert({
-              email,
-              company_name: companyName,
+              name: companyName,
+              email: email,
+              approved: false // Will be set to true by webhook after payment
+            })
+            .select()
+            .single();
+
+          if (companyError) throw companyError;
+
+          // Step 3: Create user profile linking to company
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: authData.user.id,
+              company_id: companyData.id,
+              email: email,
               first_name: firstName,
-              last_name: lastName
+              last_name: lastName,
+              role: 'admin'
             });
 
-          if (error) throw error;
+          if (profileError) throw profileError;
 
-          setMessage(
-            'Registration request submitted! You will receive an email once your account is approved by our team.'
+          // Step 4: Redirect to Stripe checkout
+          setMessage('Redirecting to payment...');
+
+          // Get auth token for Edge Function
+          const { data: { session } } = await supabase.auth.getSession();
+
+          if (!session) {
+            throw new Error('No active session');
+          }
+
+          // Call Edge Function to create checkout session
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json'
+              }
+            }
           );
 
-          // Clear form
-          setEmail('');
-          setPassword('');
-          setConfirmPassword('');
-          setFirstName('');
-          setLastName('');
-          setCompanyName('');
+          const { url, error: checkoutError } = await response.json();
+
+          if (checkoutError || !url) {
+            throw new Error(checkoutError || 'Failed to create checkout session');
+          }
+
+          // Redirect to Stripe Checkout
+          window.location.href = url;
         }
       }
     } catch (err) {

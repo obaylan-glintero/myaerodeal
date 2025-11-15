@@ -13,6 +13,8 @@ import RegistrationApproval from './components/Admin/RegistrationApproval';
 import UserSettings from './components/Settings/UserSettings';
 import AIAssistant from './components/AI/AIAssistant';
 import Modal from './components/Common/Modal';
+import PaymentSuccess from './components/Auth/PaymentSuccess';
+import PaymentCancel from './components/Auth/PaymentCancel';
 import { useStore } from './store/useStore';
 
 // Inner component that has access to auth context
@@ -102,6 +104,26 @@ function AppContent() {
 
 // Main App component with AuthProvider
 function App() {
+  // Check if we're on a payment page (these don't require authentication)
+  const pathname = window.location.pathname;
+
+  if (pathname === '/payment-success') {
+    return (
+      <AuthProvider>
+        <PaymentSuccess />
+      </AuthProvider>
+    );
+  }
+
+  if (pathname === '/payment-cancel') {
+    return (
+      <AuthProvider>
+        <PaymentCancel />
+      </AuthProvider>
+    );
+  }
+
+  // Default: render main app content
   return (
     <AuthProvider>
       <AppContent />
