@@ -17,17 +17,14 @@ const DealsView = ({ openModal }) => {
   const handleViewDocument = (deal) => {
     if (deal.documentData) {
       if (deal.documentType && deal.documentType.includes('pdf')) {
-        // Detect Safari iOS - it has poor inline PDF support
-        const isSafariIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/CriOS|FxiOS/.test(navigator.userAgent);
+        // Detect mobile devices
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-        if (isSafariIOS) {
-          // Safari iOS: Direct download works better than inline viewing
-          const link = document.createElement('a');
-          link.href = deal.documentData;
-          link.download = deal.document || 'document.pdf';
-          link.click();
+        if (isMobile) {
+          // Mobile: Open PDF directly in new tab (triggers native viewer or download)
+          window.open(deal.documentData, '_blank');
         } else {
-          // Other browsers: Open PDF in new window with proper HTML structure
+          // Desktop: Open PDF in new window with iframe
           const newWindow = window.open('', '_blank');
           if (newWindow) {
             newWindow.document.write(`
@@ -51,38 +48,26 @@ const DealsView = ({ openModal }) => {
                     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                   }
                   .toolbar h3 { font-size: 14px; font-weight: 500; }
-                  .toolbar a {
+                  .toolbar button {
                     color: #D4AF37;
+                    background: transparent;
                     text-decoration: none;
                     font-size: 13px;
                     padding: 6px 12px;
                     border: 1px solid #D4AF37;
                     border-radius: 4px;
+                    cursor: pointer;
                     transition: all 0.2s;
                   }
-                  .toolbar a:hover {
+                  .toolbar button:hover {
                     background: #D4AF37;
                     color: #0A1628;
                   }
-                  .pdf-container {
+                  iframe {
                     flex: 1;
                     width: 100%;
-                    overflow: auto;
+                    border: none;
                     background: #525252;
-                  }
-                  embed {
-                    width: 100%;
-                    height: 100%;
-                    border: none;
-                  }
-                  object {
-                    width: 100%;
-                    height: 100%;
-                    border: none;
-                  }
-                  @media (max-width: 768px) {
-                    .toolbar { padding: 10px 15px; }
-                    .toolbar h3 { font-size: 12px; }
                   }
                 </style>
               </head>
@@ -90,13 +75,14 @@ const DealsView = ({ openModal }) => {
                 <div class="container">
                   <div class="toolbar">
                     <h3>${deal.document || 'Document'}</h3>
-                    <a href="${deal.documentData}" download="${deal.document || 'document.pdf'}">Download PDF</a>
+                    <button onclick="
+                      const link = document.createElement('a');
+                      link.href = '${deal.documentData}';
+                      link.download = '${deal.document || 'document.pdf'}';
+                      link.click();
+                    ">Download PDF</button>
                   </div>
-                  <div class="pdf-container">
-                    <object data="${deal.documentData}" type="application/pdf">
-                      <embed src="${deal.documentData}" type="application/pdf" />
-                    </object>
-                  </div>
+                  <iframe src="${deal.documentData}" type="application/pdf"></iframe>
                 </div>
               </body>
               </html>
