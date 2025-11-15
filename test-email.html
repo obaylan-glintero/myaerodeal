@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Welcome Email</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      width: 100%;
+      font-size: 14px;
+    }
+    button {
+      background: #0A1628;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1a2f4a;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test Welcome Email Function</h1>
+  <p>This tool tests if your welcome email Edge Function is configured correctly.</p>
+
+  <h3>1. Get Your User ID and Company ID</h3>
+  <ol>
+    <li>Go to Supabase Dashboard → Authentication → Users</li>
+    <li>Copy your User ID</li>
+    <li>Go to Table Editor → profiles → find your profile</li>
+    <li>Copy the company_id</li>
+  </ol>
+
+  <h3>2. Get Your Service Role Key</h3>
+  <ol>
+    <li>Go to Supabase Dashboard → Settings → API</li>
+    <li>Copy the <code>service_role</code> key (starts with <code>eyJ...</code>)</li>
+  </ol>
+
+  <h3>3. Test the Function</h3>
+  <form id="testForm">
+    <input type="text" id="userId" placeholder="User ID (UUID)" required />
+    <input type="text" id="companyId" placeholder="Company ID (UUID)" required />
+    <input type="password" id="serviceKey" placeholder="Service Role Key (eyJ...)" required />
+    <button type="submit">Send Test Welcome Email</button>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    const SUPABASE_URL = 'https://dpqjgogloaokggvafrsw.supabase.co';
+
+    document.getElementById('testForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const userId = document.getElementById('userId').value.trim();
+      const companyId = document.getElementById('companyId').value.trim();
+      const serviceKey = document.getElementById('serviceKey').value.trim();
+      const resultDiv = document.getElementById('result');
+
+      resultDiv.className = 'info';
+      resultDiv.innerHTML = '⏳ Sending test email...';
+
+      try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/send-welcome-email`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${serviceKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, companyId })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          resultDiv.className = 'success';
+          resultDiv.innerHTML = `
+            <h3>✅ Success!</h3>
+            <p>Welcome email sent successfully!</p>
+            <p><strong>Email ID:</strong> ${data.emailId}</p>
+            <p>Check your inbox (and spam folder) for the welcome email.</p>
+            <h4>Next Steps:</h4>
+            <ol>
+              <li>Check your email inbox</li>
+              <li>Go to Supabase → Table Editor → email_logs to see the log</li>
+              <li>Go to Resend Dashboard → Emails to see delivery status</li>
+            </ol>
+          `;
+        } else {
+          resultDiv.className = 'error';
+          resultDiv.innerHTML = `
+            <h3>❌ Error</h3>
+            <p><strong>Message:</strong> ${data.error || 'Unknown error'}</p>
+            <h4>Common Issues:</h4>
+            <ul>
+              <li><strong>Profile not found:</strong> Check User ID is correct</li>
+              <li><strong>Resend API key not configured:</strong> Add RESEND_API_KEY to Vercel env vars</li>
+              <li><strong>Template not found:</strong> Run the database migration SQL</li>
+              <li><strong>Unauthorized:</strong> Check Service Role Key is correct</li>
+            </ul>
+            <p>See <code>QUICK_EMAIL_FIX.md</code> for detailed troubleshooting.</p>
+          `;
+        }
+      } catch (error) {
+        resultDiv.className = 'error';
+        resultDiv.innerHTML = `
+          <h3>❌ Network Error</h3>
+          <p><strong>Error:</strong> ${error.message}</p>
+          <p>Check that:</p>
+          <ul>
+            <li>The Edge Function is deployed</li>
+            <li>Your internet connection is working</li>
+            <li>The Supabase URL is correct</li>
+          </ul>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>
