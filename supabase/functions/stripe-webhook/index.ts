@@ -96,6 +96,45 @@ serve(async (req) => {
           console.error('⚠️  Error creating payment record:', paymentError)
         }
 
+        // Send welcome email to the user
+        try {
+          // Get primary user for this company
+          const { data: primaryUser } = await supabaseAdmin
+            .from('profiles')
+            .select('id, email')
+            .eq('company_id', companyId)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .single()
+
+          if (primaryUser) {
+            // Call send-welcome-email function
+            const welcomeEmailResponse = await fetch(
+              `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-welcome-email`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  userId: primaryUser.id,
+                  companyId: companyId
+                })
+              }
+            )
+
+            if (welcomeEmailResponse.ok) {
+              console.log('✅ Welcome email sent to:', primaryUser.email)
+            } else {
+              console.error('⚠️  Error sending welcome email:', await welcomeEmailResponse.text())
+            }
+          }
+        } catch (emailError) {
+          console.error('⚠️  Error sending welcome email:', emailError)
+          // Don't fail the webhook if email fails
+        }
+
         console.log('✅ Company approved and subscription activated:', companyId)
         break
       }
