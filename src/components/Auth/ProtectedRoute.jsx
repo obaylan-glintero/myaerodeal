@@ -8,6 +8,21 @@ const ProtectedRoute = ({ children }) => {
   const { user, loading, isConfigured } = useAuth();
   const { colors } = useTheme();
 
+  // Check if payment redirect is pending
+  const paymentRedirectPending = sessionStorage.getItem('payment_redirect_pending');
+
+  // Show payment redirect loading screen
+  if (paymentRedirectPending && user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: colors.background }}>
+        <div className="text-center">
+          <Loader size={48} className="animate-spin mx-auto mb-4" style={{ color: colors.primary }} />
+          <p style={{ color: colors.textSecondary }}>Redirecting to payment...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Show loading spinner while checking authentication
   if (loading) {
     return (

@@ -66,7 +66,14 @@ serve(async (req) => {
     }
 
     // Get frontend URL for redirects
-    const origin = req.headers.get('origin') || 'http://localhost:3002'
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'http://localhost:3002'
+
+    // Use production URL if coming from production
+    const baseUrl = origin.includes('myaerodeal') && !origin.includes('vercel.app')
+      ? 'https://myaerodeal.vercel.app' // Use Vercel URL instead of custom domain
+      : origin
+
+    console.log('Origin:', origin, 'Using baseUrl:', baseUrl)
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -77,8 +84,8 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription', // or 'payment' for one-time
-      success_url: `${origin}/payment-success`,
-      cancel_url: `${origin}/payment-cancel`,
+      success_url: `${baseUrl}/payment-success`,
+      cancel_url: `${baseUrl}/payment-cancel`,
       customer_email: company.email || profile.email,
       client_reference_id: company.id,
       metadata: {
