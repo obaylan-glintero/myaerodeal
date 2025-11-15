@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyAeroDeal - AI-Powered Jet Brokerage CRM</title>
+    <meta name="description" content="Transform your aircraft brokerage business with AI-powered lead management, intelligent document processing, and streamlined deal tracking.">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #C5A572;
+            --primary-dark: #B89456;
+            --navy: #1E293B;
+            --navy-light: #334155;
+            --text-light: #F8FAFC;
+            --text-gray: #94A3B8;
+            --bg-light: #F1F5F9;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: var(--navy);
+        }
+
+        /* Header */
+        header {
+            background: var(--navy);
+            color: var(--text-light);
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-light);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .cta-button {
+            background: var(--primary);
+            color: var(--navy);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .cta-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+            color: var(--text-light);
+            padding: 120px 2rem 80px;
+            text-align: center;
+            margin-top: 60px;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-light);
+        }
+
+        .hero .highlight {
+            color: var(--primary);
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            color: var(--text-gray);
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .hero-button-primary {
+            background: var(--primary);
+            color: var(--navy);
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+
+        .hero-button-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .hero-button-secondary {
+            background: transparent;
+            color: var(--text-light);
+            padding: 1rem 2rem;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+
+        .hero-button-secondary:hover {
+            background: var(--primary);
+            color: var(--navy);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Section */
+        section {
+            padding: 80px 0;
+        }
+
+        section h2 {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            color: var(--navy);
+        }
+
+        section .subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--text-gray);
+            margin-bottom: 4rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--navy);
+        }
+
+        .feature-card p {
+            color: var(--text-gray);
+            line-height: 1.8;
+        }
+
+        /* Screenshot Section */
+        .screenshot-section {
+            background: var(--bg-light);
+        }
+
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .screenshot-item {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .screenshot-placeholder {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .screenshot-caption {
+            padding: 1.5rem;
+        }
+
+        .screenshot-caption h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: var(--navy);
+        }
+
+        .screenshot-caption p {
+            color: var(--text-gray);
+        }
+
+        /* AI Features */
+        .ai-features {
+            background: var(--navy);
+            color: var(--text-light);
+        }
+
+        .ai-features h2 {
+            color: var(--text-light);
+        }
+
+        .ai-features .subtitle {
+            color: var(--text-gray);
+        }
+
+        .ai-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .ai-card {
+            background: var(--navy-light);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid rgba(197, 165, 114, 0.2);
+            transition: all 0.3s;
+        }
+
+        .ai-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+        }
+
+        .ai-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .ai-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .ai-card p {
+            color: var(--text-gray);
+        }
+
+        /* Pricing */
+        .pricing {
+            background: var(--bg-light);
+        }
+
+        .pricing-card {
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            max-width: 500px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .price {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 1rem 0;
+        }
+
+        .price-period {
+            color: var(--text-gray);
+            font-size: 1.2rem;
+        }
+
+        .features-list {
+            list-style: none;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .features-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--bg-light);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .features-list li:before {
+            content: "✓";
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        .cta-section h2 {
+            color: var(--text-light);
+        }
+
+        .cta-section p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: var(--text-gray);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--navy);
+            color: var(--text-gray);
+            text-align: center;
+            padding: 2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero p {
+                font-size: 1.1rem;
+            }
+
+            section h2 {
+                font-size: 2rem;
+            }
+
+            .screenshot-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <img src="images/MyAeroDeal_dark.png" style="width: 10%; height: auto; object-fit: cover;">
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#ai">AI Capabilities</a></li>
+                <li><a href="#screenshots">Screenshots</a></li>
+                <li><a href="#pricing">Pricing</a></li>
+            </ul>
+            <a href="#signup" class="cta-button">Start Free Trial</a>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Transform Your Business Jet Brokerage with <span class="highlight"><br><b>AI-Powered Intelligence</b></span></h1>
+            <p>The only CRM built specifically for aircraft brokers. Manage leads, track deals, and close sales faster with intelligent automation.</p>
+            <div class="hero-buttons">
+                <a href="#signup" class="hero-button-primary">Start 14-Day Free Trial</a>
+                <a href="#demo" class="hero-button-secondary">Watch Demo</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Overview -->
+    <section id="features">
+        <div class="container">
+            <h2>Everything You Need to Close More Deals</h2>
+            <p class="subtitle">Built by brokers, for brokers. Every feature designed to streamline your workflow.</p>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">👥</div>
+                    <h3>Smart Lead Management</h3>
+                    <p>Track every inquiry from first contact to closed deal. Automatic status updates based on actions. Never lose track of a potential buyer again.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">✈️</div>
+                    <h3>Aircraft Inventory</h3>
+                    <p>Manage your entire inventory with detailed specs, pricing, and availability. Upload spec sheets and let AI extract all the details automatically.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📄</div>
+                    <h3>Deal Pipeline Tracking</h3>
+                    <p>Visualize every deal from LOI to closing. Track documents, deadlines, and action items. Never miss a critical step in the transaction.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI Document Processing</h3>
+                    <p>Upload aircraft spec sheets or deal contracts and watch AI extract all key information automatically. Save hours of manual data entry.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Real-Time Analytics</h3>
+                    <p>Dashboard with key metrics: hot leads, active deals, pending tasks. Make data-driven decisions with instant insights.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔔</div>
+                    <h3>Automated Reminders</h3>
+                    <p>Never miss a follow-up. Automatic task creation for presentations, inspections, and deadlines. Stay on top of every opportunity.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Mobile Responsive</h3>
+                    <p>Access your CRM from anywhere. Fully responsive design works perfectly on desktop, tablet, and mobile devices.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Enterprise Security</h3>
+                    <p>Bank-level encryption. Row-level security. Multi-tenant architecture. Your data is safe and isolated from other companies.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🌓</div>
+                    <h3>Light & Dark Themes</h3>
+                    <p>Switch between elegant light and dark modes to match your preference and reduce eye strain during long work sessions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Features -->
+    <section id="ai" class="ai-features">
+        <div class="container">
+            <h2>Powered by Advanced AI</h2>
+            <p class="subtitle">Let artificial intelligence handle the repetitive work so you can focus on closing deals.</p>
+
+            <div class="ai-grid">
+                <div class="ai-card">
+                    <div class="icon">🧠</div>
+                    <h3>Intelligent Document Parsing</h3>
+                    <p>Upload any aircraft spec sheet PDF. AI automatically extracts manufacturer, model, year, serial number, registration, total time, location, price, and creates a detailed summary.</p>
+                </div>
+
+                <div class="ai-card">
+                    <div class="icon">📋</div>
+                    <h3>Smart Contract Analysis</h3>
+                    <p>Upload LOIs or APAs and AI instantly extracts all action items, deadlines, and obligations. Automatically creates tasks for your team with proper priorities and due dates.</p>
+                </div>
+
+                <div class="ai-card">
+                    <div class="icon">🎯</div>
+                    <h3>Automatic Status Updates</h3>
+                    <p>Lead statuses update automatically based on actions: Inquiry → Presented → Interested → Deal Created. No manual updates needed.</p>
+                </div>
+
+                <div class="ai-card">
+                    <div class="icon">💡</div>
+                    <h3>Intelligent Matching</h3>
+                    <p>AI suggests which aircraft to present to which leads based on their requirements, budget, and preferences. Increase your conversion rate.</p>
+                </div>
+
+                <div class="ai-card">
+                    <div class="icon">✍️</div>
+                    <h3>Auto-Generated Summaries</h3>
+                    <p>AI creates professional summaries of aircraft specifications and deal terms. Perfect for quick reference and client presentations.</p>
+                </div>
+
+                <div class="ai-card">
+                    <div class="icon">⏰</div>
+                    <h3>Smart Task Creation</h3>
+                    <p>When you present an aircraft or create a deal, AI automatically creates follow-up tasks and reminders. Never forget a critical action.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots -->
+    <section id="screenshots" class="screenshot-section">
+        <div class="container">
+            <h2>See MyAeroDeal in Action</h2>
+            <p class="subtitle">A complete suite of tools designed specifically for aircraft brokers.</p>
+
+            <div class="screenshot-grid">
+                <div class="screenshot-item">
+                    <img src="images/screenshot-dashboard.png"
+     alt="MyAeroDeal Dashboard"
+     style="width: 100%; height: 300px; object-fit: cover;">
+                    <div class="screenshot-caption">
+                        <h3>Dashboard Overview</h3>
+                        <p>Get instant insights with key metrics: hot leads, active deals, aircraft inventory, and pending tasks. Visualize your deal pipeline at a glance.</p>
+                    </div>
+                </div>
+
+                <div class="screenshot-item">
+                    <img src="images/screenshot-leads.png"
+     alt="MyAeroDeal Leads"
+     style="width: 100%; height: 300px; object-fit: cover;">
+                    <div class="screenshot-caption">
+                        <h3>Lead Management</h3>
+                        <p>Track every inquiry with detailed profiles. View status, requirements, budget, and activity history. Add timestamped notes and track aircraft presentations.</p>
+                    </div>
+                </div>
+
+                <div class="screenshot-item">
+                    <img src="images/screenshot-aircraft.png"
+     alt="MyAeroDeal Aircraft Inventory"
+     style="width: 100%; height: 300px; object-fit: cover;">
+                    <div class="screenshot-caption">
+                        <h3>Aircraft Inventory</h3>
+                        <p>Beautiful gallery view of your entire inventory. Filter and search instantly. Upload spec sheets and images. Track which aircraft have been presented to which leads.</p>
+                    </div>
+                </div>
+
+                <div class="screenshot-item">
+                    <img src="images/screenshot-deals.png"
+     alt="MyAeroDeal Deals Pipeline"
+     style="width: 100%; height: 300px; object-fit: cover;">
+                    <div class="screenshot-caption">
+                        <h3>Deal Pipeline</h3>
+                        <p>Track deals through every stage from LOI to closing. Gantt chart view of timelines. Upload contracts and automatically extract action items with AI.</p>
+                    </div>
+                </div>
+
+                <div class="screenshot-item">
+                    <img src="images/screenshot-ai.png"
+     alt="MyAeroDeal AI Power"
+     style="width: 100%; height: 300px; object-fit: cover;">
+                    <div class="screenshot-caption">
+                        <h3>AI-Powered Document Processing</h3>
+                        <p>Simply drag and drop aircraft spec sheets. AI extracts all information automatically. Review and edit before saving. Supports PDF, Word, and image files.</p>
+                    </div>
+                </div>
+
+                <div class="screenshot-item">
+                    <img src="images/screenshot-tasks.png"
+     alt="MyAeroDeal Tasks & Checklists"
+     style="width: 100%; height: 300px; object-fit: cover;">
+                    <div class="screenshot-caption">
+                        <h3>Task Management & Checklists</h3>
+                        <p>Never miss a deadline. Automatic task creation for follow-ups and deadlines. Deal checklists ensure nothing falls through the cracks. Export to PDF for clients.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <h2>Simple, Transparent Pricing</h2>
+            <p class="subtitle">Start with a 14-day free trial. No credit card required.</p>
+
+            <div class="pricing-card">
+                <h3>Professional Plan</h3>
+                <div class="price">$99<span class="price-period">/month</span></div>
+                <ul class="features-list">
+                    <li>Up to 5 users</li>
+                    <li>Unlimited leads & aircraft</li>
+                    <li>Unlimited deals & tasks</li>
+                    <li>AI document processing (unlimited)</li>
+                    <li>Real-time collaboration</li>
+                    <li>Email support</li>
+                    <li>Mobile access</li>
+                    <li>Export to PDF</li>
+                    <li>Dark/Light themes</li>
+                    <li>99.9% uptime SLA</li>
+                </ul>
+                <a href="#signup" class="hero-button-primary">Start Free Trial</a>
+                <p style="margin-top: 1rem; color: var(--text-gray); font-size: 0.9rem;">No credit card required • Cancel anytime</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="signup" class="cta-section">
+        <div class="container">
+            <h2>Ready to Close More Deals?</h2>
+            <p>Join aircraft brokers who are already using MyAeroDeal to streamline their business.</p>
+            <a href="https://app.myaerodeal.com/signup" class="hero-button-primary">Start Your Free Trial Today</a>
+            <p style="margin-top: 1rem; color: var(--text-gray);">14-day free trial • No credit card required • Setup in 5 minutes</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 MyAeroDeal. All rights reserved.</p>
+            <p style="margin-top: 0.5rem;">
+                <a href="#" style="color: var(--primary); text-decoration: none; margin: 0 1rem;">Privacy Policy</a>
+                <a href="#" style="color: var(--primary); text-decoration: none; margin: 0 1rem;">Terms of Service</a>
+                <a href="#" style="color: var(--primary); text-decoration: none; margin: 0 1rem;">Contact</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

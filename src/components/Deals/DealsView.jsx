@@ -1,0 +1,1058 @@
+import React, { useState } from 'react';
+import { Plus, Edit2, Trash2, Clock, MessageSquare, Send, FileText, Download, Search, ListChecks, CheckCircle2, ListTodo, BarChart3 } from 'lucide-react';
+import { useStore } from '../../store/useStore';
+import { useTheme } from '../../contexts/ThemeContext';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+const DealsView = ({ openModal }) => {
+  const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask } = useStore();
+  const { colors } = useTheme();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showDocTypeModal, setShowDocTypeModal] = useState(false);
+  const [selectedDealId, setSelectedDealId] = useState(null);
+
+  const handleViewDocument = (deal) => {
+    if (deal.documentData) {
+      const newWindow = window.open();
+      if (deal.documentType && deal.documentType.includes('pdf')) {
+        newWindow.document.write(
+          `<iframe src="${deal.documentData}" width="100%" height="100%" style="border:none;"></iframe>`
+        );
+      } else {
+        const link = document.createElement('a');
+        link.href = deal.documentData;
+        link.download = deal.document;
+        link.click();
+      }
+    }
+  };
+
+  const handleGenerateActionItems = async (dealId, docType) => {
+    try {
+      setShowDocTypeModal(false);
+      setSelectedDealId(null);
+
+      // Show loading indicator
+      const loadingAlert = alert('Parsing document and extracting action items with AI...\n\nPlease wait...You can close this alert window...');
+
+      const count = await generateActionItemsFromDocument(dealId, docType);
+
+      alert(`✓ Successfully generated ${count} action items from your ${docType} document!\n\n• Action items extracted from actual document content\n• Tasks created with AI-detected dates and priorities\n• Timeline added to deal card\n\nCheck the Tasks page to see all generated action items.`);
+    } catch (error) {
+      alert(`Error generating action items: ${error.message}\n\nPlease ensure:\n1. A document is uploaded to this deal\n2. The document is a PDF file\n3. Try again or contact support`);
+    }
+  };
+
+  const filteredDeals = deals.filter(deal => {
+    const matchesSearch = deal.dealName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         deal.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || deal.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Deals</h2>
+        <button
+          onClick={() => openModal('deal')}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
+          style={{ backgroundColor: colors.primary, color: colors.secondary }}
+        >
+          <Plus size={20} /> Add Deal
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-4 items-center">
+        <div className="flex-1 min-w-[250px] relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" size={20} style={{ color: colors.textSecondary }} />
+          <input
+            type="text"
+            placeholder="Search by deal name or client..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-lg"
+            style={{
+              backgroundColor: colors.cardBg,
+              color: colors.textPrimary,
+              border: `1px solid ${colors.border}`
+            }}
+          />
+        </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-4 py-2 rounded-lg"
+          style={{
+            backgroundColor: colors.cardBg,
+            color: colors.textPrimary,
+            border: `1px solid ${colors.border}`
+          }}
+        >
+          <option value="all">All Stages</option>
+          <option value="LOI Signed">LOI Signed</option>
+          <option value="Deposit Paid">Deposit Paid</option>
+          <option value="APA Drafted">APA Drafted</option>
+          <option value="APA Signed">APA Signed</option>
+          <option value="PPI Started">PPI Started</option>
+          <option value="Defect Rectifications">Defect Rectifications</option>
+          <option value="Closing">Closing</option>
+          <option value="Closed Won">Closed Won</option>
+          <option value="Closed Lost">Closed Lost</option>
+        </select>
+      </div>
+
+      <div className="text-sm" style={{ color: colors.textSecondary }}>
+        Showing {filteredDeals.length} of {deals.length} deals
+      </div>
+
+      <div className="space-y-4">
+        {filteredDeals.map(deal => {
+          const lead = leads.find(l => l.id === deal.relatedLead);
+          const ac = aircraft.find(a => a.id === deal.relatedAircraft);
+          
+          return (
+            <div key={deal.id} className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold" style={{ color: colors.primary }}>{deal.dealName}</h3>
+                  <p style={{ color: colors.textSecondary }}>{deal.clientName}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openModal('deal', deal)}
+                    className="p-2 rounded"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    <Edit2 size={18} />
+                  </button>
+                  <button
+                    onClick={() => deleteDeal(deal.id)}
+                    className="p-2 rounded"
+                    style={{ color: colors.error }}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <p className="text-sm" style={{ color: colors.textSecondary }}>Aircraft</p>
+                  <p className="font-medium" style={{ color: colors.textPrimary }}>{ac?.manufacturer} {ac?.model} {!ac && 'Not specified'}</p>
+                </div>
+                <div>
+                  <p className="text-sm" style={{ color: colors.textSecondary }}>Deal Value</p>
+                  <p className="font-medium text-lg" style={{ color: colors.primary }}>
+                    {deal.dealValue ? `$${(deal.dealValue / 1000000).toFixed(1)}M` : 'Not specified'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm" style={{ color: colors.textSecondary }}>Est. Closing</p>
+                  <p className="font-medium" style={{ color: colors.textPrimary }}>{deal.estimatedClosing || 'Not specified'}</p>
+                </div>
+              </div>
+
+              {deal.document && deal.documentData && (
+                <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText size={18} style={{ color: colors.primary }} />
+                      <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>{deal.document}</span>
+                    </div>
+                    <button
+                      onClick={() => handleViewDocument(deal)}
+                      className="flex items-center gap-1 px-3 py-1 text-sm rounded font-semibold hover:opacity-90"
+                      style={{ backgroundColor: colors.primary, color: colors.secondary }}
+                    >
+                      <Download size={14} />
+                      View
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="mb-4">
+                <p className="text-sm mb-2" style={{ color: colors.textSecondary }}>Status</p>
+                <select
+                  value={deal.status}
+                  onChange={(e) => updateDealStatus(deal.id, e.target.value)}
+                  className="w-full md:w-auto px-4 py-2 rounded-lg font-medium"
+                  style={{
+                    backgroundColor: colors.cardBg,
+                    color: colors.primary,
+                    border: `1px solid ${colors.border}`
+                  }}
+                >
+                  <option value="LOI Signed">LOI Signed</option>
+                  <option value="Deposit Paid">Deposit Paid</option>
+                  <option value="APA Drafted">APA Drafted</option>
+                  <option value="APA Signed">APA Signed</option>
+                  <option value="PPI Started">PPI Started</option>
+                  <option value="Defect Rectifications">Defect Rectifications</option>
+                  <option value="Closing">Closing</option>
+                  <option value="Closed Won">Closed Won</option>
+                  <option value="Closed Lost">Closed Lost</option>
+                </select>
+              </div>
+
+              <div className="rounded-lg p-4" style={{ backgroundColor: colors.secondary }}>
+                <div className="flex items-start gap-3">
+                  <Clock size={20} style={{ color: colors.primary }} className="mt-1" />
+                  <div className="flex-1">
+                    <p className="font-semibold" style={{ color: colors.primary }}>Next Step</p>
+                    <p style={{ color: colors.textPrimary }}>{deal.nextStep || 'No next step defined'}</p>
+                    <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>Follow-up: {deal.followUpDate || 'Not scheduled'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {deal.history && deal.history.length > 1 && (
+                <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
+                  <p className="font-semibold mb-2" style={{ color: colors.primary }}>History</p>
+                  <div className="space-y-2">
+                    {deal.history.slice(-3).reverse().map((h, idx) => (
+                      <div key={idx} className="text-sm" style={{ color: colors.textSecondary }}>
+                        <span className="font-medium" style={{ color: colors.textPrimary }}>{new Date(h.date).toLocaleDateString()}</span> - {h.action}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {deal.timeline && deal.timeline.length > 0 && (
+                <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="font-semibold flex items-center gap-2" style={{ color: colors.primary }}>
+                      <ListChecks size={18} />
+                      Deal Timeline
+                    </p>
+                    <span className="text-xs" style={{ color: colors.textSecondary }}>
+                      Generated {new Date(deal.timelineGenerated).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {deal.timeline.map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-sm p-2 rounded" style={{ backgroundColor: colors.secondary }}>
+                        <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" style={{ color: colors.textSecondary }} />
+                        <div className="flex-1">
+                          <p className="font-medium" style={{ color: colors.textPrimary }}>{item.title}</p>
+                          <p className="text-xs" style={{ color: colors.textSecondary }}>Due: {new Date(item.dueDate).toLocaleDateString()}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          item.priority === 'high' ? 'bg-red-100 text-red-700' :
+                          item.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {item.priority}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
+                <button
+                  onClick={() => {
+                    setSelectedDealId(deal.id);
+                    setShowDocTypeModal(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold"
+                  style={{ backgroundColor: colors.primary, color: colors.secondary }}
+                >
+                  <ListChecks size={18} />
+                  Generate Action Items & Timeline
+                </button>
+              </div>
+
+              <DealTaskActions
+                deal={deal}
+                tasks={tasks.filter(t => t.relatedTo?.type === 'deal' && t.relatedTo?.id === deal.id)}
+              />
+
+              <TasksSection
+                dealId={deal.id}
+                dealName={deal.dealName}
+                tasks={tasks.filter(t => t.relatedTo?.type === 'deal' && t.relatedTo?.id === deal.id)}
+                onToggleComplete={(taskId, currentStatus) => {
+                  updateTask(taskId, { status: currentStatus === 'completed' ? 'pending' : 'completed' });
+                }}
+                onUpdateTask={updateTask}
+                onAddTask={(taskData) => {
+                  addTask({
+                    ...taskData,
+                    relatedTo: { type: 'deal', id: deal.id }
+                  });
+                }}
+              />
+
+              <NotesSection
+                notes={deal.timestampedNotes || []}
+                onAddNote={(noteText) => addNoteToDeal(deal.id, noteText)}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {showDocTypeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="rounded-lg shadow-xl max-w-md w-full p-6" style={{ backgroundColor: colors.cardBg }}>
+            <h3 className="text-xl font-semibold mb-4" style={{ color: colors.primary }}>
+              Select Document Type
+            </h3>
+            <p className="mb-6" style={{ color: colors.textSecondary }}>
+              Choose the type of document to generate appropriate action items and timeline:
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => handleGenerateActionItems(selectedDealId, 'LOI')}
+                className="w-full p-4 border-2 rounded-lg text-left"
+                style={{ borderColor: colors.primary, backgroundColor: colors.secondary }}
+              >
+                <p className="font-semibold" style={{ color: colors.primary }}>Letter of Intent (LOI)</p>
+                <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                  9 action items • 15-day timeline • Initial deal phase
+                </p>
+              </button>
+              <button
+                onClick={() => handleGenerateActionItems(selectedDealId, 'APA')}
+                className="w-full p-4 border-2 rounded-lg text-left"
+                style={{ borderColor: colors.primary, backgroundColor: colors.secondary }}
+              >
+                <p className="font-semibold" style={{ color: colors.primary }}>Aircraft Purchase Agreement (APA)</p>
+                <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                  12 action items • 31-day timeline • Full transaction process
+                </p>
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                setShowDocTypeModal(false);
+                setSelectedDealId(null);
+              }}
+              className="w-full mt-4 px-4 py-2 rounded-lg"
+              style={{ border: `1px solid ${colors.border}`, color: colors.textPrimary }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DealTaskActions = ({ deal, tasks }) => {
+  const { colors } = useTheme();
+  const [showGantt, setShowGantt] = useState(false);
+
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Header with branding
+      doc.setFillColor(201, 165, 90); // #C9A55A - Refined Gold
+      doc.rect(0, 0, pageWidth, 40, 'F');
+
+      doc.setTextColor(10, 22, 40); // #0A1628 - Deep Navy
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('AeroBrokerOne', 14, 20);
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Deal Task Checklist', 14, 30);
+
+      // Deal information
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(deal.dealName, 14, 55);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Client: ${deal.clientName}`, 14, 62);
+      doc.text(`Status: ${deal.status}`, 14, 68);
+      if (deal.dealValue) {
+        doc.text(`Deal Value: $${(deal.dealValue / 1000000).toFixed(1)}M`, 14, 74);
+      }
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 80);
+
+      // Task summary
+      const completedTasks = tasks.filter(t => t.status === 'completed').length;
+      const totalTasks = tasks.length;
+      const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Progress: ${completedTasks}/${totalTasks} tasks completed (${progress}%)`, 14, 92);
+
+      // Progress bar
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.rect(14, 95, pageWidth - 28, 6);
+      doc.setFillColor(201, 165, 90); // #C9A55A - Refined Gold
+      doc.rect(14, 95, (pageWidth - 28) * (progress / 100), 6, 'F');
+
+      // Tasks table
+      const tableData = tasks.map(task => [
+        task.status === 'completed' ? '☑' : '☐',
+        task.title,
+        task.dueDate || 'N/A',
+        task.priority.toUpperCase(),
+        task.status === 'completed' ? 'Completed' : 'Pending'
+      ]);
+
+      autoTable(doc, {
+        startY: 110,
+        head: [['', 'Task', 'Due Date', 'Priority', 'Status']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: {
+          fillColor: [201, 165, 90], // #C9A55A - Refined Gold
+          textColor: [10, 22, 40],    // #0A1628 - Deep Navy
+          fontStyle: 'bold'
+        },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 20, halign: 'center' },
+          4: { cellWidth: 25, halign: 'center' }
+        },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3
+        },
+        didDrawCell: (data) => {
+          if (data.column.index === 0 && data.cell.section === 'body') {
+            const task = tasks[data.row.index];
+            if (task.status === 'completed') {
+              doc.setTextColor(76, 175, 80);
+            }
+          }
+        }
+      });
+
+      // Add Gantt chart if there are tasks with due dates
+      const tasksWithDates = tasks.filter(t => t.dueDate).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+      if (tasksWithDates.length > 0) {
+        const currentY = (doc.lastAutoTable?.finalY || 110) + 15;
+
+        // Check if we need a new page
+        if (currentY > doc.internal.pageSize.getHeight() - 80) {
+          doc.addPage();
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Task Timeline (Gantt Chart)', 14, 20);
+        } else {
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text('Task Timeline (Gantt Chart)', 14, currentY);
+        }
+
+        renderGanttChartToPDF(doc, tasksWithDates, currentY > 200 ? 30 : currentY + 10);
+      }
+
+      // Footer
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.text(
+          `AeroBrokerOne - Page ${i} of ${pageCount}`,
+          pageWidth / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: 'center' }
+        );
+      }
+
+      doc.save(`${deal.dealName.replace(/[^a-z0-9]/gi, '_')}_checklist.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert(`Error generating PDF: ${error.message}\n\nPlease check the browser console for details.`);
+    }
+  };
+
+  const renderGanttChartToPDF = (doc, tasks, startY) => {
+    const chartX = 14;
+    const chartWidth = doc.internal.pageSize.getWidth() - 28;
+    const rowHeight = 8;
+    const chartHeight = Math.min(tasks.length * rowHeight, 100);
+
+    // Find date range
+    const dates = tasks.map(t => new Date(t.dueDate));
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
+    const dateRange = maxDate - minDate || 1;
+
+    // Calculate dimensions
+    const labelWidth = 60;
+    const timelineWidth = chartWidth - labelWidth - 10;
+
+    // Draw tasks
+    tasks.forEach((task, index) => {
+      const y = startY + index * rowHeight;
+
+      // Task label
+      doc.setFontSize(8);
+      doc.setTextColor(0, 0, 0);
+      const taskLabel = task.title.length > 25 ? task.title.substring(0, 25) + '...' : task.title;
+      doc.text(taskLabel, chartX, y + 5);
+
+      // Timeline bar
+      const taskDate = new Date(task.dueDate);
+      const position = ((taskDate - minDate) / dateRange) * timelineWidth;
+      const barX = chartX + labelWidth + position;
+
+      // Color based on status and priority
+      if (task.status === 'completed') {
+        doc.setFillColor(76, 175, 80); // Green
+      } else if (task.priority === 'high') {
+        doc.setFillColor(244, 67, 54); // Red
+      } else if (task.priority === 'medium') {
+        doc.setFillColor(255, 152, 0); // Orange
+      } else {
+        doc.setFillColor(33, 150, 243); // Blue
+      }
+
+      doc.circle(barX, y + 3, 2, 'F');
+
+      // Date label
+      doc.setFontSize(7);
+      doc.setTextColor(100, 100, 100);
+      doc.text(new Date(task.dueDate).toLocaleDateString(), barX + 4, y + 4);
+    });
+
+    // Draw timeline axis
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(chartX + labelWidth, startY - 3, chartX + labelWidth + timelineWidth, startY - 3);
+
+    // Date markers
+    doc.setFontSize(7);
+    doc.setTextColor(100, 100, 100);
+    doc.text(minDate.toLocaleDateString(), chartX + labelWidth, startY - 5);
+    doc.text(maxDate.toLocaleDateString(), chartX + labelWidth + timelineWidth - 15, startY - 5);
+
+    // Add Legend
+    const legendY = startY + (tasks.length * rowHeight) + 10;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Legend:', chartX, legendY);
+
+    // Legend items
+    const legendItems = [
+      { color: [76, 175, 80], label: 'Completed' },
+      { color: [244, 67, 54], label: 'High Priority' },
+      { color: [255, 152, 0], label: 'Medium Priority' },
+      { color: [33, 150, 243], label: 'Low Priority / Pending' }
+    ];
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+
+    legendItems.forEach((item, index) => {
+      const legendItemX = chartX + (index * 45);
+      const legendItemY = legendY + 6;
+
+      // Draw colored circle
+      doc.setFillColor(...item.color);
+      doc.circle(legendItemX, legendItemY, 1.5, 'F');
+
+      // Draw label
+      doc.setTextColor(0, 0, 0);
+      doc.text(item.label, legendItemX + 4, legendItemY + 1);
+    });
+  };
+
+  if (tasks.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setShowGantt(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
+          style={{ border: `1px solid ${colors.primary}`, color: colors.primary, backgroundColor: colors.secondary }}
+        >
+          <BarChart3 size={18} />
+          View Gantt Chart
+        </button>
+        <button
+          onClick={exportToPDF}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
+          style={{ backgroundColor: colors.primary, color: colors.secondary }}
+        >
+          <Download size={18} />
+          Export Task Checklist PDF
+        </button>
+      </div>
+
+      {showGantt && (
+        <GanttChartModal
+          deal={deal}
+          tasks={tasks}
+          onClose={() => setShowGantt(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+const GanttChartModal = ({ deal, tasks, onClose }) => {
+  const { colors } = useTheme();
+  const tasksWithDates = tasks.filter(t => t.dueDate).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+  if (tasksWithDates.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="rounded-lg shadow-xl max-w-4xl w-full p-6" style={{ backgroundColor: colors.cardBg }}>
+          <h3 className="text-xl font-semibold mb-4" style={{ color: colors.primary }}>
+            Task Timeline - {deal.dealName}
+          </h3>
+          <p style={{ color: colors.textSecondary }}>No tasks with due dates to display in Gantt chart.</p>
+          <button
+            onClick={onClose}
+            className="mt-4 px-4 py-2 rounded-lg"
+            style={{ border: `1px solid ${colors.border}`, color: colors.textPrimary }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate date range
+  const dates = tasksWithDates.map(t => new Date(t.dueDate));
+  const minDate = new Date(Math.min(...dates));
+  const maxDate = new Date(Math.max(...dates));
+  const dateRange = maxDate - minDate || 1;
+
+  // Generate month labels
+  const monthLabels = [];
+  const currentDate = new Date(minDate);
+  while (currentDate <= maxDate) {
+    monthLabels.push({
+      date: new Date(currentDate),
+      label: currentDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    });
+    currentDate.setMonth(currentDate.getMonth() + 1);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto p-6" style={{ backgroundColor: colors.cardBg }}>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-xl font-semibold" style={{ color: colors.primary }}>
+              Task Timeline - {deal.dealName}
+            </h3>
+            <p className="text-sm" style={{ color: colors.textSecondary }}>
+              {minDate.toLocaleDateString()} - {maxDate.toLocaleDateString()}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg"
+            style={{ border: `1px solid ${colors.border}`, color: colors.textPrimary }}
+          >
+            Close
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <div className="min-w-[600px]">
+            {/* Timeline header */}
+            <div className="flex mb-2">
+              <div className="w-48 flex-shrink-0"></div>
+              <div className="flex-1 flex justify-between px-4" style={{ borderBottom: `2px solid ${colors.border}` }}>
+                {monthLabels.map((month, idx) => (
+                  <div key={idx} className="text-xs font-semibold pb-2" style={{ color: colors.textSecondary }}>
+                    {month.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tasks */}
+            <div className="space-y-2">
+              {tasksWithDates.map((task) => {
+                const taskDate = new Date(task.dueDate);
+                const position = ((taskDate - minDate) / dateRange) * 100;
+
+                let barColor = colors.primary;
+                if (task.status === 'completed') {
+                  barColor = '#4CAF50';
+                } else if (task.priority === 'high') {
+                  barColor = '#f44336';
+                } else if (task.priority === 'medium') {
+                  barColor = '#ff9800';
+                }
+
+                return (
+                  <div key={task.id} className="flex items-center py-2">
+                    <div className="w-48 flex-shrink-0 pr-4">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={task.status === 'completed'}
+                          readOnly
+                          className="w-4 h-4"
+                          style={{ accentColor: colors.primary }}
+                        />
+                        <span className={`text-sm ${task.status === 'completed' ? 'line-through' : ''}`} style={{ color: colors.textPrimary }}>
+                          {task.title.length > 30 ? task.title.substring(0, 30) + '...' : task.title}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 mt-1 ml-6">
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                          task.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
+                          'bg-blue-100 text-blue-700'
+                        }`}>
+                          {task.priority}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1 relative h-8 rounded" style={{ backgroundColor: colors.secondary }}>
+                      <div
+                        className="absolute top-0 h-full flex items-center justify-center rounded"
+                        style={{
+                          left: `${position}%`,
+                          width: '8px',
+                          backgroundColor: barColor,
+                          transform: 'translateX(-50%)'
+                        }}
+                      >
+                        <div
+                          className="absolute whitespace-nowrap text-xs font-medium px-2 py-1 rounded shadow-sm"
+                          style={{
+                            backgroundColor: barColor,
+                            color: colors.secondary,
+                            top: '-100%',
+                            left: '50%',
+                            transform: 'translateX(-50%)'
+                          }}
+                        >
+                          {new Date(task.dueDate).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="mt-6 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
+              <p className="text-sm font-semibold mb-2" style={{ color: colors.textPrimary }}>Legend:</p>
+              <div className="flex flex-wrap gap-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: '#4CAF50' }}></div>
+                  <span style={{ color: colors.textSecondary }}>Completed</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: '#f44336' }}></div>
+                  <span style={{ color: colors.textSecondary }}>High Priority</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ff9800' }}></div>
+                  <span style={{ color: colors.textSecondary }}>Medium Priority</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: colors.primary }}></div>
+                  <span style={{ color: colors.textSecondary }}>Low Priority / Pending</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TasksSection = ({ dealId, dealName, tasks, onToggleComplete, onUpdateTask, onAddTask }) => {
+  const { colors } = useTheme();
+  const [showTasks, setShowTasks] = useState(false);
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDueDate, setTaskDueDate] = useState('');
+  const [taskPriority, setTaskPriority] = useState('medium');
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editingDueDate, setEditingDueDate] = useState('');
+
+  const pendingTasks = tasks.filter(t => t.status === 'pending');
+
+  const handleAddTask = () => {
+    if (taskTitle.trim()) {
+      onAddTask({
+        title: taskTitle.trim(),
+        description: `Task for ${dealName}`,
+        dueDate: taskDueDate || null,
+        priority: taskPriority,
+        status: 'pending'
+      });
+      setTaskTitle('');
+      setTaskDueDate('');
+      setTaskPriority('medium');
+    }
+  };
+
+  const handleEditDueDate = (taskId, currentDueDate) => {
+    setEditingTaskId(taskId);
+    setEditingDueDate(currentDueDate || '');
+  };
+
+  const handleSaveDueDate = (taskId) => {
+    onUpdateTask(taskId, { dueDate: editingDueDate || null });
+    setEditingTaskId(null);
+    setEditingDueDate('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTaskId(null);
+    setEditingDueDate('');
+  };
+
+  const getPriorityBadgeClass = (priority) => {
+    switch (priority) {
+      case 'high':
+        return 'bg-red-100 text-red-700';
+      case 'medium':
+        return 'bg-orange-100 text-orange-700';
+      case 'low':
+        return 'bg-blue-100 text-blue-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  return (
+    <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
+      <button
+        onClick={() => setShowTasks(!showTasks)}
+        className="flex items-center gap-2 font-semibold mb-2"
+        style={{ color: colors.primary }}
+      >
+        <ListTodo size={18} />
+        Tasks ({tasks.length})
+        {pendingTasks.length > 0 && (
+          <span className="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700 font-bold">
+            {pendingTasks.length} pending
+          </span>
+        )}
+        <span className="text-xs" style={{ color: colors.textSecondary }}>{showTasks ? '▼' : '▶'}</span>
+      </button>
+
+      {showTasks && (
+        <div className="space-y-3">
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {tasks.length === 0 ? (
+              <p className="text-sm italic" style={{ color: colors.textSecondary }}>No tasks yet</p>
+            ) : (
+              tasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-start gap-3 p-3 rounded"
+                  style={{ backgroundColor: colors.secondary }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={task.status === 'completed'}
+                    onChange={() => onToggleComplete(task.id, task.status)}
+                    className="mt-1 w-4 h-4 cursor-pointer"
+                    style={{ accentColor: colors.primary }}
+                  />
+                  <div className="flex-1">
+                    <p
+                      className={`font-medium ${task.status === 'completed' ? 'line-through' : ''}`}
+                      style={{ color: task.status === 'completed' ? colors.textSecondary : colors.textPrimary }}
+                    >
+                      {task.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {editingTaskId === task.id ? (
+                        <>
+                          <input
+                            type="date"
+                            value={editingDueDate}
+                            onChange={(e) => setEditingDueDate(e.target.value)}
+                            className="text-xs px-2 py-1 rounded"
+                            style={{
+                              backgroundColor: colors.cardBg,
+                              color: colors.textPrimary,
+                              border: `1px solid ${colors.border}`
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => handleSaveDueDate(task.id)}
+                            className="text-xs px-2 py-1 rounded font-semibold"
+                            style={{ backgroundColor: colors.primary, color: colors.secondary }}
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="text-xs px-2 py-1 rounded"
+                            style={{ border: `1px solid ${colors.border}`, color: colors.textSecondary }}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <p
+                          className="text-xs cursor-pointer hover:underline"
+                          style={{ color: colors.textSecondary }}
+                          onClick={() => handleEditDueDate(task.id, task.dueDate)}
+                          title="Click to edit due date"
+                        >
+                          Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No date set'} ✏️
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded flex-shrink-0 ${getPriorityBadgeClass(task.priority)}`}>
+                    {task.priority}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="space-y-2 p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+            <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>Quick Add Task</p>
+            <input
+              type="text"
+              value={taskTitle}
+              onChange={(e) => setTaskTitle(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddTask()}
+              placeholder="Task title..."
+              className="w-full px-3 py-2 text-sm rounded-lg"
+              style={{
+                backgroundColor: colors.cardBg,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.border}`
+              }}
+            />
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={taskDueDate}
+                onChange={(e) => setTaskDueDate(e.target.value)}
+                className="flex-1 px-3 py-2 text-sm rounded-lg"
+                style={{
+                  backgroundColor: colors.cardBg,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`
+                }}
+              />
+              <select
+                value={taskPriority}
+                onChange={(e) => setTaskPriority(e.target.value)}
+                className="px-3 py-2 text-sm rounded-lg"
+                style={{
+                  backgroundColor: colors.cardBg,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`
+                }}
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+              <button
+                onClick={handleAddTask}
+                className="px-4 py-2 rounded-lg font-semibold"
+                style={{ backgroundColor: colors.primary, color: colors.secondary }}
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const NotesSection = ({ notes, onAddNote }) => {
+  const { colors } = useTheme();
+  const [noteText, setNoteText] = useState('');
+  const [showNotes, setShowNotes] = useState(false);
+
+  const handleAddNote = () => {
+    if (noteText.trim()) {
+      onAddNote(noteText.trim());
+      setNoteText('');
+    }
+  };
+
+  return (
+    <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
+      <button
+        onClick={() => setShowNotes(!showNotes)}
+        className="flex items-center gap-2 font-semibold mb-2"
+        style={{ color: colors.primary }}
+      >
+        <MessageSquare size={18} />
+        Notes ({notes.length})
+        <span className="text-xs" style={{ color: colors.textSecondary }}>{showNotes ? '▼' : '▶'}</span>
+      </button>
+
+      {showNotes && (
+        <div className="space-y-3">
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {notes.length === 0 ? (
+              <p className="text-sm italic" style={{ color: colors.textSecondary }}>No notes yet</p>
+            ) : (
+              notes.slice().reverse().map((note) => (
+                <div key={note.id} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                  <p style={{ color: colors.textPrimary }}>{note.text}</p>
+                  <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                    {new Date(note.timestamp).toLocaleString()}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddNote()}
+              placeholder="Add a note..."
+              className="flex-1 px-3 py-2 text-sm rounded-lg"
+              style={{
+                backgroundColor: colors.secondary,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.border}`
+              }}
+            />
+            <button
+              onClick={handleAddNote}
+              className="px-4 py-2 rounded-lg font-semibold"
+              style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DealsView;

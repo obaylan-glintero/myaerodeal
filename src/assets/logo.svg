@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300">
+  <defs>
+    <linearGradient id="jetGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#A88847;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C9A55A;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#C9A55A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A88847;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Circular background element suggesting AI/tech -->
+  <circle cx="80" cy="150" r="65" fill="url(#accentGradient)" opacity="0.15"/>
+  
+  <!-- Stylized jet icon -->
+  <g transform="translate(30, 130)">
+    <!-- Main fuselage -->
+    <path d="M 20 20 L 100 20 L 110 15 L 115 20 L 110 25 L 100 20 Z" 
+          fill="url(#jetGradient)" stroke="#0A1628" stroke-width="1.5"/>
+    
+    <!-- Wings -->
+    <path d="M 45 20 L 35 5 L 65 20 Z" 
+          fill="url(#jetGradient)" opacity="0.9"/>
+    <path d="M 45 20 L 35 35 L 65 20 Z" 
+          fill="url(#jetGradient)" opacity="0.9"/>
+    
+    <!-- Tail -->
+    <path d="M 25 20 L 15 10 L 25 15 Z" 
+          fill="#0A1628"/>
+    <path d="M 25 20 L 15 30 L 25 25 Z" 
+          fill="#0A1628"/>
+    
+    <!-- Engine detail -->
+    <ellipse cx="70" cy="20" rx="8" ry="6" fill="#C9A55A" opacity="0.6"/>
+    
+    <!-- Speed lines/motion effect -->
+    <line x1="5" y1="15" x2="15" y2="15" stroke="#C9A55A" stroke-width="2" opacity="0.4"/>
+    <line x1="0" y1="20" x2="15" y2="20" stroke="#C9A55A" stroke-width="2.5" opacity="0.5"/>
+    <line x1="5" y1="25" x2="15" y2="25" stroke="#C9A55A" stroke-width="2" opacity="0.4"/>
+  </g>
+  
+  <!-- AI Circuit pattern element -->
+  <g transform="translate(115, 135)" opacity="0.3">
+    <circle cx="0" cy="0" r="3" fill="#C9A55A"/>
+    <line x1="0" y1="0" x2="15" y2="0" stroke="#C9A55A" stroke-width="1.5"/>
+    <circle cx="15" cy="0" r="2.5" fill="#C9A55A"/>
+    <line x1="0" y1="0" x2="7" y2="-10" stroke="#C9A55A" stroke-width="1.5"/>
+    <circle cx="7" cy="-10" r="2" fill="#C9A55A"/>
+  </g>
+  
+  <!-- Company name -->
+  <text x="170" y="165" font-family="Arial, sans-serif" font-size="56" font-weight="700" fill="#050A14">
+    Aero<tspan fill="#C9A55A">Broker</tspan><tspan font-size="48" baseline-shift="super" fill="#C9A55A">One</tspan>
+  </text>
+  
+  <!-- Tagline -->
+  <text x="172" y="190" font-family="Arial, sans-serif" font-size="16" font-weight="400" fill="#8A95A5" letter-spacing="1">
+    AI-POWERED JET BROKERAGE CRM
+  </text>
+  
+  <!-- Decorative line under tagline -->
+  <line x1="172" y1="195" x2="350" y2="195" stroke="#1A2A42" stroke-width="2" opacity="0.3"/>
+</svg>
