@@ -533,10 +533,7 @@ export const useStore = create((set, get) => ({
         status: lead.status,
         notes: lead.notes,
         presentations: [],
-        timestamped_notes: [],
-        source: 'Initial Sample',
-        email: `${lead.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-        phone: '+1 (555) 123-4567'
+        timestamped_notes: []
       }));
 
       const { data: insertedLeads, error: leadsError } = await supabase
