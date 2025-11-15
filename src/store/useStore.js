@@ -1262,7 +1262,7 @@ export const useStore = create((set, get) => ({
 
   // Deal Actions
   addDeal: async (dealData) => {
-    const { deals, createAutoTask, isAuthenticated, currentUser, currentUserProfile, saveToLocalStorage } = get();
+    const { deals, leads, createAutoTask, isAuthenticated, currentUser, currentUserProfile, saveToLocalStorage } = get();
 
     const history = [{ date: new Date().toISOString(), action: 'Deal created', status: dealData.status || 'LOI Signed' }];
 
