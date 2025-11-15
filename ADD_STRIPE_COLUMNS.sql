@@ -3,13 +3,17 @@
 
 -- Add Stripe-related columns to companies table
 ALTER TABLE companies
+ADD COLUMN IF NOT EXISTS approved BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT,
 ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT,
 ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'inactive',
 ADD COLUMN IF NOT EXISTS subscription_start_date TIMESTAMPTZ,
 ADD COLUMN IF NOT EXISTS subscription_end_date TIMESTAMPTZ;
 
--- Create index for faster Stripe customer lookups
+-- Create indexes for faster lookups
+CREATE INDEX IF NOT EXISTS idx_companies_approved
+ON companies(approved);
+
 CREATE INDEX IF NOT EXISTS idx_companies_stripe_customer
 ON companies(stripe_customer_id);
 
@@ -62,6 +66,7 @@ USING (company_id = (
 */
 
 -- Add helpful comments
+COMMENT ON COLUMN companies.approved IS 'Whether company has been approved (via payment or manual approval)';
 COMMENT ON COLUMN companies.stripe_customer_id IS 'Stripe customer ID for billing';
 COMMENT ON COLUMN companies.stripe_subscription_id IS 'Current active subscription ID';
 COMMENT ON COLUMN companies.subscription_status IS 'active, inactive, canceled, past_due';
