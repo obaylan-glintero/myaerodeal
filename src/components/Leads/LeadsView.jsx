@@ -7,7 +7,7 @@ const LeadsView = ({ openModal }) => {
   const { leads, aircraft, deleteLead, addNoteToLead } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('active');
   const [filterAircraftType, setFilterAircraftType] = useState('all');
   const [sortBy, setSortBy] = useState('dateNewest');
   const [viewMode, setViewMode] = useState('card');
