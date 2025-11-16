@@ -22,6 +22,7 @@ const AuthPage = () => {
   const [invitationData, setInvitationData] = useState(null);
   const [checkingInvitation, setCheckingInvitation] = useState(true);
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, feedback: [] });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const { colors, isDark } = useTheme();
   const logo = isDark ? logoDark : logoLight;
 
@@ -167,6 +168,11 @@ const AuthPage = () => {
         const passwordValidation = validatePassword(password);
         if (!passwordValidation.isValid) {
           throw new Error('Password does not meet security requirements: ' + passwordValidation.feedback.join(', '));
+        }
+
+        // Validate terms acceptance
+        if (!acceptedTerms) {
+          throw new Error('You must accept the Terms and Conditions and Privacy Policy to create an account');
         }
 
         // Check if this is an invitation signup
@@ -591,15 +597,55 @@ const AuthPage = () => {
             </div>
           )}
 
+          {/* Terms and Privacy Acceptance (Sign Up Only) */}
+          {!isLogin && (
+            <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
+              <input
+                type="checkbox"
+                id="acceptTerms"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                required
+                className="mt-1 w-4 h-4 flex-shrink-0"
+                style={{ accentColor: colors.primary }}
+              />
+              <label htmlFor="acceptTerms" className="text-sm cursor-pointer" style={{ color: colors.textPrimary }}>
+                I have read and agree to the{' '}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold underline hover:opacity-70"
+                  style={{ color: colors.primary }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Terms and Conditions
+                </a>
+                {' '}and{' '}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold underline hover:opacity-70"
+                  style={{ color: colors.primary }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Privacy Policy
+                </a>
+              </label>
+            </div>
+          )}
+
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (!isLogin && !acceptedTerms)}
             className="w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2"
             style={{
               backgroundColor: colors.primary,
               color: colors.secondary,
-              opacity: loading ? 0.7 : 1
+              opacity: (loading || (!isLogin && !acceptedTerms)) ? 0.5 : 1,
+              cursor: (loading || (!isLogin && !acceptedTerms)) ? 'not-allowed' : 'pointer'
             }}
           >
             {loading && <Loader size={20} className="animate-spin" />}

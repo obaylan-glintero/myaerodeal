@@ -15,6 +15,8 @@ import AIAssistant from './components/AI/AIAssistant';
 import Modal from './components/Common/Modal';
 import PaymentSuccess from './components/Auth/PaymentSuccess';
 import PaymentCancel from './components/Auth/PaymentCancel';
+import PrivacyPolicy from './components/Legal/PrivacyPolicy';
+import TermsConditions from './components/Legal/TermsConditions';
 import { useStore } from './store/useStore';
 
 // Inner component that has access to auth context
@@ -142,6 +144,22 @@ function App() {
     return (
       <AuthProvider>
         <PaymentCancel />
+      </AuthProvider>
+    );
+  }
+
+  if (pathname === '/privacy') {
+    return (
+      <AuthProvider>
+        <PrivacyPolicy />
+      </AuthProvider>
+    );
+  }
+
+  if (pathname === '/terms') {
+    return (
+      <AuthProvider>
+        <TermsConditions />
       </AuthProvider>
     );
   }
