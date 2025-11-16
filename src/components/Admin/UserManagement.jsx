@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Users as UsersIcon, Shield, User, Mail, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users as UsersIcon, Shield, User, Mail, X, AlertTriangle } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -23,6 +23,11 @@ const UserManagement = () => {
   });
   const [loading, setLoading] = useState(false);
 
+  // Constants for user limits
+  const MAX_USERS = 5;
+  const activeUserCount = companyUsers.filter(u => u.active).length;
+  const isAtLimit = activeUserCount >= MAX_USERS;
+
   useEffect(() => {
     loadCompanyUsers();
   }, []);
@@ -36,7 +41,7 @@ const UserManagement = () => {
     setLoading(true);
     try {
       await inviteUser(inviteData);
-      alert('User invited successfully! They will receive an email to set up their account.');
+      // Success message is shown by inviteUser function
       setShowInviteModal(false);
       setInviteData({ email: '', firstName: '', lastName: '', role: 'user' });
       loadCompanyUsers();
@@ -88,26 +93,57 @@ const UserManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>User Management</h2>
+        <div>
+          <h2 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>User Management</h2>
+          <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+            {activeUserCount} of {MAX_USERS} users
+            {isAtLimit && (
+              <span className="ml-2 text-xs px-2 py-1 rounded font-semibold" style={{ backgroundColor: colors.error, color: 'white' }}>
+                Limit Reached
+              </span>
+            )}
+          </p>
+        </div>
         <button
           onClick={() => setShowInviteModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
-          style={{ backgroundColor: colors.primary, color: colors.secondary }}
+          disabled={isAtLimit}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-opacity"
+          style={{
+            backgroundColor: isAtLimit ? colors.border : colors.primary,
+            color: colors.secondary,
+            opacity: isAtLimit ? 0.6 : 1,
+            cursor: isAtLimit ? 'not-allowed' : 'pointer'
+          }}
+          title={isAtLimit ? 'User limit reached. Please contact support to increase your limit.' : 'Invite a new user'}
         >
           <Plus size={20} /> Invite User
         </button>
       </div>
 
+      {/* User Limit Warning */}
+      {isAtLimit && (
+        <div className="rounded-lg p-4 flex items-start gap-3" style={{ backgroundColor: `${colors.error}15`, border: `1px solid ${colors.error}` }}>
+          <AlertTriangle size={20} style={{ color: colors.error, flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <p className="font-semibold" style={{ color: colors.error }}>User Limit Reached</p>
+            <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+              Your company has reached the maximum limit of {MAX_USERS} users.
+              Please contact support to increase your user limit if you need to add more team members.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
         <div className="flex items-center gap-2 mb-4">
           <UsersIcon size={24} style={{ color: colors.primary }} />
           <h3 className="text-xl font-semibold" style={{ color: colors.primary }}>
-            Company Users ({companyUsers.length})
+            Active Users ({activeUserCount})
           </h3>
         </div>
 
         <div className="space-y-3">
-          {companyUsers.map(user => (
+          {companyUsers.filter(u => u.active).map(user => (
             <div
               key={user.id}
               className="flex items-center justify-between p-4 rounded-lg"

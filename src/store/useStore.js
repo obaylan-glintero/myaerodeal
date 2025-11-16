@@ -862,6 +862,19 @@ export const useStore = create((set, get) => ({
       throw new Error('Only admins can invite users');
     }
 
+    // Check if company can add more users (5 user limit)
+    const { data: canAddUser, error: checkError } = await supabase
+      .rpc('can_add_user_to_company', { p_company_id: profile.company_id });
+
+    if (checkError) {
+      console.error('Error checking user limit:', checkError);
+      throw new Error('Failed to verify company user limit');
+    }
+
+    if (!canAddUser) {
+      throw new Error('Your company has reached the maximum limit of 5 users. Please contact support to increase your limit.');
+    }
+
     // Generate a unique token
     const token = crypto.randomUUID();
 
@@ -878,18 +891,42 @@ export const useStore = create((set, get) => ({
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Check if error is due to user limit
+      if (error.message && error.message.includes('maximum limit')) {
+        throw new Error(error.message);
+      }
+      throw error;
+    }
 
-    // Generate invitation URL
-    const invitationUrl = `${window.location.origin}?invitation=${token}`;
-
-    // In a production app, you would send an email here
-    // For now, copy the URL to clipboard
+    // Send invitation email automatically
     try {
-      await navigator.clipboard.writeText(invitationUrl);
-      alert(`Invitation created!\n\nInvitation link copied to clipboard:\n${invitationUrl}\n\nSend this link to ${userData.email}`);
-    } catch (clipboardError) {
-      alert(`Invitation created!\n\nSend this link to ${userData.email}:\n${invitationUrl}`);
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const response = await supabase.functions.invoke('send-invitation-email', {
+        body: { invitationId: data.id },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`
+        }
+      });
+
+      if (response.error) {
+        console.error('Error sending invitation email:', response.error);
+        // Don't throw - invitation was created, just email failed
+        alert(`Invitation created for ${userData.email}, but email delivery failed. Please contact them directly with this link:\n${window.location.origin}?invitation=${token}`);
+      } else {
+        alert(`Invitation sent successfully! An email has been sent to ${userData.email} with instructions to join your team.`);
+      }
+    } catch (emailError) {
+      console.error('Failed to send invitation email:', emailError);
+      // Fallback to manual link sharing
+      const invitationUrl = `${window.location.origin}?invitation=${token}`;
+      try {
+        await navigator.clipboard.writeText(invitationUrl);
+        alert(`Invitation created, but automated email failed.\n\nInvitation link copied to clipboard:\n${invitationUrl}\n\nPlease send this link to ${userData.email} manually.`);
+      } catch (clipboardError) {
+        alert(`Invitation created, but automated email failed.\n\nPlease send this link to ${userData.email}:\n${invitationUrl}`);
+      }
     }
 
     return data;
