@@ -499,7 +499,7 @@ const AircraftView = ({ openModal }) => {
                   <div className="flex justify-between text-sm">
                     <span style={{ color: colors.textSecondary }}>Seller:</span>
                     <span className="font-medium" style={{ color: colors.textPrimary }}>{ac.seller}</span>
-                  </div>
+                  </div></div>
                 )}
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
