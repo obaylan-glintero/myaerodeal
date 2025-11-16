@@ -7,7 +7,7 @@ const LeadsView = ({ openModal }) => {
   const { leads, aircraft, deleteLead, addNoteToLead } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('active');
   const [filterAircraftType, setFilterAircraftType] = useState('all');
   const [sortBy, setSortBy] = useState('dateNewest');
   const [viewMode, setViewMode] = useState('card');
@@ -16,7 +16,10 @@ const LeadsView = ({ openModal }) => {
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          lead.company?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || lead.status === filterStatus;
+    const matchesStatus =
+      filterStatus === 'all' ||
+      (filterStatus === 'active' && lead.status !== 'Lost' && lead.status !== 'Deal Created') ||
+      lead.status === filterStatus;
     const matchesAircraftType = filterAircraftType === 'all' || lead.aircraftType === filterAircraftType;
     return matchesSearch && matchesStatus && matchesAircraftType;
   });
@@ -108,6 +111,7 @@ const LeadsView = ({ openModal }) => {
           }}
         >
           <option value="all">All Status</option>
+          <option value="active">All Active Leads</option>
           <option value="Inquiry">Inquiry</option>
           <option value="Presented">Presented</option>
           <option value="Interested">Interested</option>
