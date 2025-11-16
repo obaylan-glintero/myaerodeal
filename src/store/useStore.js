@@ -862,6 +862,55 @@ export const useStore = create((set, get) => ({
       throw new Error('Only admins can invite users');
     }
 
+    // Check if user is already in the company
+    const { data: existingUser } = await supabase
+      .from('profiles')
+      .select('id, email, active')
+      .eq('company_id', profile.company_id)
+      .eq('email', userData.email)
+      .single();
+
+    if (existingUser) {
+      if (existingUser.active) {
+        throw new Error(`${userData.email} is already a member of your company.`);
+      } else {
+        throw new Error(`${userData.email} was previously a member. Please contact support to reactivate this user.`);
+      }
+    }
+
+    // Check if an invitation already exists
+    const { data: existingInvitation } = await supabase
+      .from('user_invitations')
+      .select('*')
+      .eq('company_id', profile.company_id)
+      .eq('email', userData.email)
+      .single();
+
+    let invitationData;
+    let isResend = false;
+
+    if (existingInvitation) {
+      // Check if invitation is expired
+      const isExpired = new Date(existingInvitation.expires_at) < new Date();
+      const isPending = existingInvitation.status === 'pending';
+
+      if (existingInvitation.status === 'accepted') {
+        throw new Error(`An invitation for ${userData.email} was already accepted. The user should already be in your company.`);
+      }
+
+      if (isPending && !isExpired) {
+        // Invitation is still valid - resend email
+        invitationData = existingInvitation;
+        isResend = true;
+      } else {
+        // Invitation is expired or cancelled - delete and create new one
+        await supabase
+          .from('user_invitations')
+          .delete()
+          .eq('id', existingInvitation.id);
+      }
+    }
+
     // Check if company can add more users (5 user limit)
     const { data: canAddUser, error: checkError } = await supabase
       .rpc('can_add_user_to_company', { p_company_id: profile.company_id });
@@ -875,28 +924,31 @@ export const useStore = create((set, get) => ({
       throw new Error('Your company has reached the maximum limit of 5 users. Please contact support to increase your limit.');
     }
 
-    // Generate a unique token
-    const token = crypto.randomUUID();
+    // Create new invitation if we don't have one to resend
+    if (!invitationData) {
+      const token = crypto.randomUUID();
 
-    // Create invitation in database
-    const { data, error } = await supabase
-      .from('user_invitations')
-      .insert({
-        company_id: profile.company_id,
-        email: userData.email,
-        invited_by: profile.id,
-        role: userData.role || 'user',
-        token: token
-      })
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from('user_invitations')
+        .insert({
+          company_id: profile.company_id,
+          email: userData.email,
+          invited_by: profile.id,
+          role: userData.role || 'user',
+          token: token
+        })
+        .select()
+        .single();
 
-    if (error) {
-      // Check if error is due to user limit
-      if (error.message && error.message.includes('maximum limit')) {
-        throw new Error(error.message);
+      if (error) {
+        // Check if error is due to user limit
+        if (error.message && error.message.includes('maximum limit')) {
+          throw new Error(error.message);
+        }
+        throw error;
       }
-      throw error;
+
+      invitationData = data;
     }
 
     // Send invitation email automatically
@@ -904,7 +956,7 @@ export const useStore = create((set, get) => ({
       const { data: { session } } = await supabase.auth.getSession();
 
       const response = await supabase.functions.invoke('send-invitation-email', {
-        body: { invitationId: data.id },
+        body: { invitationId: invitationData.id },
         headers: {
           Authorization: `Bearer ${session?.access_token}`
         }
@@ -913,23 +965,23 @@ export const useStore = create((set, get) => ({
       if (response.error) {
         console.error('Error sending invitation email:', response.error);
         // Don't throw - invitation was created, just email failed
-        alert(`Invitation created for ${userData.email}, but email delivery failed. Please contact them directly with this link:\n${window.location.origin}?invitation=${token}`);
+        alert(`Invitation ${isResend ? 'exists' : 'created'} for ${userData.email}, but email delivery failed. Please contact them directly with this link:\n${window.location.origin}?invitation=${invitationData.token}`);
       } else {
-        alert(`Invitation sent successfully! An email has been sent to ${userData.email} with instructions to join your team.`);
+        alert(`Invitation ${isResend ? 'resent' : 'sent'} successfully! An email has been sent to ${userData.email} with instructions to join your team.`);
       }
     } catch (emailError) {
       console.error('Failed to send invitation email:', emailError);
       // Fallback to manual link sharing
-      const invitationUrl = `${window.location.origin}?invitation=${token}`;
+      const invitationUrl = `${window.location.origin}?invitation=${invitationData.token}`;
       try {
         await navigator.clipboard.writeText(invitationUrl);
-        alert(`Invitation created, but automated email failed.\n\nInvitation link copied to clipboard:\n${invitationUrl}\n\nPlease send this link to ${userData.email} manually.`);
+        alert(`Invitation ${isResend ? 'exists' : 'created'}, but automated email failed.\n\nInvitation link copied to clipboard:\n${invitationUrl}\n\nPlease send this link to ${userData.email} manually.`);
       } catch (clipboardError) {
-        alert(`Invitation created, but automated email failed.\n\nPlease send this link to ${userData.email}:\n${invitationUrl}`);
+        alert(`Invitation ${isResend ? 'exists' : 'created'}, but automated email failed.\n\nPlease send this link to ${userData.email}:\n${invitationUrl}`);
       }
     }
 
-    return data;
+    return invitationData;
   },
 
   // Update user role (admin only)
