@@ -228,6 +228,7 @@ const DealsView = ({ openModal }) => {
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Seller</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>YoM</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Deal Value</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Created</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Est. Closing</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Status</th>
                   <th className="text-right px-4 py-3 font-semibold" style={{ color: colors.primary }}>Actions</th>
@@ -268,6 +269,9 @@ const DealsView = ({ openModal }) => {
                         <span className="font-bold text-lg" style={{ color: colors.primary }}>
                           {deal.dealValue ? `$${(deal.dealValue / 1000000).toFixed(1)}M` : 'N/A'}
                         </span>
+                      </td>
+                      <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                        {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
                         {deal.estimatedClosing || 'Not set'}
