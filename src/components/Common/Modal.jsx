@@ -125,6 +125,7 @@ const Modal = ({ modalType, editingItem, closeModal }) => {
 // Form Components
 const LeadForm = ({ formData, setFormData }) => {
   const { colors } = useTheme();
+  const [budgetError, setBudgetError] = React.useState('');
 
   const inputStyle = {
     backgroundColor: colors.cardBg,
@@ -189,14 +190,37 @@ const LeadForm = ({ formData, setFormData }) => {
           Budget Known
         </label>
         {formData.budgetKnown && (
-          <input
-            type="number"
-            placeholder="Budget (USD)"
-            value={formData.budget || ''}
-            onChange={(e) => setFormData({ ...formData, budget: Number(e.target.value) })}
-            className="flex-1 px-4 py-2 border rounded-lg"
-            style={inputStyle}
-          />
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Budget (USD)"
+              value={formData.budget || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Check if the value is empty or a valid number
+                if (value === '') {
+                  setBudgetError('');
+                  setFormData({ ...formData, budget: '' });
+                } else if (isNaN(value) || isNaN(parseFloat(value))) {
+                  setBudgetError('Please enter a valid number');
+                  setFormData({ ...formData, budget: value });
+                } else {
+                  setBudgetError('');
+                  setFormData({ ...formData, budget: Number(value) });
+                }
+              }}
+              className="w-full px-4 py-2 border rounded-lg"
+              style={{
+                ...inputStyle,
+                borderColor: budgetError ? '#EF4444' : colors.border,
+              }}
+            />
+            {budgetError && (
+              <p className="text-sm mt-1" style={{ color: '#EF4444' }}>
+                ⚠️ {budgetError}
+              </p>
+            )}
+          </div>
         )}
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -251,6 +275,7 @@ const AircraftForm = ({ formData, setFormData }) => {
   const imageInputRef = React.useRef(null);
   const [isSearching, setIsSearching] = React.useState(false);
   const [isExtracting, setIsExtracting] = React.useState(false);
+  const [priceError, setPriceError] = React.useState('');
   const { extractAircraftDataFromPDF } = useStore();
   const { colors } = useTheme();
 
@@ -418,14 +443,37 @@ const AircraftForm = ({ formData, setFormData }) => {
         className="w-full px-4 py-2 border rounded-lg"
         style={inputStyle}
       />
-      <input
-        type="number"
-        placeholder="Price (USD) *"
-        value={formData.price || ''}
-        onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-        className="w-full px-4 py-2 border rounded-lg"
-        style={inputStyle}
-      />
+      <div>
+        <input
+          type="text"
+          placeholder="Price (USD) *"
+          value={formData.price || ''}
+          onChange={(e) => {
+            const value = e.target.value;
+            // Check if the value is empty or a valid number
+            if (value === '') {
+              setPriceError('');
+              setFormData({ ...formData, price: '' });
+            } else if (isNaN(value) || isNaN(parseFloat(value))) {
+              setPriceError('Please enter a valid number');
+              setFormData({ ...formData, price: value });
+            } else {
+              setPriceError('');
+              setFormData({ ...formData, price: Number(value) });
+            }
+          }}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={{
+            ...inputStyle,
+            borderColor: priceError ? '#EF4444' : colors.border,
+          }}
+        />
+        {priceError && (
+          <p className="text-sm mt-1" style={{ color: '#EF4444' }}>
+            ⚠️ {priceError}
+          </p>
+        )}
+      </div>
       <select
         value={formData.accessType || 'Direct'}
         onChange={(e) => setFormData({ ...formData, accessType: e.target.value })}
@@ -542,6 +590,7 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
   const { leads, aircraft } = useStore();
   const fileInputRef = React.useRef(null);
   const { colors } = useTheme();
+  const [dealValueError, setDealValueError] = React.useState('');
 
   const inputStyle = {
     backgroundColor: colors.cardBg,
@@ -667,13 +716,34 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
           Deal Value (USD) *
         </label>
         <input
-          type="number"
+          type="text"
           placeholder="Enter deal value"
           value={formData.dealValue || ''}
-          onChange={(e) => setFormData({ ...formData, dealValue: Number(e.target.value) })}
+          onChange={(e) => {
+            const value = e.target.value;
+            // Check if the value is empty or a valid number
+            if (value === '') {
+              setDealValueError('');
+              setFormData({ ...formData, dealValue: '' });
+            } else if (isNaN(value) || isNaN(parseFloat(value))) {
+              setDealValueError('Please enter a valid number');
+              setFormData({ ...formData, dealValue: value });
+            } else {
+              setDealValueError('');
+              setFormData({ ...formData, dealValue: Number(value) });
+            }
+          }}
           className="w-full px-4 py-2 border rounded-lg"
-          style={inputStyle}
+          style={{
+            ...inputStyle,
+            borderColor: dealValueError ? '#EF4444' : colors.border,
+          }}
         />
+        {dealValueError && (
+          <p className="text-sm mt-1" style={{ color: '#EF4444' }}>
+            ⚠️ {dealValueError}
+          </p>
+        )}
       </div>
       <div>
         <label className="block text-sm font-medium mb-2" style={{ color: colors.textPrimary }}>
@@ -832,6 +902,7 @@ const TaskForm = ({ formData, setFormData }) => {
 const PresentationForm = ({ formData, setFormData, modalType, editingItem }) => {
   const { leads, aircraft } = useStore();
   const { colors } = useTheme();
+  const [priceError, setPriceError] = React.useState('');
 
   const inputStyle = {
     backgroundColor: colors.cardBg,
@@ -897,14 +968,37 @@ const PresentationForm = ({ formData, setFormData, modalType, editingItem }) => 
           )}
         />
       )}
-      <input
-        type="number"
-        placeholder="Price Given (USD) *"
-        value={formData.price || ''}
-        onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-        className="w-full px-4 py-2 border rounded-lg"
-        style={inputStyle}
-      />
+      <div>
+        <input
+          type="text"
+          placeholder="Price Given (USD) *"
+          value={formData.price || ''}
+          onChange={(e) => {
+            const value = e.target.value;
+            // Check if the value is empty or a valid number
+            if (value === '') {
+              setPriceError('');
+              setFormData({ ...formData, price: '' });
+            } else if (isNaN(value) || isNaN(parseFloat(value))) {
+              setPriceError('Please enter a valid number');
+              setFormData({ ...formData, price: value });
+            } else {
+              setPriceError('');
+              setFormData({ ...formData, price: Number(value) });
+            }
+          }}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={{
+            ...inputStyle,
+            borderColor: priceError ? '#EF4444' : colors.border,
+          }}
+        />
+        {priceError && (
+          <p className="text-sm mt-1" style={{ color: '#EF4444' }}>
+            ⚠️ {priceError}
+          </p>
+        )}
+      </div>
       <textarea
         placeholder="Presentation Notes"
         value={formData.notes || ''}
