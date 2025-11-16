@@ -221,7 +221,7 @@ const DealsView = ({ openModal }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <div>
                   <p className="text-sm" style={{ color: colors.textSecondary }}>Aircraft</p>
                   <p className="font-medium" style={{ color: colors.textPrimary }}>{ac?.manufacturer} {ac?.model} {!ac && 'Not specified'}</p>
@@ -235,6 +235,12 @@ const DealsView = ({ openModal }) => {
                 <div>
                   <p className="text-sm" style={{ color: colors.textSecondary }}>Est. Closing</p>
                   <p className="font-medium" style={{ color: colors.textPrimary }}>{deal.estimatedClosing || 'Not specified'}</p>
+                </div>
+                <div>
+                  <p className="text-sm" style={{ color: colors.textSecondary }}>Created</p>
+                  <p className="font-medium" style={{ color: colors.textPrimary }}>
+                    {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString() : 'N/A'}
+                  </p>
                 </div>
               </div>
 
