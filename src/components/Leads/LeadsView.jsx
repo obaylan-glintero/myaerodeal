@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, MessageSquare, Send, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, MessageSquare, Send, ArrowUpDown, LayoutGrid, List } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -10,6 +10,7 @@ const LeadsView = ({ openModal }) => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterAircraftType, setFilterAircraftType] = useState('all');
   const [sortBy, setSortBy] = useState('dateNewest');
+  const [viewMode, setViewMode] = useState('card');
 
   // Filter leads
   const filteredLeads = leads.filter(lead => {
@@ -46,13 +47,38 @@ const LeadsView = ({ openModal }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Leads</h2>
-        <button
-          onClick={() => openModal('lead')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
-          style={{ backgroundColor: colors.primary, color: colors.secondary }}
-        >
-          <Plus size={20} /> Add Lead
-        </button>
+        <div className="flex gap-2">
+          <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
+            <button
+              onClick={() => setViewMode('card')}
+              className="flex items-center gap-2 px-4 py-2 font-semibold"
+              style={{
+                backgroundColor: viewMode === 'card' ? colors.primary : colors.cardBg,
+                color: viewMode === 'card' ? colors.secondary : colors.textPrimary
+              }}
+            >
+              <LayoutGrid size={18} /> Card
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className="flex items-center gap-2 px-4 py-2 font-semibold"
+              style={{
+                backgroundColor: viewMode === 'list' ? colors.primary : colors.cardBg,
+                color: viewMode === 'list' ? colors.secondary : colors.textPrimary,
+                borderLeft: `1px solid ${colors.border}`
+              }}
+            >
+              <List size={18} /> List
+            </button>
+          </div>
+          <button
+            onClick={() => openModal('lead')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.primary, color: colors.secondary }}
+          >
+            <Plus size={20} /> Add Lead
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-4 items-center">
@@ -129,8 +155,97 @@ const LeadsView = ({ openModal }) => {
         Showing {sortedLeads.length} of {leads.length} leads
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {sortedLeads.map(lead => (
+      {viewMode === 'list' ? (
+        <div className="rounded-lg shadow-lg overflow-hidden" style={{ backgroundColor: colors.cardBg }}>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr style={{ backgroundColor: colors.secondary, borderBottom: `2px solid ${colors.border}` }}>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Lead</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Aircraft Type</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Budget</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Year Pref.</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Status</th>
+                  <th className="text-right px-4 py-3 font-semibold" style={{ color: colors.primary }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedLeads.map(lead => (
+                  <tr
+                    key={lead.id}
+                    className="hover:opacity-80 cursor-pointer"
+                    style={{ borderBottom: `1px solid ${colors.border}` }}
+                    onClick={() => openModal('lead', lead)}
+                  >
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="font-semibold" style={{ color: colors.primary }}>
+                          {lead.name}
+                        </p>
+                        <p className="text-sm" style={{ color: colors.textSecondary }}>
+                          {lead.company}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                      {lead.aircraftType || 'Not specified'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium" style={{ color: colors.textPrimary }}>
+                        {lead.budgetKnown && lead.budget ? `$${(lead.budget / 1000000).toFixed(1)}M` : 'Unknown'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                      {lead.yearPreference?.oldest && lead.yearPreference?.newest
+                        ? `${lead.yearPreference.oldest}-${lead.yearPreference.newest}`
+                        : 'N/A'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold"
+                        style={{
+                          backgroundColor:
+                            lead.status === 'Inquiry' ? '#5BC0DE' :
+                            lead.status === 'Presented' ? '#7C3AED' :
+                            lead.status === 'Interested' ? '#F0AD4E' :
+                            lead.status === 'Deal Created' ? '#D9534F' :
+                            lead.status === 'Lost' ? '#6B7280' : '#5BC0DE',
+                          color: '#FFFFFF'
+                        }}>
+                        {lead.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => openModal('lead', lead)}
+                          className="p-2 rounded hover:opacity-70"
+                          style={{ color: colors.textPrimary }}
+                          title="Edit"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteLead(lead.id);
+                          }}
+                          className="p-2 rounded hover:opacity-70"
+                          style={{ color: colors.error }}
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {sortedLeads.map(lead => (
           <div key={lead.id} className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -256,7 +371,8 @@ const LeadsView = ({ openModal }) => {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

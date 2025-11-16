@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, MessageSquare, Send, FileText, Download, Search, FileBarChart } from 'lucide-react';
+import { Plus, Edit2, Trash2, MessageSquare, Send, FileText, Download, Search, FileBarChart, LayoutGrid, List } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -13,6 +13,7 @@ const AircraftView = ({ openModal }) => {
   const [filterLocation, setFilterLocation] = useState('all');
   const [filterStatus, setFilterStatus] = useState('For Sale');
   const [sortBy, setSortBy] = useState('dateNewest');
+  const [viewMode, setViewMode] = useState('card');
 
   // Helper function to get status colors
   const getStatusColors = (status) => {
@@ -350,13 +351,38 @@ const AircraftView = ({ openModal }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Aircraft Inventory</h2>
-        <button
-          onClick={() => openModal('aircraft')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
-          style={{ backgroundColor: colors.primary, color: colors.secondary }}
-        >
-          <Plus size={20} /> Add Aircraft
-        </button>
+        <div className="flex gap-2">
+          <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
+            <button
+              onClick={() => setViewMode('card')}
+              className="flex items-center gap-2 px-4 py-2 font-semibold"
+              style={{
+                backgroundColor: viewMode === 'card' ? colors.primary : colors.cardBg,
+                color: viewMode === 'card' ? colors.secondary : colors.textPrimary
+              }}
+            >
+              <LayoutGrid size={18} /> Card
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className="flex items-center gap-2 px-4 py-2 font-semibold"
+              style={{
+                backgroundColor: viewMode === 'list' ? colors.primary : colors.cardBg,
+                color: viewMode === 'list' ? colors.secondary : colors.textPrimary,
+                borderLeft: `1px solid ${colors.border}`
+              }}
+            >
+              <List size={18} /> List
+            </button>
+          </div>
+          <button
+            onClick={() => openModal('aircraft')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.primary, color: colors.secondary }}
+          >
+            <Plus size={20} /> Add Aircraft
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-4 items-center">
@@ -450,8 +476,92 @@ const AircraftView = ({ openModal }) => {
         Showing {sortedAircraft.length} of {aircraft.length} aircraft
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {sortedAircraft.map(ac => (
+      {viewMode === 'list' ? (
+        <div className="rounded-lg shadow-lg overflow-hidden" style={{ backgroundColor: colors.cardBg }}>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr style={{ backgroundColor: colors.secondary, borderBottom: `2px solid ${colors.border}` }}>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Aircraft</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Seller</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>YoM</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Price</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Status</th>
+                  <th className="text-right px-4 py-3 font-semibold" style={{ color: colors.primary }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedAircraft.map(ac => (
+                  <tr
+                    key={ac.id}
+                    className="hover:opacity-80 cursor-pointer"
+                    style={{ borderBottom: `1px solid ${colors.border}` }}
+                    onClick={() => openModal('aircraft', ac)}
+                  >
+                    <td className="px-4 py-3">
+                      <div>
+                        <p className="font-semibold" style={{ color: colors.primary }}>
+                          {ac.manufacturer} {ac.model}
+                        </p>
+                        <p className="text-sm" style={{ color: colors.textSecondary }}>
+                          {ac.registration}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                      {ac.seller || 'N/A'}
+                    </td>
+                    <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                      {ac.yom}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-bold text-lg" style={{ color: colors.primary }}>
+                        ${(ac.price / 1000000).toFixed(1)}M
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className="font-semibold px-3 py-1 rounded text-sm"
+                        style={{
+                          backgroundColor: getStatusColors(ac.status || 'For Sale').bg,
+                          color: getStatusColors(ac.status || 'For Sale').text
+                        }}
+                      >
+                        {ac.status || 'For Sale'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => openModal('aircraft', ac)}
+                          className="p-2 rounded hover:opacity-70"
+                          style={{ color: colors.textPrimary }}
+                          title="Edit"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteAircraft(ac.id);
+                          }}
+                          className="p-2 rounded hover:opacity-70"
+                          style={{ color: colors.error }}
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {sortedAircraft.map(ac => (
           <div key={ac.id} className="rounded-lg shadow-lg overflow-hidden" style={{ backgroundColor: colors.cardBg }}>
             {ac.imageData && (
               <div className="w-full h-48 overflow-hidden" style={{ backgroundColor: colors.secondary }}>
@@ -621,7 +731,8 @@ const AircraftView = ({ openModal }) => {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

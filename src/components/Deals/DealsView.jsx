@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Clock, MessageSquare, Send, FileText, Download, Search, ListChecks, CheckCircle2, ListTodo, BarChart3 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Clock, MessageSquare, Send, FileText, Download, Search, ListChecks, CheckCircle2, ListTodo, BarChart3, LayoutGrid, List } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { jsPDF } from 'jspdf';
@@ -13,6 +13,7 @@ const DealsView = ({ openModal }) => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [showDocTypeModal, setShowDocTypeModal] = useState(false);
   const [selectedDealId, setSelectedDealId] = useState(null);
+  const [viewMode, setViewMode] = useState('card');
 
   const handleViewDocument = (deal) => {
     if (deal.documentData) {
@@ -139,13 +140,38 @@ const DealsView = ({ openModal }) => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Deals</h2>
-        <button
-          onClick={() => openModal('deal')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
-          style={{ backgroundColor: colors.primary, color: colors.secondary }}
-        >
-          <Plus size={20} /> Add Deal
-        </button>
+        <div className="flex gap-2">
+          <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
+            <button
+              onClick={() => setViewMode('card')}
+              className="flex items-center gap-2 px-4 py-2 font-semibold"
+              style={{
+                backgroundColor: viewMode === 'card' ? colors.primary : colors.cardBg,
+                color: viewMode === 'card' ? colors.secondary : colors.textPrimary
+              }}
+            >
+              <LayoutGrid size={18} /> Card
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className="flex items-center gap-2 px-4 py-2 font-semibold"
+              style={{
+                backgroundColor: viewMode === 'list' ? colors.primary : colors.cardBg,
+                color: viewMode === 'list' ? colors.secondary : colors.textPrimary,
+                borderLeft: `1px solid ${colors.border}`
+              }}
+            >
+              <List size={18} /> List
+            </button>
+          </div>
+          <button
+            onClick={() => openModal('deal')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.primary, color: colors.secondary }}
+          >
+            <Plus size={20} /> Add Deal
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-4 items-center">
@@ -191,12 +217,106 @@ const DealsView = ({ openModal }) => {
         Showing {filteredDeals.length} of {deals.length} deals
       </div>
 
-      <div className="space-y-4">
-        {filteredDeals.map(deal => {
-          const lead = leads.find(l => l.id === deal.relatedLead);
-          const ac = aircraft.find(a => a.id === deal.relatedAircraft);
-          
-          return (
+      {viewMode === 'list' ? (
+        <div className="rounded-lg shadow-lg overflow-hidden" style={{ backgroundColor: colors.cardBg }}>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr style={{ backgroundColor: colors.secondary, borderBottom: `2px solid ${colors.border}` }}>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Deal</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Aircraft</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Seller</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>YoM</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Deal Value</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Est. Closing</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Status</th>
+                  <th className="text-right px-4 py-3 font-semibold" style={{ color: colors.primary }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDeals.map(deal => {
+                  const lead = leads.find(l => l.id === deal.relatedLead);
+                  const ac = aircraft.find(a => a.id === deal.relatedAircraft);
+
+                  return (
+                    <tr
+                      key={deal.id}
+                      className="hover:opacity-80 cursor-pointer"
+                      style={{ borderBottom: `1px solid ${colors.border}` }}
+                      onClick={() => openModal('deal', deal)}
+                    >
+                      <td className="px-4 py-3">
+                        <div>
+                          <p className="font-semibold" style={{ color: colors.primary }}>
+                            {deal.dealName}
+                          </p>
+                          <p className="text-sm" style={{ color: colors.textSecondary }}>
+                            {deal.clientName}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                        {ac ? `${ac.manufacturer} ${ac.model}` : 'N/A'}
+                      </td>
+                      <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                        {ac?.seller || 'N/A'}
+                      </td>
+                      <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                        {ac?.yom || 'N/A'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-bold text-lg" style={{ color: colors.primary }}>
+                          {deal.dealValue ? `$${(deal.dealValue / 1000000).toFixed(1)}M` : 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                        {deal.estimatedClosing || 'Not set'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 rounded text-xs font-semibold" style={{
+                          backgroundColor: colors.secondary,
+                          color: colors.primary
+                        }}>
+                          {deal.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => openModal('deal', deal)}
+                            className="p-2 rounded hover:opacity-70"
+                            style={{ color: colors.textPrimary }}
+                            title="Edit"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteDeal(deal.id);
+                            }}
+                            className="p-2 rounded hover:opacity-70"
+                            style={{ color: colors.error }}
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredDeals.map(deal => {
+            const lead = leads.find(l => l.id === deal.relatedLead);
+            const ac = aircraft.find(a => a.id === deal.relatedAircraft);
+
+            return (
             <div key={deal.id} className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
@@ -385,8 +505,9 @@ const DealsView = ({ openModal }) => {
               />
             </div>
           );
-        })}
-      </div>
+          })}
+        </div>
+      )}
 
       {showDocTypeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
