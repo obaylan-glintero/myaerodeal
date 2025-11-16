@@ -436,6 +436,16 @@ const AircraftForm = ({ formData, setFormData }) => {
         <option value="Broker">Through Broker</option>
         <option value="Intermediary">Through Intermediary</option>
       </select>
+      <select
+        value={formData.status || 'For Sale'}
+        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+        className="w-full px-4 py-2 border rounded-lg"
+        style={inputStyle}
+      >
+        <option value="For Sale">For Sale</option>
+        <option value="Not for Sale">Not for Sale</option>
+        <option value="Under Contract">Under Contract</option>
+      </select>
 
       <div className="border-2 border-dashed rounded-lg p-6 text-center" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
         <Upload className="mx-auto mb-2" size={32} style={{ color: colors.primary }} />

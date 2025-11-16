@@ -11,6 +11,7 @@ const AircraftView = ({ openModal }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterLocation, setFilterLocation] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('For Sale');
   const [sortBy, setSortBy] = useState('dateNewest');
 
   // Debug: Check aircraft data
@@ -296,7 +297,8 @@ const AircraftView = ({ openModal }) => {
                          ac.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === 'all' || ac.category === filterCategory;
     const matchesLocation = filterLocation === 'all' || ac.location?.includes(filterLocation);
-    return matchesSearch && matchesCategory && matchesLocation;
+    const matchesStatus = filterStatus === 'all' || (ac.status || 'For Sale') === filterStatus;
+    return matchesSearch && matchesCategory && matchesLocation && matchesStatus;
   });
 
   // Sort aircraft
@@ -393,6 +395,21 @@ const AircraftView = ({ openModal }) => {
           </select>
         )}
         <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          className="px-4 py-2 rounded-lg"
+          style={{
+            backgroundColor: colors.cardBg,
+            color: colors.textPrimary,
+            border: `1px solid ${colors.border}`
+          }}
+        >
+          <option value="all">All Status</option>
+          <option value="For Sale">For Sale</option>
+          <option value="Not for Sale">Not for Sale</option>
+          <option value="Under Contract">Under Contract</option>
+        </select>
+        <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
           className="px-4 py-2 rounded-lg"
@@ -485,6 +502,18 @@ const AircraftView = ({ openModal }) => {
                 <div className="flex justify-between text-sm">
                   <span style={{ color: colors.textSecondary }}>Access Type:</span>
                   <span className="font-medium" style={{ color: colors.textPrimary }}>{ac.accessType}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: colors.textSecondary }}>Status:</span>
+                  <span
+                    className="font-medium px-2 py-1 rounded text-xs"
+                    style={{
+                      backgroundColor: ac.status === 'For Sale' ? '#10B981' : ac.status === 'Under Contract' ? '#F59E0B' : '#6B7280',
+                      color: 'white'
+                    }}
+                  >
+                    {ac.status || 'For Sale'}
+                  </span>
                 </div>
                 <div className="flex justify-between text-lg font-bold pt-2" style={{ borderTop: `1px solid ${colors.border}` }}>
                   <span style={{ color: colors.primary }}>Price:</span>

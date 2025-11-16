@@ -619,7 +619,7 @@ const AuthPage = () => {
               className="font-medium"
               style={{ color: colors.primary }}
             >
-              {isLogin ? "Don't have an account? Request access" : 'Already have an account? Sign in'}
+              {isLogin ? "Don't have an account? Sign up now!" : 'Already have an account? Sign in'}
             </button>
           </div>
         )}
