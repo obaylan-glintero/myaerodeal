@@ -10,7 +10,14 @@ export const lightTheme = {
   textPrimary: '#0A1628',  // Deep Navy - Main text
   textSecondary: '#5A6B7D', // Muted Blue - Labels and secondary info
   error: '#D9534F',        // Warm Red - Alerts, warnings, and deletions
-  accent: '#2E5A88'        // Aerospace Blue - Accent color for highlights
+  accent: '#2E5A88',       // Aerospace Blue - Accent color for highlights
+  // Status colors
+  statusForSale: '#059669',      // Darker green for better contrast
+  statusForSaleText: '#FFFFFF',  // White text
+  statusUnderContract: '#D97706', // Darker amber for better contrast
+  statusUnderContractText: '#FFFFFF', // White text
+  statusNotForSale: '#DC2626',   // Red for better visibility
+  statusNotForSaleText: '#FFFFFF' // White text
 };
 
 // Dark Theme
@@ -23,7 +30,14 @@ export const darkTheme = {
   textPrimary: '#F5F5F5',  // Off-White - Main text for dark backgrounds
   textSecondary: '#8A95A5', // Steel Gray - Labels and secondary info
   error: '#D9534F',        // Warm Red - Alerts, warnings, and deletions
-  accent: '#2E5A88'        // Aerospace Blue - Accent color for highlights
+  accent: '#2E5A88',       // Aerospace Blue - Accent color for highlights
+  // Status colors
+  statusForSale: '#10B981',      // Bright green for dark backgrounds
+  statusForSaleText: '#FFFFFF',  // White text
+  statusUnderContract: '#F59E0B', // Bright amber for dark backgrounds
+  statusUnderContractText: '#FFFFFF', // White text
+  statusNotForSale: '#EF4444',   // Bright red for better visibility
+  statusNotForSaleText: '#FFFFFF' // White text
 };
 
 // Default export (light theme)

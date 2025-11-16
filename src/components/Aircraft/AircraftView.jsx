@@ -14,6 +14,20 @@ const AircraftView = ({ openModal }) => {
   const [filterStatus, setFilterStatus] = useState('For Sale');
   const [sortBy, setSortBy] = useState('dateNewest');
 
+  // Helper function to get status colors
+  const getStatusColors = (status) => {
+    switch (status) {
+      case 'For Sale':
+        return { bg: colors.statusForSale, text: colors.statusForSaleText };
+      case 'Under Contract':
+        return { bg: colors.statusUnderContract, text: colors.statusUnderContractText };
+      case 'Not for Sale':
+        return { bg: colors.statusNotForSale, text: colors.statusNotForSaleText };
+      default:
+        return { bg: colors.statusForSale, text: colors.statusForSaleText };
+    }
+  };
+
   // Debug: Check aircraft data
   React.useEffect(() => {
     console.log('🛩️ Aircraft data:', aircraft);
@@ -506,10 +520,10 @@ const AircraftView = ({ openModal }) => {
                 <div className="flex justify-between text-sm">
                   <span style={{ color: colors.textSecondary }}>Status:</span>
                   <span
-                    className="font-medium px-2 py-1 rounded text-xs"
+                    className="font-semibold px-3 py-1 rounded text-sm"
                     style={{
-                      backgroundColor: ac.status === 'For Sale' ? '#10B981' : ac.status === 'Under Contract' ? '#F59E0B' : '#6B7280',
-                      color: 'white'
+                      backgroundColor: getStatusColors(ac.status || 'For Sale').bg,
+                      color: getStatusColors(ac.status || 'For Sale').text
                     }}
                   >
                     {ac.status || 'For Sale'}
