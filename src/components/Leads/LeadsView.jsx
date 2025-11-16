@@ -189,6 +189,12 @@ const LeadsView = ({ openModal }) => {
                   {lead.status}
                 </span>
               </div>
+              <div className="flex justify-between">
+                <span style={{ color: colors.textSecondary }}>Created:</span>
+                <span className="font-medium" style={{ color: colors.textPrimary }}>
+                  {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
+                </span>
+              </div>
             </div>
 
             {lead.presentations.length > 0 && (
