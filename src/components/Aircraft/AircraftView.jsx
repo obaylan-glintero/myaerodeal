@@ -486,6 +486,7 @@ const AircraftView = ({ openModal }) => {
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Seller</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>YoM</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Price</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Created</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Status</th>
                   <th className="text-right px-4 py-3 font-semibold" style={{ color: colors.primary }}>Actions</th>
                 </tr>
@@ -518,6 +519,9 @@ const AircraftView = ({ openModal }) => {
                       <span className="font-bold text-lg" style={{ color: colors.primary }}>
                         ${(ac.price / 1000000).toFixed(1)}M
                       </span>
+                    </td>
+                    <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                      {ac.createdAt ? new Date(ac.createdAt).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -631,6 +635,12 @@ const AircraftView = ({ openModal }) => {
                 <div className="flex justify-between text-sm">
                   <span style={{ color: colors.textSecondary }}>Access Type:</span>
                   <span className="font-medium" style={{ color: colors.textPrimary }}>{ac.accessType}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: colors.textSecondary }}>Created:</span>
+                  <span className="font-medium" style={{ color: colors.textPrimary }}>
+                    {ac.createdAt ? new Date(ac.createdAt).toLocaleDateString() : 'N/A'}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span style={{ color: colors.textSecondary }}>Status:</span>

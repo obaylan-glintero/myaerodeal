@@ -165,6 +165,7 @@ const LeadsView = ({ openModal }) => {
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Aircraft Type</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Budget</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Year Pref.</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Created</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Status</th>
                   <th className="text-right px-4 py-3 font-semibold" style={{ color: colors.primary }}>Actions</th>
                 </tr>
@@ -199,6 +200,9 @@ const LeadsView = ({ openModal }) => {
                       {lead.yearPreference?.oldest && lead.yearPreference?.newest
                         ? `${lead.yearPreference.oldest}-${lead.yearPreference.newest}`
                         : 'N/A'}
+                    </td>
+                    <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                      {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="px-4 py-3">
                       <span className="px-3 py-1 rounded-full text-xs font-semibold"
