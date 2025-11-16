@@ -529,6 +529,12 @@ const AircraftView = ({ openModal }) => {
                     {ac.status || 'For Sale'}
                   </span>
                 </div>
+                {ac.seller && (
+                  <div className="flex justify-between text-sm">
+                    <span style={{ color: colors.textSecondary }}>Seller:</span>
+                    <span className="font-medium" style={{ color: colors.textPrimary }}>{ac.seller}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold pt-2" style={{ borderTop: `1px solid ${colors.border}` }}>
                   <span style={{ color: colors.primary }}>Price:</span>
                   <span style={{ color: colors.primary }}>${(ac.price / 1000000).toFixed(1)}M</span>

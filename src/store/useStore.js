@@ -310,6 +310,8 @@ export const useStore = create((set, get) => ({
         price: aircraft.price || 0,
         accessType: aircraft.access_type || 'Direct',
         summary: aircraft.summary || '',
+        status: aircraft.status || 'For Sale',
+        seller: aircraft.seller || '',
         specSheet: aircraft.spec_sheet,
         specSheetData: aircraft.spec_sheet_data,
         specSheetType: aircraft.spec_sheet_type,
@@ -705,6 +707,8 @@ export const useStore = create((set, get) => ({
         price: aircraft.price || 0,
         accessType: aircraft.access_type || 'Direct',
         summary: aircraft.summary || '',
+        status: aircraft.status || 'For Sale',
+        seller: aircraft.seller || '',
         specSheet: aircraft.spec_sheet,
         specSheetData: aircraft.spec_sheet_data,
         specSheetType: aircraft.spec_sheet_type,
@@ -1139,6 +1143,8 @@ export const useStore = create((set, get) => ({
           price: aircraftData.price || 0,
           access_type: aircraftData.accessType || 'Direct',
           summary: aircraftData.summary || null,
+          status: aircraftData.status || 'For Sale',
+          seller: aircraftData.seller || null,
           spec_sheet: aircraftData.specSheet,
           spec_sheet_data: aircraftData.specSheetData,
           spec_sheet_type: aircraftData.specSheetType,
@@ -1170,6 +1176,8 @@ export const useStore = create((set, get) => ({
         price: data.price || 0,
         accessType: data.access_type || 'Direct',
         summary: data.summary || '',
+        status: data.status || 'For Sale',
+        seller: data.seller || '',
         specSheet: data.spec_sheet,
         specSheetData: data.spec_sheet_data,
         specSheetType: data.spec_sheet_type,
@@ -1212,6 +1220,8 @@ export const useStore = create((set, get) => ({
       if (updatedData.price !== undefined) dbData.price = updatedData.price;
       if (updatedData.accessType !== undefined) dbData.access_type = updatedData.accessType;
       if (updatedData.summary !== undefined) dbData.summary = updatedData.summary;
+      if (updatedData.status !== undefined) dbData.status = updatedData.status;
+      if (updatedData.seller !== undefined) dbData.seller = updatedData.seller;
       if (updatedData.specSheet !== undefined) dbData.spec_sheet = updatedData.specSheet;
       if (updatedData.specSheetData !== undefined) dbData.spec_sheet_data = updatedData.specSheetData;
       if (updatedData.specSheetType !== undefined) dbData.spec_sheet_type = updatedData.specSheetType;
