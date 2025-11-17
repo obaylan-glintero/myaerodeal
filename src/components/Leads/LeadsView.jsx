@@ -41,6 +41,12 @@ const LeadsView = ({ openModal }) => {
         return (a.budget || 0) - (b.budget || 0);
       case 'company':
         return (a.company || '').localeCompare(b.company || '');
+      case 'statusAsc':
+        const statusOrder = { 'Inquiry': 1, 'Presented': 2, 'Interested': 3, 'Deal Created': 4, 'Lost': 5 };
+        return (statusOrder[a.status] || 999) - (statusOrder[b.status] || 999);
+      case 'statusDesc':
+        const statusOrderDesc = { 'Inquiry': 5, 'Presented': 4, 'Interested': 3, 'Deal Created': 2, 'Lost': 1 };
+        return (statusOrderDesc[a.status] || 0) - (statusOrderDesc[b.status] || 0);
       default:
         return 0;
     }
@@ -156,6 +162,8 @@ const LeadsView = ({ openModal }) => {
           <option value="company">Company: A to Z</option>
           <option value="budgetHigh">Budget: High to Low</option>
           <option value="budgetLow">Budget: Low to High</option>
+          <option value="statusAsc">Status: Inquiry to Lost</option>
+          <option value="statusDesc">Status: Lost to Inquiry</option>
         </select>
       </div>
 
