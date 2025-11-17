@@ -49,7 +49,11 @@ const Dashboard = ({ openModal }) => {
         <div className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
           <h3 className="text-xl font-semibold mb-4" style={{ color: colors.primary }}>Recent Leads</h3>
           <div className="space-y-3">
-            {leads.slice(0, 5).map(lead => (
+            {leads
+              .filter(lead => lead.status !== 'Lost')
+              .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+              .slice(0, 5)
+              .map(lead => (
               <button
                 key={lead.id}
                 onClick={() => openModal('lead', lead)}

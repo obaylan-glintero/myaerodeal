@@ -9,7 +9,7 @@ const LeadsView = ({ openModal }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('active');
   const [filterAircraftType, setFilterAircraftType] = useState('all');
-  const [sortBy, setSortBy] = useState('dateNewest');
+  const [sortBy, setSortBy] = useState('statusAsc');
   const [viewMode, setViewMode] = useState('card');
 
   // Filter leads
