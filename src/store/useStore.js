@@ -2286,7 +2286,7 @@ Extract and return ONLY a valid JSON object with this exact structure (no markdo
   "serialNumber": "Serial number or MSN",
   "registration": "Registration number (N-number)",
   "totalTime": 1000,
-  "category": "Light Jet|Midsize Jet|Super-Mid Jet|Heavy Jet|Ultra-Long Range",
+  "category": "Piston|Turboprop|Light Jet|Midsize Jet|Super-Mid Jet|Heavy Jet|Ultra-Long Range|Airliner|Cargo",
   "location": "Current location",
   "price": 5000000,
   "summary": "A comprehensive 2-3 sentence summary highlighting key features, condition, and selling points of this aircraft.",

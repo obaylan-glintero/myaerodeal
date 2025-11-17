@@ -169,11 +169,15 @@ const LeadForm = ({ formData, setFormData }) => {
         style={inputStyle}
       >
         <option value="">Select Aircraft Type</option>
+        <option value="Piston">Piston</option>
+        <option value="Turboprop">Turboprop</option>
         <option value="Light Jet">Light Jet</option>
         <option value="Midsize Jet">Midsize Jet</option>
-        <option value="Midsize Jet">Super-Mid Jet</option>
+        <option value="Super-Mid Jet">Super-Mid Jet</option>
         <option value="Heavy Jet">Heavy Jet</option>
         <option value="Ultra-Long Range">Ultra-Long Range</option>
+        <option value="Airliner">Airliner</option>
+        <option value="Cargo">Cargo</option>
       </select>
       <div className="flex gap-4 items-center">
         <label className="flex items-center gap-2" style={{ color: colors.textSecondary }}>
@@ -430,10 +434,15 @@ const AircraftForm = ({ formData, setFormData }) => {
         style={inputStyle}
       >
         <option value="">Select Category</option>
+        <option value="Piston">Piston</option>
+        <option value="Turboprop">Turboprop</option>
         <option value="Light Jet">Light Jet</option>
         <option value="Midsize Jet">Midsize Jet</option>
+        <option value="Super-Mid Jet">Super-Mid Jet</option>
         <option value="Heavy Jet">Heavy Jet</option>
         <option value="Ultra-Long Range">Ultra-Long Range</option>
+        <option value="Airliner">Airliner</option>
+        <option value="Cargo">Cargo</option>
       </select>
       <input
         type="text"

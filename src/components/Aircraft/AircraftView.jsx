@@ -412,10 +412,15 @@ const AircraftView = ({ openModal }) => {
           }}
         >
           <option value="all">All Categories</option>
+          <option value="Piston">Piston</option>
+          <option value="Turboprop">Turboprop</option>
           <option value="Light Jet">Light Jet</option>
           <option value="Midsize Jet">Midsize Jet</option>
+          <option value="Super-Mid Jet">Super-Mid Jet</option>
           <option value="Heavy Jet">Heavy Jet</option>
           <option value="Ultra-Long Range">Ultra-Long Range</option>
+          <option value="Airliner">Airliner</option>
+          <option value="Cargo">Cargo</option>
         </select>
         {locations.length > 0 && (
           <select
