@@ -453,7 +453,13 @@ const DealsView = ({ openModal }) => {
 
                   {showTimeline[deal.id] && (
                     <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {[...deal.timeline].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)).map((item, idx) => {
+                      {[...deal.timeline].sort((a, b) => {
+                        // Handle items without due dates - put them at the end
+                        if (!a.dueDate && !b.dueDate) return 0;
+                        if (!a.dueDate) return 1;
+                        if (!b.dueDate) return -1;
+                        return new Date(a.dueDate) - new Date(b.dueDate);
+                      }).map((item, idx) => {
                         const originalIndex = deal.timeline.findIndex(t => t === item);
                         return (
                           <div key={idx} className="flex items-start gap-2 text-sm p-2 rounded" style={{ backgroundColor: colors.secondary }}>
@@ -496,7 +502,7 @@ const DealsView = ({ openModal }) => {
                                   onClick={() => handleEditTimelineDueDate(deal.id, originalIndex, item.dueDate)}
                                   title="Click to edit due date"
                                 >
-                                  Due: {new Date(item.dueDate).toLocaleDateString()} ✏️
+                                  Due: {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'No date set'} ✏️
                                 </p>
                               )}
                             </div>
