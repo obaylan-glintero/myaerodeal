@@ -2013,7 +2013,8 @@ export const useStore = create((set, get) => ({
     }
 
     // Parse document with AI (or demo mode)
-    const actionItems = await get().parseDocumentWithAI(extractedText, documentType, deal);
+    const parseResult = await get().parseDocumentWithAI(extractedText, documentType, deal);
+    const { documentOverview, actionItems } = parseResult;
 
     console.log(`📋 Creating ${actionItems.length} tasks from action items...`);
 
@@ -2021,9 +2022,21 @@ export const useStore = create((set, get) => ({
     let successCount = 0;
     for (const item of actionItems) {
       try {
+        // Build enhanced description with responsible party and penalties
+        let enhancedDescription = item.description || `Extracted from ${documentType} document`;
+        if (item.responsibleParty) {
+          enhancedDescription += `\n\nResponsible Party: ${item.responsibleParty}`;
+        }
+        if (item.penalties) {
+          enhancedDescription += `\n⚠️ Penalty: ${item.penalties}`;
+        }
+        if (item.dayNumber !== undefined) {
+          enhancedDescription += `\nDay ${item.dayNumber} from effective date`;
+        }
+
         await addTask({
           title: `${deal.dealName}: ${item.title}`,
-          description: item.description || `Extracted from ${documentType} document`,
+          description: enhancedDescription,
           dueDate: item.dueDate || null,
           relatedTo: { type: 'deal', id: dealId },
           status: 'pending',
@@ -2047,13 +2060,16 @@ export const useStore = create((set, get) => ({
         dueDate: item.dueDate,
         priority: item.priority || 'medium',
         completed: false,
-        source: 'AI-extracted'
+        source: 'AI-extracted',
+        responsibleParty: item.responsibleParty || null,
+        dayNumber: item.dayNumber || null
       }));
 
     const updatedDealData = {
       timeline: timeline,
       timelineGenerated: new Date().toISOString(),
-      documentParsed: true
+      documentParsed: true,
+      documentOverview: documentOverview
     };
 
     // Update local state
@@ -2074,7 +2090,8 @@ export const useStore = create((set, get) => ({
           .update({
             timeline: timeline,
             timeline_generated: updatedDealData.timelineGenerated,
-            document_parsed: true
+            document_parsed: true,
+            document_overview: documentOverview
           })
           .eq('id', dealId);
       } catch (error) {
@@ -2098,30 +2115,71 @@ export const useStore = create((set, get) => ({
 
     if (GEMINI_API_KEY) {
       try {
-        const prompt = `You are an expert in aircraft transactions. Parse this ${documentType} document and extract ALL action items with dates, priorities, and descriptions. 
+        const prompt = `You are an aircraft transaction timeline specialist. Your task is to analyze letters of intent (LOI) or aircraft purchase agreements and create a detailed, actionable timeline with specific tasks.
 
-Document Text:
+DOCUMENT TEXT TO ANALYZE:
 ${documentText}
 
-Extract every action item, deadline, obligation, and requirement from this document. Only extract action items with solid deliverables. Return ONLY a valid JSON object with this exact format (no markdown, no code blocks):
+YOUR TASK:
+1. Identify the effective date of the document - this is your Day 0/starting point
+2. Extract all time-sensitive clauses, deadlines, and milestones mentioned in the document
+3. Create a chronological timeline starting from the effective date
+4. Define specific, actionable tasks for each milestone
+5. Calculate exact dates based on the effective date and any relative timeframes mentioned (e.g., "within 30 days of execution")
+
+KEY ITEMS TO EXTRACT AND TRACK:
+- Deposit payment deadlines and amounts
+- Inspection periods (pre-buy, technical review)
+- Document delivery deadlines (logbooks, maintenance records, title documents)
+- Financing contingency periods
+- Export/import authorization deadlines
+- Closing date
+- Aircraft delivery date and location
+- Payment schedules
+- Insurance requirements and deadlines
+- Registration transfer deadlines
+- Warranty periods
+- Any conditional clauses with timeframes
+- Business days vs calendar days distinctions where specified
+
+IMPORTANT INSTRUCTIONS:
+- For each task, identify the responsible party (Buyer/Seller/Both) if mentioned
+- Note any penalties or consequences for missing deadlines
+- Extract specific dollar amounts for deposits and payments
+- Identify aircraft details (make, model, serial number) if available
+- Note the parties involved (buyer and seller names)
+- Pay attention to whether deadlines are in business days or calendar days
+
+OUTPUT FORMAT:
+Return ONLY a valid JSON object with this exact structure (no markdown, no code blocks, no additional text):
 
 {
+  "documentOverview": {
+    "documentType": "${documentType}",
+    "effectiveDate": "YYYY-MM-DD or null if not found",
+    "buyer": "Buyer name or null",
+    "seller": "Seller name or null",
+    "aircraft": "Make, model, serial number or null"
+  },
   "actionItems": [
     {
-      "title": "Brief action title",
-      "description": "Detailed description with context from document",
+      "title": "Brief, actionable task title",
+      "description": "Detailed description including: specific requirements, deliverables, responsible party (Buyer/Seller/Both), any amounts or penalties, and relevant document section references",
       "dueDate": "YYYY-MM-DD",
-      "priority": "high"
+      "priority": "high|medium|low",
+      "dayNumber": 0,
+      "responsibleParty": "Buyer|Seller|Both|null",
+      "penalties": "Description of consequences for missing deadline, or null"
     }
   ]
 }
 
-Priority levels:
-- high: Critical deadlines, payments, inspections
-- medium: Important but flexible items
-- low: Nice-to-have or informational items
+PRIORITY GUIDELINES:
+- high: Critical deadlines with penalties, deposit/payment deadlines, inspection periods, closing dates, aircraft delivery
+- medium: Important documentation requirements, insurance deadlines, registration transfers, financing milestones
+- low: Informational items, warranty periods, optional inspections, post-delivery activities
 
-Return ONLY the JSON object, no other text.`;
+CRITICAL: Return ONLY the JSON object. Do not include any explanatory text, markdown formatting, or code blocks. The response must be valid, parseable JSON.`;
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
@@ -2164,7 +2222,11 @@ Return ONLY the JSON object, no other text.`;
 
         if (parsed.actionItems && Array.isArray(parsed.actionItems)) {
           console.log(`✅ Gemini extracted ${parsed.actionItems.length} action items from ${documentType}`);
-          return parsed.actionItems;
+          // Return both documentOverview and actionItems
+          return {
+            documentOverview: parsed.documentOverview || null,
+            actionItems: parsed.actionItems
+          };
         } else {
           throw new Error('Invalid response format from Gemini');
         }
@@ -2193,34 +2255,46 @@ Return ONLY the JSON object, no other text.`;
     const hasText = documentText && documentText.length > 100;
     let actionItems = [];
 
+    // Create demo document overview
+    const documentOverview = {
+      documentType: documentType,
+      effectiveDate: today.toISOString().split('T')[0],
+      buyer: deal?.clientName || 'Demo Buyer',
+      seller: 'Demo Seller',
+      aircraft: deal?.relatedAircraft || 'Demo Aircraft'
+    };
+
     if (documentType === 'LOI') {
       actionItems = [
-        { title: 'Review and execute LOI', dueDate: addDays(2), priority: 'high', description: hasText ? 'Extracted from document section 1' : 'Initial LOI execution' },
-        { title: 'Submit earnest money deposit', dueDate: addDays(3), priority: 'high', description: hasText ? 'Per deposit terms in document' : 'Initial deposit' },
-        { title: 'Conduct initial aircraft inspection', dueDate: addDays(7), priority: 'high', description: 'Visual and documentation review' },
-        { title: 'Review maintenance records', dueDate: addDays(7), priority: 'medium', description: 'Complete logbook review' },
-        { title: 'Verify aircraft registration and title', dueDate: addDays(10), priority: 'medium', description: 'FAA registration check' },
-        { title: 'Draft Purchase Agreement', dueDate: addDays(14), priority: 'high', description: 'Prepare full APA' },
-        { title: 'Schedule pre-purchase inspection', dueDate: addDays(14), priority: 'high', description: 'Coordinate with inspection facility' }
+        { title: 'Review and execute LOI', dueDate: addDays(2), priority: 'high', description: hasText ? 'Extracted from document section 1' : 'Initial LOI execution', dayNumber: 2, responsibleParty: 'Both', penalties: null },
+        { title: 'Submit earnest money deposit', dueDate: addDays(3), priority: 'high', description: hasText ? 'Per deposit terms in document' : 'Initial deposit', dayNumber: 3, responsibleParty: 'Buyer', penalties: 'Deal may be terminated' },
+        { title: 'Conduct initial aircraft inspection', dueDate: addDays(7), priority: 'high', description: 'Visual and documentation review', dayNumber: 7, responsibleParty: 'Buyer', penalties: null },
+        { title: 'Review maintenance records', dueDate: addDays(7), priority: 'medium', description: 'Complete logbook review', dayNumber: 7, responsibleParty: 'Buyer', penalties: null },
+        { title: 'Verify aircraft registration and title', dueDate: addDays(10), priority: 'medium', description: 'FAA registration check', dayNumber: 10, responsibleParty: 'Buyer', penalties: null },
+        { title: 'Draft Purchase Agreement', dueDate: addDays(14), priority: 'high', description: 'Prepare full APA', dayNumber: 14, responsibleParty: 'Both', penalties: null },
+        { title: 'Schedule pre-purchase inspection', dueDate: addDays(14), priority: 'high', description: 'Coordinate with inspection facility', dayNumber: 14, responsibleParty: 'Buyer', penalties: null }
       ];
     } else if (documentType === 'APA') {
       actionItems = [
-        { title: 'Execute Aircraft Purchase Agreement', dueDate: addDays(1), priority: 'high', description: hasText ? 'Per document execution clause' : 'Sign APA' },
-        { title: 'Submit balance of deposit', dueDate: addDays(2), priority: 'high', description: hasText ? 'Extracted from payment terms' : 'Additional deposit' },
-        { title: 'Complete pre-purchase inspection', dueDate: addDays(7), priority: 'high', description: 'Full aircraft inspection' },
-        { title: 'Review inspection report', dueDate: addDays(9), priority: 'high', description: 'Analyze findings and discrepancies' },
-        { title: 'Negotiate any discrepancies', dueDate: addDays(12), priority: 'medium', description: 'Address inspection items' },
-        { title: 'Finalize financing documents', dueDate: addDays(14), priority: 'high', description: 'Complete lender requirements' },
-        { title: 'Obtain insurance certificate', dueDate: addDays(14), priority: 'high', description: 'Full hull and liability coverage' },
-        { title: 'Complete FAA registration transfer', dueDate: addDays(20), priority: 'medium', description: 'File ownership documents' },
-        { title: 'Schedule closing date', dueDate: addDays(21), priority: 'high', description: 'Coordinate all parties' },
-        { title: 'Wire final payment', dueDate: addDays(28), priority: 'high', description: hasText ? 'Per closing instructions' : 'Transfer remaining funds' },
-        { title: 'Physical aircraft delivery', dueDate: addDays(30), priority: 'high', description: 'Accept aircraft at location' },
-        { title: 'Post-delivery inspection', dueDate: addDays(31), priority: 'medium', description: 'Verify condition and documentation' }
+        { title: 'Execute Aircraft Purchase Agreement', dueDate: addDays(1), priority: 'high', description: hasText ? 'Per document execution clause' : 'Sign APA', dayNumber: 1, responsibleParty: 'Both', penalties: null },
+        { title: 'Submit balance of deposit', dueDate: addDays(2), priority: 'high', description: hasText ? 'Extracted from payment terms' : 'Additional deposit', dayNumber: 2, responsibleParty: 'Buyer', penalties: 'Deal termination and deposit forfeiture' },
+        { title: 'Complete pre-purchase inspection', dueDate: addDays(7), priority: 'high', description: 'Full aircraft inspection', dayNumber: 7, responsibleParty: 'Buyer', penalties: null },
+        { title: 'Review inspection report', dueDate: addDays(9), priority: 'high', description: 'Analyze findings and discrepancies', dayNumber: 9, responsibleParty: 'Buyer', penalties: null },
+        { title: 'Negotiate any discrepancies', dueDate: addDays(12), priority: 'medium', description: 'Address inspection items', dayNumber: 12, responsibleParty: 'Both', penalties: null },
+        { title: 'Finalize financing documents', dueDate: addDays(14), priority: 'high', description: 'Complete lender requirements', dayNumber: 14, responsibleParty: 'Buyer', penalties: 'Financing contingency expires' },
+        { title: 'Obtain insurance certificate', dueDate: addDays(14), priority: 'high', description: 'Full hull and liability coverage', dayNumber: 14, responsibleParty: 'Buyer', penalties: 'Cannot take delivery' },
+        { title: 'Complete FAA registration transfer', dueDate: addDays(20), priority: 'medium', description: 'File ownership documents', dayNumber: 20, responsibleParty: 'Both', penalties: null },
+        { title: 'Schedule closing date', dueDate: addDays(21), priority: 'high', description: 'Coordinate all parties', dayNumber: 21, responsibleParty: 'Both', penalties: null },
+        { title: 'Wire final payment', dueDate: addDays(28), priority: 'high', description: hasText ? 'Per closing instructions' : 'Transfer remaining funds', dayNumber: 28, responsibleParty: 'Buyer', penalties: 'Deal termination and deposit forfeiture' },
+        { title: 'Physical aircraft delivery', dueDate: addDays(30), priority: 'high', description: 'Accept aircraft at location', dayNumber: 30, responsibleParty: 'Both', penalties: null },
+        { title: 'Post-delivery inspection', dueDate: addDays(31), priority: 'medium', description: 'Verify condition and documentation', dayNumber: 31, responsibleParty: 'Buyer', penalties: null }
       ];
     }
 
-    return actionItems;
+    return {
+      documentOverview: documentOverview,
+      actionItems: actionItems
+    };
   },
 
   addNoteToAircraft: async (aircraftId, noteText) => {
