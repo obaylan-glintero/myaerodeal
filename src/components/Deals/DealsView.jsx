@@ -452,7 +452,45 @@ const DealsView = ({ openModal }) => {
                         <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" style={{ color: colors.textSecondary }} />
                         <div className="flex-1">
                           <p className="font-medium" style={{ color: colors.textPrimary }}>{item.title}</p>
-                          <p className="text-xs" style={{ color: colors.textSecondary }}>Due: {new Date(item.dueDate).toLocaleDateString()}</p>
+                          {editingTimelineItem?.dealId === deal.id && editingTimelineItem?.itemIndex === idx ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <input
+                                type="date"
+                                value={editingTimelineDueDate}
+                                onChange={(e) => setEditingTimelineDueDate(e.target.value)}
+                                className="text-xs px-2 py-1 rounded"
+                                style={{
+                                  backgroundColor: colors.cardBg,
+                                  color: colors.textPrimary,
+                                  border: `1px solid ${colors.border}`
+                                }}
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => handleSaveTimelineDueDate(deal.id, idx)}
+                                className="text-xs px-2 py-1 rounded font-semibold"
+                                style={{ backgroundColor: colors.primary, color: colors.secondary }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={handleCancelTimelineEdit}
+                                className="text-xs px-2 py-1 rounded"
+                                style={{ border: `1px solid ${colors.border}`, color: colors.textSecondary }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <p
+                              className="text-xs cursor-pointer hover:underline"
+                              style={{ color: colors.textSecondary }}
+                              onClick={() => handleEditTimelineDueDate(deal.id, idx, item.dueDate)}
+                              title="Click to edit due date"
+                            >
+                              Due: {new Date(item.dueDate).toLocaleDateString()} ✏️
+                            </p>
+                          )}
                         </div>
                         <span className={`text-xs px-2 py-1 rounded ${
                           item.priority === 'high' ? 'bg-red-100 text-red-700' :
@@ -1023,6 +1061,8 @@ const TasksSection = ({ dealId, dealName, tasks, onToggleComplete, onUpdateTask,
   const [taskPriority, setTaskPriority] = useState('medium');
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingDueDate, setEditingDueDate] = useState('');
+  const [editingTimelineItem, setEditingTimelineItem] = useState(null); // { dealId, itemIndex }
+  const [editingTimelineDueDate, setEditingTimelineDueDate] = useState('');
 
   const pendingTasks = tasks.filter(t => t.status === 'pending');
 
@@ -1055,6 +1095,31 @@ const TasksSection = ({ dealId, dealName, tasks, onToggleComplete, onUpdateTask,
   const handleCancelEdit = () => {
     setEditingTaskId(null);
     setEditingDueDate('');
+  };
+
+  const handleEditTimelineDueDate = (dealId, itemIndex, currentDueDate) => {
+    setEditingTimelineItem({ dealId, itemIndex });
+    setEditingTimelineDueDate(currentDueDate || '');
+  };
+
+  const handleSaveTimelineDueDate = async (dealId, itemIndex) => {
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal || !deal.timeline) return;
+
+    const updatedTimeline = [...deal.timeline];
+    updatedTimeline[itemIndex] = {
+      ...updatedTimeline[itemIndex],
+      dueDate: editingTimelineDueDate
+    };
+
+    await updateDeal(dealId, { timeline: updatedTimeline });
+    setEditingTimelineItem(null);
+    setEditingTimelineDueDate('');
+  };
+
+  const handleCancelTimelineEdit = () => {
+    setEditingTimelineItem(null);
+    setEditingTimelineDueDate('');
   };
 
   const getPriorityBadgeClass = (priority) => {
