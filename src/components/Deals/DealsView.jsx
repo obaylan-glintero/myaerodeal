@@ -14,6 +14,9 @@ const DealsView = ({ openModal }) => {
   const [showDocTypeModal, setShowDocTypeModal] = useState(false);
   const [selectedDealId, setSelectedDealId] = useState(null);
   const [viewMode, setViewMode] = useState('card');
+  const [showTimeline, setShowTimeline] = useState({});
+  const [editingTimelineItem, setEditingTimelineItem] = useState(null); // { dealId, itemIndex }
+  const [editingTimelineDueDate, setEditingTimelineDueDate] = useState('');
 
   const handleViewDocument = (deal) => {
     if (deal.documentData) {
@@ -127,6 +130,31 @@ const DealsView = ({ openModal }) => {
     } catch (error) {
       alert(`Error generating action items: ${error.message}\n\nPlease ensure:\n1. A document is uploaded to this deal\n2. The document is a PDF file\n3. Try again or contact support`);
     }
+  };
+
+  const handleEditTimelineDueDate = (dealId, itemIndex, currentDueDate) => {
+    setEditingTimelineItem({ dealId, itemIndex });
+    setEditingTimelineDueDate(currentDueDate || '');
+  };
+
+  const handleSaveTimelineDueDate = async (dealId, itemIndex) => {
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal || !deal.timeline) return;
+
+    const updatedTimeline = [...deal.timeline];
+    updatedTimeline[itemIndex] = {
+      ...updatedTimeline[itemIndex],
+      dueDate: editingTimelineDueDate
+    };
+
+    await updateDeal(dealId, { timeline: updatedTimeline });
+    setEditingTimelineItem(null);
+    setEditingTimelineDueDate('');
+  };
+
+  const handleCancelTimelineEdit = () => {
+    setEditingTimelineItem(null);
+    setEditingTimelineDueDate('');
   };
 
   const filteredDeals = deals.filter(deal => {
@@ -437,33 +465,86 @@ const DealsView = ({ openModal }) => {
 
               {deal.timeline && deal.timeline.length > 0 && (
                 <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-semibold flex items-center gap-2" style={{ color: colors.primary }}>
-                      <ListChecks size={18} />
-                      Deal Timeline
-                    </p>
-                    <span className="text-xs" style={{ color: colors.textSecondary }}>
+                  <button
+                    onClick={() => setShowTimeline({ ...showTimeline, [deal.id]: !showTimeline[deal.id] })}
+                    className="flex items-center gap-2 font-semibold mb-2 w-full"
+                    style={{ color: colors.primary }}
+                  >
+                    <ListChecks size={18} />
+                    Deal Timeline ({deal.timeline.length})
+                    <span className="text-xs ml-auto" style={{ color: colors.textSecondary }}>
                       Generated {new Date(deal.timelineGenerated).toLocaleDateString()}
                     </span>
-                  </div>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {deal.timeline.map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-sm p-2 rounded" style={{ backgroundColor: colors.secondary }}>
-                        <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" style={{ color: colors.textSecondary }} />
-                        <div className="flex-1">
-                          <p className="font-medium" style={{ color: colors.textPrimary }}>{item.title}</p>
-                          <p className="text-xs" style={{ color: colors.textSecondary }}>Due: {new Date(item.dueDate).toLocaleDateString()}</p>
-                        </div>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          item.priority === 'high' ? 'bg-red-100 text-red-700' :
-                          item.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {item.priority}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                    <span className="text-xs" style={{ color: colors.textSecondary }}>{showTimeline[deal.id] ? '▼' : '▶'}</span>
+                  </button>
+
+                  {showTimeline[deal.id] && (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {[...deal.timeline].sort((a, b) => {
+                        // Handle items without due dates - put them at the end
+                        if (!a.dueDate && !b.dueDate) return 0;
+                        if (!a.dueDate) return 1;
+                        if (!b.dueDate) return -1;
+                        return new Date(a.dueDate) - new Date(b.dueDate);
+                      }).map((item, idx) => {
+                        const originalIndex = deal.timeline.findIndex(t => t === item);
+                        return (
+                          <div key={idx} className="flex items-start gap-2 text-sm p-2 rounded" style={{ backgroundColor: colors.secondary }}>
+                            <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" style={{ color: colors.textSecondary }} />
+                            <div className="flex-1">
+                              <p className="font-medium" style={{ color: colors.textPrimary }}>{item.title}</p>
+                              {editingTimelineItem?.dealId === deal.id && editingTimelineItem?.itemIndex === originalIndex ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <input
+                                    type="date"
+                                    value={editingTimelineDueDate}
+                                    onChange={(e) => setEditingTimelineDueDate(e.target.value)}
+                                    className="text-xs px-2 py-1 rounded"
+                                    style={{
+                                      backgroundColor: colors.cardBg,
+                                      color: colors.textPrimary,
+                                      border: `1px solid ${colors.border}`
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleSaveTimelineDueDate(deal.id, originalIndex)}
+                                    className="text-xs px-2 py-1 rounded font-semibold"
+                                    style={{ backgroundColor: colors.primary, color: colors.secondary }}
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={handleCancelTimelineEdit}
+                                    className="text-xs px-2 py-1 rounded"
+                                    style={{ border: `1px solid ${colors.border}`, color: colors.textSecondary }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <p
+                                  className="text-xs cursor-pointer hover:underline"
+                                  style={{ color: colors.textSecondary }}
+                                  onClick={() => handleEditTimelineDueDate(deal.id, originalIndex, item.dueDate)}
+                                  title="Click to edit due date"
+                                >
+                                  Due: {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'No date set'} ✏️
+                                </p>
+                              )}
+                            </div>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              item.priority === 'high' ? 'bg-red-100 text-red-700' :
+                              item.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>
+                              {item.priority}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
