@@ -15,6 +15,8 @@ const DealsView = ({ openModal }) => {
   const [selectedDealId, setSelectedDealId] = useState(null);
   const [viewMode, setViewMode] = useState('card');
   const [showTimeline, setShowTimeline] = useState({});
+  const [editingTimelineItem, setEditingTimelineItem] = useState(null); // { dealId, itemIndex }
+  const [editingTimelineDueDate, setEditingTimelineDueDate] = useState('');
 
   const handleViewDocument = (deal) => {
     if (deal.documentData) {
@@ -128,6 +130,31 @@ const DealsView = ({ openModal }) => {
     } catch (error) {
       alert(`Error generating action items: ${error.message}\n\nPlease ensure:\n1. A document is uploaded to this deal\n2. The document is a PDF file\n3. Try again or contact support`);
     }
+  };
+
+  const handleEditTimelineDueDate = (dealId, itemIndex, currentDueDate) => {
+    setEditingTimelineItem({ dealId, itemIndex });
+    setEditingTimelineDueDate(currentDueDate || '');
+  };
+
+  const handleSaveTimelineDueDate = async (dealId, itemIndex) => {
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal || !deal.timeline) return;
+
+    const updatedTimeline = [...deal.timeline];
+    updatedTimeline[itemIndex] = {
+      ...updatedTimeline[itemIndex],
+      dueDate: editingTimelineDueDate
+    };
+
+    await updateDeal(dealId, { timeline: updatedTimeline });
+    setEditingTimelineItem(null);
+    setEditingTimelineDueDate('');
+  };
+
+  const handleCancelTimelineEdit = () => {
+    setEditingTimelineItem(null);
+    setEditingTimelineDueDate('');
   };
 
   const filteredDeals = deals.filter(deal => {
@@ -1077,8 +1104,6 @@ const TasksSection = ({ dealId, dealName, tasks, onToggleComplete, onUpdateTask,
   const [taskPriority, setTaskPriority] = useState('medium');
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingDueDate, setEditingDueDate] = useState('');
-  const [editingTimelineItem, setEditingTimelineItem] = useState(null); // { dealId, itemIndex }
-  const [editingTimelineDueDate, setEditingTimelineDueDate] = useState('');
 
   const pendingTasks = tasks.filter(t => t.status === 'pending');
 
@@ -1111,31 +1136,6 @@ const TasksSection = ({ dealId, dealName, tasks, onToggleComplete, onUpdateTask,
   const handleCancelEdit = () => {
     setEditingTaskId(null);
     setEditingDueDate('');
-  };
-
-  const handleEditTimelineDueDate = (dealId, itemIndex, currentDueDate) => {
-    setEditingTimelineItem({ dealId, itemIndex });
-    setEditingTimelineDueDate(currentDueDate || '');
-  };
-
-  const handleSaveTimelineDueDate = async (dealId, itemIndex) => {
-    const deal = deals.find(d => d.id === dealId);
-    if (!deal || !deal.timeline) return;
-
-    const updatedTimeline = [...deal.timeline];
-    updatedTimeline[itemIndex] = {
-      ...updatedTimeline[itemIndex],
-      dueDate: editingTimelineDueDate
-    };
-
-    await updateDeal(dealId, { timeline: updatedTimeline });
-    setEditingTimelineItem(null);
-    setEditingTimelineDueDate('');
-  };
-
-  const handleCancelTimelineEdit = () => {
-    setEditingTimelineItem(null);
-    setEditingTimelineDueDate('');
   };
 
   const getPriorityBadgeClass = (priority) => {
