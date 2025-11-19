@@ -7,6 +7,32 @@ import autoTable from 'jspdf-autotable';
 import logo from '../../assets/MyAeroDeal_dark.png';
 import ConfirmDialog from '../Common/ConfirmDialog';
 
+// Helper to get deal status colors
+const getDealStatusColors = (status) => {
+  switch (status) {
+    case 'LOI Signed':
+      return { bg: '#5BC0DE', text: '#FFFFFF' };
+    case 'Deposit Paid':
+      return { bg: '#7C3AED', text: '#FFFFFF' };
+    case 'APA Drafted':
+      return { bg: '#3B82F6', text: '#FFFFFF' };
+    case 'APA Signed':
+      return { bg: '#10B981', text: '#FFFFFF' };
+    case 'PPI Started':
+      return { bg: '#F59E0B', text: '#FFFFFF' };
+    case 'Defect Rectifications':
+      return { bg: '#EF4444', text: '#FFFFFF' };
+    case 'Closing':
+      return { bg: '#8B5CF6', text: '#FFFFFF' };
+    case 'Closed Won':
+      return { bg: '#059669', text: '#FFFFFF' };
+    case 'Closed Lost':
+      return { bg: '#6B7280', text: '#FFFFFF' };
+    default:
+      return { bg: '#5BC0DE', text: '#FFFFFF' };
+  }
+};
+
 const DealsView = ({ openModal }) => {
   const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask, currentUserProfile, loadFullDealData, dealsLoading } = useStore();
   const { colors } = useTheme();
@@ -376,253 +402,22 @@ const DealsView = ({ openModal }) => {
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredDeals.map(deal => {
-            const lead = leads.find(l => l.id === deal.relatedLead);
             const ac = aircraft.find(a => a.id === deal.relatedAircraft);
 
             return (
-            <div key={deal.id} className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold" style={{ color: colors.primary }}>{deal.dealName}</h3>
-                  <p style={{ color: colors.textSecondary }}>{deal.clientName}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
-                    className="p-2 rounded"
-                    style={{ color: colors.textPrimary }}
-                    disabled={dealsLoading.has(deal.id)}
-                  >
-                    <Edit2 size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(deal)}
-                    className="p-2 rounded"
-                    style={{ color: colors.error }}
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>Aircraft</p>
-                  <p className="font-medium" style={{ color: colors.textPrimary }}>{ac?.manufacturer} {ac?.model} {!ac && 'Not specified'}</p>
-                </div>
-                <div>
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>Deal Value</p>
-                  <p className="font-medium text-lg" style={{ color: colors.primary }}>
-                    {deal.dealValue ? `$${(deal.dealValue / 1000000).toFixed(1)}M` : 'Not specified'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>Est. Closing</p>
-                  <p className="font-medium" style={{ color: colors.textPrimary }}>{deal.estimatedClosing || 'Not specified'}</p>
-                </div>
-                <div>
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>Created</p>
-                  <p className="font-medium" style={{ color: colors.textPrimary }}>
-                    {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString() : 'N/A'}
-                  </p>
-                </div>
-              </div>
-
-              {deal.document && deal.documentData && (
-                <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText size={18} style={{ color: colors.primary }} />
-                      <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>{deal.document}</span>
-                    </div>
-                    <button
-                      onClick={() => handleViewDocument(deal)}
-                      className="flex items-center gap-1 px-3 py-1 text-sm rounded font-semibold hover:opacity-90"
-                      style={{ backgroundColor: colors.primary, color: colors.secondary }}
-                    >
-                      <Download size={14} />
-                      View
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="mb-4">
-                <p className="text-sm mb-2" style={{ color: colors.textSecondary }}>Status</p>
-                <select
-                  value={deal.status}
-                  onChange={(e) => updateDealStatus(deal.id, e.target.value)}
-                  className="w-full md:w-auto px-4 py-2 rounded-lg font-medium"
-                  style={{
-                    backgroundColor: colors.cardBg,
-                    color: colors.primary,
-                    border: `1px solid ${colors.border}`
-                  }}
-                >
-                  <option value="LOI Signed">LOI Signed</option>
-                  <option value="Deposit Paid">Deposit Paid</option>
-                  <option value="APA Drafted">APA Drafted</option>
-                  <option value="APA Signed">APA Signed</option>
-                  <option value="PPI Started">PPI Started</option>
-                  <option value="Defect Rectifications">Defect Rectifications</option>
-                  <option value="Closing">Closing</option>
-                  <option value="Closed Won">Closed Won</option>
-                  <option value="Closed Lost">Closed Lost</option>
-                </select>
-              </div>
-
-              <div className="rounded-lg p-4" style={{ backgroundColor: colors.secondary }}>
-                <div className="flex items-start gap-3">
-                  <Clock size={20} style={{ color: colors.primary }} className="mt-1" />
-                  <div className="flex-1">
-                    <p className="font-semibold" style={{ color: colors.primary }}>Next Step</p>
-                    <p style={{ color: colors.textPrimary }}>{deal.nextStep || 'No next step defined'}</p>
-                    <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>Follow-up: {deal.followUpDate || 'Not scheduled'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {deal.history && deal.history.length > 1 && (
-                <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
-                  <p className="font-semibold mb-2" style={{ color: colors.primary }}>History</p>
-                  <div className="space-y-2">
-                    {deal.history.slice(-3).reverse().map((h, idx) => (
-                      <div key={idx} className="text-sm" style={{ color: colors.textSecondary }}>
-                        <span className="font-medium" style={{ color: colors.textPrimary }}>{new Date(h.date).toLocaleDateString()}</span> - {h.action}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {deal.timeline && deal.timeline.length > 0 && (
-                <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
-                  <button
-                    onClick={() => setShowTimeline({ ...showTimeline, [deal.id]: !showTimeline[deal.id] })}
-                    className="flex items-center gap-2 font-semibold mb-2 w-full"
-                    style={{ color: colors.primary }}
-                  >
-                    <ListChecks size={18} />
-                    Deal Timeline ({deal.timeline.length})
-                    <span className="text-xs ml-auto" style={{ color: colors.textSecondary }}>
-                      Generated {new Date(deal.timelineGenerated).toLocaleDateString()}
-                    </span>
-                    <span className="text-xs" style={{ color: colors.textSecondary }}>{showTimeline[deal.id] ? '▼' : '▶'}</span>
-                  </button>
-
-                  {showTimeline[deal.id] && (
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {[...deal.timeline].sort((a, b) => {
-                        // Handle items without due dates - put them at the end
-                        if (!a.dueDate && !b.dueDate) return 0;
-                        if (!a.dueDate) return 1;
-                        if (!b.dueDate) return -1;
-                        return new Date(a.dueDate) - new Date(b.dueDate);
-                      }).map((item, idx) => {
-                        const originalIndex = deal.timeline.findIndex(t => t === item);
-                        return (
-                          <div key={idx} className="flex items-start gap-2 text-sm p-2 rounded" style={{ backgroundColor: colors.secondary }}>
-                            <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" style={{ color: colors.textSecondary }} />
-                            <div className="flex-1">
-                              <p className="font-medium" style={{ color: colors.textPrimary }}>{item.title}</p>
-                              {editingTimelineItem?.dealId === deal.id && editingTimelineItem?.itemIndex === originalIndex ? (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <input
-                                    type="date"
-                                    value={editingTimelineDueDate}
-                                    onChange={(e) => setEditingTimelineDueDate(e.target.value)}
-                                    className="text-xs px-2 py-1 rounded"
-                                    style={{
-                                      backgroundColor: colors.cardBg,
-                                      color: colors.textPrimary,
-                                      border: `1px solid ${colors.border}`
-                                    }}
-                                    autoFocus
-                                  />
-                                  <button
-                                    onClick={() => handleSaveTimelineDueDate(deal.id, originalIndex)}
-                                    className="text-xs px-2 py-1 rounded font-semibold"
-                                    style={{ backgroundColor: colors.primary, color: colors.secondary }}
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={handleCancelTimelineEdit}
-                                    className="text-xs px-2 py-1 rounded"
-                                    style={{ border: `1px solid ${colors.border}`, color: colors.textSecondary }}
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <p
-                                  className="text-xs cursor-pointer hover:underline"
-                                  style={{ color: colors.textSecondary }}
-                                  onClick={() => handleEditTimelineDueDate(deal.id, originalIndex, item.dueDate)}
-                                  title="Click to edit due date"
-                                >
-                                  Due: {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'No date set'} ✏️
-                                </p>
-                              )}
-                            </div>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              item.priority === 'high' ? 'bg-red-100 text-red-700' :
-                              item.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
-                              'bg-blue-100 text-blue-700'
-                            }`}>
-                              {item.priority}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
-                <button
-                  onClick={() => {
-                    setSelectedDealId(deal.id);
-                    setShowDocTypeModal(true);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold"
-                  style={{ backgroundColor: colors.primary, color: colors.secondary }}
-                >
-                  <ListChecks size={18} />
-                  Generate Action Items & Timeline
-                </button>
-              </div>
-
-              <DealTaskActions
-                deal={deal}
-                tasks={tasks.filter(t => t.relatedTo?.type === 'deal' && t.relatedTo?.id === deal.id)}
-                currentUserProfile={currentUserProfile}
-              />
-
-              <TasksSection
-                dealId={deal.id}
-                dealName={deal.dealName}
-                tasks={tasks.filter(t => t.relatedTo?.type === 'deal' && t.relatedTo?.id === deal.id)}
-                onToggleComplete={(taskId, currentStatus) => {
-                  updateTask(taskId, { status: currentStatus === 'completed' ? 'pending' : 'completed' });
-                }}
-                onUpdateTask={updateTask}
-                onAddTask={(taskData) => {
-                  addTask({
-                    ...taskData,
-                    relatedTo: { type: 'deal', id: deal.id }
-                  });
-                }}
-              />
-
-              <NotesSection
-                notes={deal.timestampedNotes || []}
-                onAddNote={(noteText) => addNoteToDeal(deal.id, noteText)}
-              />
-            </div>
+            <DealSummaryCard
+              key={deal.id}
+              deal={deal}
+              aircraft={ac}
+              colors={colors}
+              onViewDetails={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('dealDetail', updatedDeal))}
+              onEdit={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
+              onDelete={() => handleDeleteClick(deal)}
+              isLoading={dealsLoading.has(deal.id)}
+              getStatusColors={getDealStatusColors}
+            />
           );
           })}
         </div>
@@ -1342,6 +1137,113 @@ const TasksSection = ({ dealId, dealName, tasks, onToggleComplete, onUpdateTask,
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const DealSummaryCard = ({ deal, aircraft, colors, onViewDetails, onEdit, onDelete, isLoading, getStatusColors }) => {
+  return (
+    <div className="rounded-lg shadow-lg overflow-hidden relative" style={{ backgroundColor: colors.cardBg }}>
+      {/* Header with gradient background */}
+      <div
+        className="relative w-full h-32 overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${getStatusColors(deal.status).bg}dd, ${getStatusColors(deal.status).bg}99)`
+        }}
+      >
+        {/* Status Badge */}
+        <div className="absolute top-4 right-4 px-4 py-2 rounded-lg font-bold text-sm" style={{
+          backgroundColor: getStatusColors(deal.status).bg,
+          color: getStatusColors(deal.status).text,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }}>
+          {deal.status}
+        </div>
+
+        {/* Deal Name and Client */}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <h3 className="text-2xl font-bold text-white drop-shadow-md">
+            {deal.dealName}
+          </h3>
+          <p className="text-white text-sm opacity-90">{deal.clientName}</p>
+        </div>
+
+        {/* Edit and Delete Buttons */}
+        <div className="absolute top-4 left-4 flex gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="p-2 rounded-full hover:opacity-80"
+            style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
+            title="Edit"
+            disabled={isLoading}
+          >
+            <Edit2 size={18} style={{ color: colors.primary }} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-2 rounded-full hover:opacity-80"
+            style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
+            title="Delete"
+          >
+            <Trash2 size={18} style={{ color: colors.error }} />
+          </button>
+        </div>
+      </div>
+
+      {/* Info Boxes - Aircraft, Deal Value, Est. Closing */}
+      <div className="p-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {/* Aircraft */}
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+            <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Aircraft</div>
+            <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+              {aircraft ? `${aircraft.manufacturer} ${aircraft.model}` : 'Not specified'}
+            </div>
+          </div>
+
+          {/* Deal Value */}
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+            <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Deal Value</div>
+            <div className="text-sm font-bold" style={{ color: colors.primary }}>
+              {deal.dealValue ? `$${(deal.dealValue / 1000000).toFixed(1)}M` : 'Not set'}
+            </div>
+          </div>
+
+          {/* Est. Closing */}
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+            <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Est. Closing</div>
+            <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+              {deal.estimatedClosing || 'Not set'}
+            </div>
+          </div>
+        </div>
+
+        {/* Created Date */}
+        <div className="mb-4">
+          <div className="text-sm" style={{ color: colors.textSecondary }}>Created</div>
+          <div className="text-lg font-medium" style={{ color: colors.textPrimary }}>
+            {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString() : 'N/A'}
+          </div>
+        </div>
+
+        {/* View Details Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetails();
+          }}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90"
+          style={{ backgroundColor: colors.primary, color: colors.secondary }}
+        >
+          View Details →
+        </button>
+      </div>
     </div>
   );
 };
