@@ -634,13 +634,30 @@ const AircraftView = ({ openModal }) => {
 };
 
 const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete, isLoading, getStatusColors }) => {
+  const { loadFullAircraftData } = useStore();
+  const [imageData, setImageData] = useState(aircraft.imageData);
+
+  // Load image data on mount if not already loaded
+  React.useEffect(() => {
+    const loadImage = async () => {
+      if (!imageData && aircraft.id) {
+        await loadFullAircraftData(aircraft.id);
+        const updatedAircraft = useStore.getState().aircraft.find(ac => ac.id === aircraft.id);
+        if (updatedAircraft?.imageData) {
+          setImageData(updatedAircraft.imageData);
+        }
+      }
+    };
+    loadImage();
+  }, [aircraft.id, imageData, loadFullAircraftData]);
+
   return (
     <div className="rounded-lg shadow-lg overflow-hidden relative" style={{ backgroundColor: colors.cardBg }}>
       {/* Aircraft Image with Title Overlay */}
       <div className="relative w-full h-80 overflow-hidden" style={{ backgroundColor: colors.secondary }}>
-        {aircraft.imageData ? (
+        {imageData ? (
           <img
-            src={aircraft.imageData}
+            src={imageData}
             alt={`${aircraft.manufacturer} ${aircraft.model}`}
             className="w-full h-full object-cover"
           />
