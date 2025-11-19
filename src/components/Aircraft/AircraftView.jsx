@@ -41,7 +41,11 @@ const AircraftView = ({ openModal }) => {
   // Helper to ensure full data is loaded before action
   const handleActionWithFullData = async (aircraftId, action) => {
     await loadFullAircraftData(aircraftId);
-    action();
+    // Get the updated aircraft from the store after loading
+    const updatedAircraft = aircraft.find(ac => ac.id === aircraftId);
+    if (updatedAircraft) {
+      action(updatedAircraft);
+    }
   };
 
   const handleViewSpec = (ac) => {
@@ -508,7 +512,7 @@ const AircraftView = ({ openModal }) => {
                     key={ac.id}
                     className="hover:opacity-80 cursor-pointer"
                     style={{ borderBottom: `1px solid ${colors.border}` }}
-                    onClick={() => handleActionWithFullData(ac.id, () => openModal('aircraft', ac))}
+                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
                   >
                     <td className="px-4 py-3">
                       <div>
@@ -548,7 +552,7 @@ const AircraftView = ({ openModal }) => {
                     <td className="px-4 py-3">
                       <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => handleActionWithFullData(ac.id, () => openModal('aircraft', ac))}
+                          onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
                           className="p-2 rounded hover:opacity-70"
                           style={{ color: colors.textPrimary }}
                           title="Edit"
@@ -598,7 +602,7 @@ const AircraftView = ({ openModal }) => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleActionWithFullData(ac.id, () => openModal('aircraft', ac))}
+                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
                     className="p-2 rounded"
                     style={{ color: colors.textPrimary }}
                     disabled={aircraftLoading.has(ac.id)}
@@ -681,7 +685,7 @@ const AircraftView = ({ openModal }) => {
                       <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>{ac.specSheet}</span>
                     </div>
                     <button
-                      onClick={() => handleActionWithFullData(ac.id, () => handleViewSpec(ac))}
+                      onClick={() => handleActionWithFullData(ac.id, (updatedAc) => handleViewSpec(updatedAc))}
                       className="flex items-center gap-1 px-3 py-1 text-sm rounded font-semibold hover:opacity-90"
                       style={{ backgroundColor: colors.primary, color: colors.secondary }}
                       disabled={aircraftLoading.has(ac.id)}
@@ -730,7 +734,7 @@ const AircraftView = ({ openModal }) => {
 
               <div className="mt-4 space-y-2">
                 <button
-                  onClick={() => handleActionWithFullData(ac.id, () => openModal('presentationFromAircraft', ac))}
+                  onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('presentationFromAircraft', updatedAc))}
                   className="w-full px-4 py-2 rounded-lg font-semibold"
                   style={{ backgroundColor: colors.primary, color: colors.secondary }}
                   disabled={aircraftLoading.has(ac.id)}
@@ -740,7 +744,7 @@ const AircraftView = ({ openModal }) => {
 
                 {ac.presentations && ac.presentations.length > 0 && (
                   <button
-                    onClick={() => handleActionWithFullData(ac.id, () => generateMarketingReport(ac))}
+                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => generateMarketingReport(updatedAc))}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold hover:opacity-90"
                     style={{
                       backgroundColor: colors.secondary,

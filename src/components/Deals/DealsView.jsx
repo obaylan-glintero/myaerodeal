@@ -21,7 +21,11 @@ const DealsView = ({ openModal }) => {
   // Helper to ensure full deal data is loaded before action
   const handleActionWithFullDealData = async (dealId, action) => {
     await loadFullDealData(dealId);
-    action();
+    // Get the updated deal from the store after loading
+    const updatedDeal = deals.find(d => d.id === dealId);
+    if (updatedDeal) {
+      action(updatedDeal);
+    }
   };
 
   const handleViewDocument = (deal) => {
@@ -278,7 +282,7 @@ const DealsView = ({ openModal }) => {
                       key={deal.id}
                       className="hover:opacity-80 cursor-pointer"
                       style={{ borderBottom: `1px solid ${colors.border}` }}
-                      onClick={() => handleActionWithFullDealData(deal.id, () => openModal('deal', deal))}
+                      onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
                     >
                       <td className="px-4 py-3">
                         <div>
@@ -321,7 +325,7 @@ const DealsView = ({ openModal }) => {
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={() => handleActionWithFullDealData(deal.id, () => openModal('deal', deal))}
+                            onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
                             className="p-2 rounded hover:opacity-70"
                             style={{ color: colors.textPrimary }}
                             title="Edit"
@@ -364,7 +368,7 @@ const DealsView = ({ openModal }) => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleActionWithFullDealData(deal.id, () => openModal('deal', deal))}
+                    onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
                     className="p-2 rounded"
                     style={{ color: colors.textPrimary }}
                     disabled={dealsLoading.has(deal.id)}

@@ -15,13 +15,21 @@ const LeadsView = ({ openModal }) => {
   // Helper to ensure full aircraft data is loaded before action
   const handleActionWithFullAircraftData = async (aircraftId, action) => {
     await loadFullAircraftData(aircraftId);
-    action();
+    // Get the updated aircraft from the store after loading
+    const updatedAircraft = aircraft.find(ac => ac.id === aircraftId);
+    if (updatedAircraft) {
+      action(updatedAircraft);
+    }
   };
 
   // Helper to ensure full lead data is loaded before action
   const handleActionWithFullLeadData = async (leadId, action) => {
     await loadFullLeadData(leadId);
-    action();
+    // Get the updated lead from the store after loading
+    const updatedLead = leads.find(l => l.id === leadId);
+    if (updatedLead) {
+      action(updatedLead);
+    }
   };
 
   // Filter leads
@@ -204,7 +212,7 @@ const LeadsView = ({ openModal }) => {
                     key={lead.id}
                     className="hover:opacity-80 cursor-pointer"
                     style={{ borderBottom: `1px solid ${colors.border}` }}
-                    onClick={() => handleActionWithFullLeadData(lead.id, () => openModal('lead', lead))}
+                    onClick={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('lead', updatedLead))}
                   >
                     <td className="px-4 py-3">
                       <div>
@@ -249,7 +257,7 @@ const LeadsView = ({ openModal }) => {
                     <td className="px-4 py-3">
                       <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => handleActionWithFullLeadData(lead.id, () => openModal('lead', lead))}
+                          onClick={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('lead', updatedLead))}
                           className="p-2 rounded hover:opacity-70"
                           style={{ color: colors.textPrimary }}
                           title="Edit"
@@ -358,7 +366,7 @@ const LeadsView = ({ openModal }) => {
                       <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
                         <p className="font-medium">
                           <button
-                            onClick={() => handleActionWithFullAircraftData(ac.id, () => openModal('aircraft', ac))}
+                            onClick={() => handleActionWithFullAircraftData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
                             className="hover:underline cursor-pointer text-left"
                             style={{ color: colors.primary }}
                           >
