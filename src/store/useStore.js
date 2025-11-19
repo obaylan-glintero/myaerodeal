@@ -137,6 +137,12 @@ export const useStore = create((set, get) => ({
   currentUser: null,
   companyUsers: [],
   currentUserProfile: null,
+  aircraftFullDataLoaded: new Set(), // Track which aircraft have full data loaded
+  aircraftLoading: new Set(), // Track which aircraft are currently loading
+  leadsFullDataLoaded: new Set(), // Track which leads have full data loaded
+  leadsLoading: new Set(), // Track which leads are currently loading
+  dealsFullDataLoaded: new Set(), // Track which deals have full data loaded
+  dealsLoading: new Set(), // Track which deals are currently loading
 
   // Initialize store - fetch from Supabase or use demo data
   initialize: async () => {
@@ -239,10 +245,16 @@ export const useStore = create((set, get) => ({
 
       // Now fetch all data from Supabase (RLS automatically filters by company_id)
       console.log('Fetching data from Supabase...');
+
+      // Only fetch minimal fields for faster initial load
+      const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, presentations, timestamped_notes, created_at';
+      const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, created_at';
+      const dealsMinimalFields = 'id, deal_name, client_name, related_lead, related_aircraft, deal_value, estimated_closing, status, next_step, follow_up_date, created_at';
+
       const [leadsResult, aircraftResult, dealsResult, tasksResult] = await Promise.all([
-        supabase.from('leads').select('*').order('created_at', { ascending: false }),
-        supabase.from('aircraft').select('*').order('created_at', { ascending: false }),
-        supabase.from('deals').select('*').order('created_at', { ascending: false }),
+        supabase.from('leads').select(leadsMinimalFields).order('created_at', { ascending: false }),
+        supabase.from('aircraft').select(aircraftMinimalFields).order('created_at', { ascending: false }),
+        supabase.from('deals').select(dealsMinimalFields).order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false })
       ]);
 
@@ -279,7 +291,29 @@ export const useStore = create((set, get) => ({
       console.log('=================================');
 
       // Convert database format to app format
-      const convertLeadFromDB = (lead) => {
+      // Minimal converter for leads - only essential fields for list/card view
+      const convertLeadMinimalFromDB = (lead) => {
+        const converted = {
+          id: lead.id,
+          name: lead.name || '',
+          company: lead.company || '',
+          aircraftType: lead.aircraft_type || '',
+          budget: lead.budget,
+          budgetKnown: lead.budget_known || false,
+          yearPreference: lead.year_preference || { oldest: null, newest: null },
+          status: lead.status || 'Inquiry',
+          presentations: lead.presentations || [],
+          timestampedNotes: lead.timestamped_notes || [],
+          createdAt: lead.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+          // Placeholder for full data (will be loaded on demand)
+          notes: ''
+        };
+        console.log('🔄 Converting lead (minimal) from DB:', lead.name, 'status:', lead.status, '→', converted.status);
+        return converted;
+      };
+
+      // Full converter for leads - all fields including heavy data
+      const convertLeadFullFromDB = (lead) => {
         const converted = {
           id: lead.id,
           name: lead.name || '',
@@ -294,11 +328,38 @@ export const useStore = create((set, get) => ({
           timestampedNotes: lead.timestamped_notes || [],
           createdAt: lead.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
         };
-        console.log('🔄 Converting lead from DB:', lead.name, 'status:', lead.status, '→', converted.status);
+        console.log('🔄 Converting lead (full) from DB:', lead.name, 'status:', lead.status, '→', converted.status);
         return converted;
       };
 
-      const convertAircraftFromDB = (aircraft) => ({
+      // Minimal converter - only essential fields for list/card view
+      const convertAircraftMinimalFromDB = (aircraft) => ({
+        id: aircraft.id,
+        manufacturer: aircraft.manufacturer || '',
+        model: aircraft.model || '',
+        yom: aircraft.yom,
+        category: aircraft.category || '',
+        location: aircraft.location || '',
+        price: aircraft.price || 0,
+        status: aircraft.status || 'For Sale',
+        seller: aircraft.seller || '',
+        imageUrl: aircraft.image_url,
+        accessType: aircraft.access_type || 'Direct',
+        specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
+        summary: aircraft.summary || '', // AI-generated summary for display
+        presentations: aircraft.presentations || [], // Which leads this was presented to
+        createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+        // Placeholders for full data (will be loaded on demand)
+        serialNumber: null,
+        registration: null,
+        specSheetData: null,
+        specSheetType: null,
+        imageData: null,
+        timestampedNotes: []
+      });
+
+      // Full converter - all fields including heavy data
+      const convertAircraftFullFromDB = (aircraft) => ({
         id: aircraft.id,
         manufacturer: aircraft.manufacturer || '',
         model: aircraft.model || '',
@@ -322,8 +383,36 @@ export const useStore = create((set, get) => ({
         createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
       });
 
-      const convertDealFromDB = (deal) => {
-        console.log('🔄 Converting deal from DB:', deal.id, deal.deal_name);
+      // Minimal converter for deals - only essential fields for list/card view
+      const convertDealMinimalFromDB = (deal) => {
+        console.log('🔄 Converting deal (minimal) from DB:', deal.id, deal.deal_name);
+        return {
+          id: deal.id,
+          dealName: deal.deal_name || '',
+          clientName: deal.client_name || '',
+          relatedLead: deal.related_lead,
+          relatedAircraft: deal.related_aircraft,
+          dealValue: deal.deal_value || 0,
+          estimatedClosing: deal.estimated_closing || '',
+          status: deal.status || 'LOI Signed',
+          nextStep: deal.next_step || '',
+          followUpDate: deal.follow_up_date || '',
+          createdAt: deal.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+          // Placeholders for full data (will be loaded on demand)
+          document: null,
+          documentData: null,
+          documentType: null,
+          history: [],
+          timestampedNotes: [],
+          timeline: null,
+          timelineGenerated: null,
+          documentParsed: null
+        };
+      };
+
+      // Full converter for deals - all fields including heavy data
+      const convertDealFullFromDB = (deal) => {
+        console.log('🔄 Converting deal (full) from DB:', deal.id, deal.deal_name);
         console.log('  - document:', deal.document);
         console.log('  - document_data exists:', !!deal.document_data, deal.document_data ? `(${deal.document_data.length} chars)` : '');
         console.log('  - document_type:', deal.document_type);
@@ -394,18 +483,21 @@ export const useStore = create((set, get) => ({
           // Re-fetch data after creating samples
           console.log('📊 Re-fetching data after sample creation...');
           const [newLeadsResult, newAircraftResult, newDealsResult, newTasksResult] = await Promise.all([
-            supabase.from('leads').select('*').order('created_at', { ascending: false }),
-            supabase.from('aircraft').select('*').order('created_at', { ascending: false }),
-            supabase.from('deals').select('*').order('created_at', { ascending: false }),
+            supabase.from('leads').select(leadsMinimalFields).order('created_at', { ascending: false }),
+            supabase.from('aircraft').select(aircraftMinimalFields).order('created_at', { ascending: false }),
+            supabase.from('deals').select(dealsMinimalFields).order('created_at', { ascending: false }),
             supabase.from('tasks').select('*').order('created_at', { ascending: false })
           ]);
 
           set({
-            leads: newLeadsResult.data?.map(convertLeadFromDB) || [],
-            aircraft: newAircraftResult.data?.map(convertAircraftFromDB) || [],
-            deals: newDealsResult.data?.map(convertDealFromDB) || [],
+            leads: newLeadsResult.data?.map(convertLeadMinimalFromDB) || [],
+            aircraft: newAircraftResult.data?.map(convertAircraftMinimalFromDB) || [],
+            deals: newDealsResult.data?.map(convertDealMinimalFromDB) || [],
             tasks: newTasksResult.data?.map(convertTaskFromDB) || [],
-            loading: false
+            loading: false,
+            aircraftFullDataLoaded: new Set(), // Reset tracking
+            leadsFullDataLoaded: new Set(),
+            dealsFullDataLoaded: new Set()
           });
 
           console.log('✅ Sample data created and loaded! This will only happen once.');
@@ -423,11 +515,14 @@ export const useStore = create((set, get) => ({
       } else {
         // Company has existing data
         set({
-          leads: leadsResult.data?.map(convertLeadFromDB) || [],
-          aircraft: aircraftResult.data?.map(convertAircraftFromDB) || [],
-          deals: dealsResult.data?.map(convertDealFromDB) || [],
+          leads: leadsResult.data?.map(convertLeadMinimalFromDB) || [],
+          aircraft: aircraftResult.data?.map(convertAircraftMinimalFromDB) || [],
+          deals: dealsResult.data?.map(convertDealMinimalFromDB) || [],
           tasks: tasksResult.data?.map(convertTaskFromDB) || [],
-          loading: false
+          loading: false,
+          aircraftFullDataLoaded: new Set(), // Reset tracking
+          leadsFullDataLoaded: new Set(),
+          dealsFullDataLoaded: new Set()
         });
       }
 
@@ -667,9 +762,13 @@ export const useStore = create((set, get) => ({
   // Refresh functions for real-time updates
   refreshLeads: async () => {
     if (!get().isAuthenticated) return;
-    const { data } = await supabase.from('leads').select('*');
+
+    // Only fetch minimal fields for refresh
+    const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, presentations, timestamped_notes, created_at';
+    const { data } = await supabase.from('leads').select(leadsMinimalFields);
+
     if (data) {
-      const convertLeadFromDB = (lead) => {
+      const convertLeadMinimalFromDB = (lead) => {
         const converted = {
           id: lead.id,
           name: lead.name || '',
@@ -679,58 +778,369 @@ export const useStore = create((set, get) => ({
           budgetKnown: lead.budget_known || false,
           yearPreference: lead.year_preference || { oldest: null, newest: null },
           status: lead.status || 'Inquiry',
-          notes: lead.notes || '',
           presentations: lead.presentations || [],
           timestampedNotes: lead.timestamped_notes || [],
-          createdAt: lead.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+          createdAt: lead.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+          // Placeholder for full data
+          notes: ''
         };
-        console.log('🔄 Converting lead from DB:', lead.name, 'status:', lead.status, '→', converted.status);
         return converted;
       };
-      set({ leads: data.map(convertLeadFromDB) });
+
+      // Preserve full data for leads that have been loaded
+      const { leads: currentLeads, leadsFullDataLoaded } = get();
+      const newLeads = data.map(dbLead => {
+        const existingLead = currentLeads.find(l => l.id === dbLead.id);
+        if (existingLead && leadsFullDataLoaded.has(dbLead.id)) {
+          // Keep full data for already loaded leads, but update minimal fields
+          return {
+            ...existingLead,
+            name: dbLead.name || '',
+            company: dbLead.company || '',
+            aircraftType: dbLead.aircraft_type || '',
+            budget: dbLead.budget,
+            budgetKnown: dbLead.budget_known || false,
+            yearPreference: dbLead.year_preference || { oldest: null, newest: null },
+            status: dbLead.status || 'Inquiry',
+            presentations: dbLead.presentations || [],
+            timestampedNotes: dbLead.timestamped_notes || []
+          };
+        }
+        return convertLeadMinimalFromDB(dbLead);
+      });
+
+      set({ leads: newLeads });
     }
   },
 
   refreshAircraft: async () => {
     if (!get().isAuthenticated) return;
-    const { data } = await supabase.from('aircraft').select('*');
+
+    // Only fetch minimal fields for refresh
+    const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, created_at';
+    const { data } = await supabase.from('aircraft').select(aircraftMinimalFields);
+
     if (data) {
-      const convertAircraftFromDB = (aircraft) => ({
+      const convertAircraftMinimalFromDB = (aircraft) => ({
         id: aircraft.id,
         manufacturer: aircraft.manufacturer || '',
         model: aircraft.model || '',
         yom: aircraft.yom,
-        serialNumber: aircraft.serial_number || '',
-        registration: aircraft.registration || '',
         category: aircraft.category || '',
         location: aircraft.location || '',
         price: aircraft.price || 0,
-        accessType: aircraft.access_type || 'Direct',
-        summary: aircraft.summary || '',
         status: aircraft.status || 'For Sale',
         seller: aircraft.seller || '',
-        specSheet: aircraft.spec_sheet,
-        specSheetData: aircraft.spec_sheet_data,
-        specSheetType: aircraft.spec_sheet_type,
         imageUrl: aircraft.image_url,
-        imageData: aircraft.image_data,
-        presentations: aircraft.presentations || [],
-        timestampedNotes: aircraft.timestamped_notes || [],
-        createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+        accessType: aircraft.access_type || 'Direct',
+        specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
+        summary: aircraft.summary || '', // AI-generated summary for display
+        presentations: aircraft.presentations || [], // Which leads this was presented to
+        createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+        // Placeholders for full data
+        serialNumber: null,
+        registration: null,
+        specSheetData: null,
+        specSheetType: null,
+        imageData: null,
+        timestampedNotes: []
       });
-      set({ aircraft: data.map(convertAircraftFromDB) });
+
+      // Preserve full data for aircraft that have been loaded
+      const { aircraft: currentAircraft, aircraftFullDataLoaded } = get();
+      const newAircraft = data.map(dbAircraft => {
+        const existingAircraft = currentAircraft.find(a => a.id === dbAircraft.id);
+        if (existingAircraft && aircraftFullDataLoaded.has(dbAircraft.id)) {
+          // Keep full data for already loaded aircraft, but update minimal fields
+          return {
+            ...existingAircraft,
+            manufacturer: dbAircraft.manufacturer || '',
+            model: dbAircraft.model || '',
+            yom: dbAircraft.yom,
+            category: dbAircraft.category || '',
+            location: dbAircraft.location || '',
+            price: dbAircraft.price || 0,
+            status: dbAircraft.status || 'For Sale',
+            seller: dbAircraft.seller || '',
+            imageUrl: dbAircraft.image_url,
+            accessType: dbAircraft.access_type || 'Direct',
+            specSheet: dbAircraft.spec_sheet,
+            summary: dbAircraft.summary || '',
+            presentations: dbAircraft.presentations || []
+          };
+        }
+        return convertAircraftMinimalFromDB(dbAircraft);
+      });
+
+      set({ aircraft: newAircraft });
+    }
+  },
+
+  // Load full aircraft data on demand (lazy loading)
+  loadFullAircraftData: async (aircraftId) => {
+    const { aircraft, aircraftFullDataLoaded, aircraftLoading, isAuthenticated } = get();
+
+    // If not authenticated or already loaded, skip
+    if (!isAuthenticated) return;
+    if (aircraftFullDataLoaded.has(aircraftId)) {
+      console.log(`✅ Aircraft ${aircraftId} full data already loaded`);
+      return;
+    }
+
+    // If already loading, skip
+    if (aircraftLoading.has(aircraftId)) {
+      console.log(`⏳ Aircraft ${aircraftId} is already being loaded`);
+      return;
+    }
+
+    try {
+      // Mark as loading
+      const newLoading = new Set(aircraftLoading);
+      newLoading.add(aircraftId);
+      set({ aircraftLoading: newLoading });
+
+      console.log(`🔄 Loading full data for aircraft ${aircraftId}...`);
+
+      // Fetch all fields for this specific aircraft
+      const { data, error } = await supabase
+        .from('aircraft')
+        .select('*')
+        .eq('id', aircraftId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        // Convert to full aircraft object
+        const fullAircraft = {
+          id: data.id,
+          manufacturer: data.manufacturer || '',
+          model: data.model || '',
+          yom: data.yom,
+          serialNumber: data.serial_number || '',
+          registration: data.registration || '',
+          category: data.category || '',
+          location: data.location || '',
+          price: data.price || 0,
+          accessType: data.access_type || 'Direct',
+          summary: data.summary || '',
+          status: data.status || 'For Sale',
+          seller: data.seller || '',
+          specSheet: data.spec_sheet,
+          specSheetData: data.spec_sheet_data,
+          specSheetType: data.spec_sheet_type,
+          imageUrl: data.image_url,
+          imageData: data.image_data,
+          presentations: data.presentations || [],
+          timestampedNotes: data.timestamped_notes || [],
+          createdAt: data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+        };
+
+        // Update aircraft in state
+        const updatedAircraft = aircraft.map(a => a.id === aircraftId ? fullAircraft : a);
+
+        // Mark as loaded
+        const newFullDataLoaded = new Set(aircraftFullDataLoaded);
+        newFullDataLoaded.add(aircraftId);
+
+        // Remove from loading
+        const updatedLoading = new Set(aircraftLoading);
+        updatedLoading.delete(aircraftId);
+
+        set({
+          aircraft: updatedAircraft,
+          aircraftFullDataLoaded: newFullDataLoaded,
+          aircraftLoading: updatedLoading
+        });
+
+        console.log(`✅ Full data loaded for aircraft ${aircraftId}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error loading full aircraft data for ${aircraftId}:`, error);
+
+      // Remove from loading on error
+      const updatedLoading = new Set(aircraftLoading);
+      updatedLoading.delete(aircraftId);
+      set({ aircraftLoading: updatedLoading });
+    }
+  },
+
+  // Load full lead data on demand (lazy loading)
+  loadFullLeadData: async (leadId) => {
+    const { leads, leadsFullDataLoaded, leadsLoading, isAuthenticated } = get();
+
+    // If not authenticated or already loaded, skip
+    if (!isAuthenticated) return;
+    if (leadsFullDataLoaded.has(leadId)) {
+      console.log(`✅ Lead ${leadId} full data already loaded`);
+      return;
+    }
+
+    // If already loading, skip
+    if (leadsLoading.has(leadId)) {
+      console.log(`⏳ Lead ${leadId} is already being loaded`);
+      return;
+    }
+
+    try {
+      // Mark as loading
+      const newLoading = new Set(leadsLoading);
+      newLoading.add(leadId);
+      set({ leadsLoading: newLoading });
+
+      console.log(`🔄 Loading full data for lead ${leadId}...`);
+
+      // Fetch all fields for this specific lead
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', leadId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        // Convert to full lead object
+        const fullLead = {
+          id: data.id,
+          name: data.name || '',
+          company: data.company || '',
+          aircraftType: data.aircraft_type || '',
+          budget: data.budget,
+          budgetKnown: data.budget_known || false,
+          yearPreference: data.year_preference || { oldest: null, newest: null },
+          status: data.status || 'Inquiry',
+          notes: data.notes || '',
+          presentations: data.presentations || [],
+          timestampedNotes: data.timestamped_notes || [],
+          createdAt: data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+        };
+
+        // Update lead in state
+        const updatedLeads = leads.map(l => l.id === leadId ? fullLead : l);
+
+        // Mark as loaded
+        const newFullDataLoaded = new Set(leadsFullDataLoaded);
+        newFullDataLoaded.add(leadId);
+
+        // Remove from loading
+        const updatedLoading = new Set(leadsLoading);
+        updatedLoading.delete(leadId);
+
+        set({
+          leads: updatedLeads,
+          leadsFullDataLoaded: newFullDataLoaded,
+          leadsLoading: updatedLoading
+        });
+
+        console.log(`✅ Full data loaded for lead ${leadId}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error loading full lead data for ${leadId}:`, error);
+
+      // Remove from loading on error
+      const updatedLoading = new Set(leadsLoading);
+      updatedLoading.delete(leadId);
+      set({ leadsLoading: updatedLoading });
+    }
+  },
+
+  // Load full deal data on demand (lazy loading)
+  loadFullDealData: async (dealId) => {
+    const { deals, dealsFullDataLoaded, dealsLoading, isAuthenticated } = get();
+
+    // If not authenticated or already loaded, skip
+    if (!isAuthenticated) return;
+    if (dealsFullDataLoaded.has(dealId)) {
+      console.log(`✅ Deal ${dealId} full data already loaded`);
+      return;
+    }
+
+    // If already loading, skip
+    if (dealsLoading.has(dealId)) {
+      console.log(`⏳ Deal ${dealId} is already being loaded`);
+      return;
+    }
+
+    try {
+      // Mark as loading
+      const newLoading = new Set(dealsLoading);
+      newLoading.add(dealId);
+      set({ dealsLoading: newLoading });
+
+      console.log(`🔄 Loading full data for deal ${dealId}...`);
+
+      // Fetch all fields for this specific deal
+      const { data, error } = await supabase
+        .from('deals')
+        .select('*')
+        .eq('id', dealId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        // Convert to full deal object
+        const fullDeal = {
+          id: data.id,
+          dealName: data.deal_name || '',
+          clientName: data.client_name || '',
+          relatedLead: data.related_lead,
+          relatedAircraft: data.related_aircraft,
+          dealValue: data.deal_value || 0,
+          estimatedClosing: data.estimated_closing || '',
+          status: data.status || 'LOI Signed',
+          nextStep: data.next_step || '',
+          followUpDate: data.follow_up_date || '',
+          document: data.document,
+          documentData: data.document_data,
+          documentType: data.document_type,
+          history: data.history || [],
+          timestampedNotes: data.timestamped_notes || [],
+          timeline: data.timeline,
+          timelineGenerated: data.timeline_generated,
+          documentParsed: data.document_parsed,
+          createdAt: data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+        };
+
+        // Update deal in state
+        const updatedDeals = deals.map(d => d.id === dealId ? fullDeal : d);
+
+        // Mark as loaded
+        const newFullDataLoaded = new Set(dealsFullDataLoaded);
+        newFullDataLoaded.add(dealId);
+
+        // Remove from loading
+        const updatedLoading = new Set(dealsLoading);
+        updatedLoading.delete(dealId);
+
+        set({
+          deals: updatedDeals,
+          dealsFullDataLoaded: newFullDataLoaded,
+          dealsLoading: updatedLoading
+        });
+
+        console.log(`✅ Full data loaded for deal ${dealId}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error loading full deal data for ${dealId}:`, error);
+
+      // Remove from loading on error
+      const updatedLoading = new Set(dealsLoading);
+      updatedLoading.delete(dealId);
+      set({ dealsLoading: updatedLoading });
     }
   },
 
   refreshDeals: async () => {
     if (!get().isAuthenticated) return;
-    const { data } = await supabase.from('deals').select('*');
+
+    // Only fetch minimal fields for refresh
+    const dealsMinimalFields = 'id, deal_name, client_name, related_lead, related_aircraft, deal_value, estimated_closing, status, next_step, follow_up_date, created_at';
+    const { data } = await supabase.from('deals').select(dealsMinimalFields);
+
     if (data) {
-      const convertDealFromDB = (deal) => {
-        console.log('🔄 Converting deal from DB:', deal.id, deal.deal_name);
-        console.log('  - document:', deal.document);
-        console.log('  - document_data exists:', !!deal.document_data, deal.document_data ? `(${deal.document_data.length} chars)` : '');
-        console.log('  - document_type:', deal.document_type);
+      const convertDealMinimalFromDB = (deal) => {
         return {
           id: deal.id,
           dealName: deal.deal_name || '',
@@ -742,18 +1152,42 @@ export const useStore = create((set, get) => ({
           status: deal.status || 'LOI Signed',
           nextStep: deal.next_step || '',
           followUpDate: deal.follow_up_date || '',
-          document: deal.document,
-          documentData: deal.document_data,
-          documentType: deal.document_type,
-          history: deal.history || [],
-          timestampedNotes: deal.timestamped_notes || [],
-          timeline: deal.timeline,
-          timelineGenerated: deal.timeline_generated,
-          documentParsed: deal.document_parsed,
-          createdAt: deal.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+          createdAt: deal.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+          // Placeholders for full data
+          document: null,
+          documentData: null,
+          documentType: null,
+          history: [],
+          timestampedNotes: [],
+          timeline: null,
+          timelineGenerated: null,
+          documentParsed: null
         };
       };
-      set({ deals: data.map(convertDealFromDB) });
+
+      // Preserve full data for deals that have been loaded
+      const { deals: currentDeals, dealsFullDataLoaded } = get();
+      const newDeals = data.map(dbDeal => {
+        const existingDeal = currentDeals.find(d => d.id === dbDeal.id);
+        if (existingDeal && dealsFullDataLoaded.has(dbDeal.id)) {
+          // Keep full data for already loaded deals, but update minimal fields
+          return {
+            ...existingDeal,
+            dealName: dbDeal.deal_name || '',
+            clientName: dbDeal.client_name || '',
+            relatedLead: dbDeal.related_lead,
+            relatedAircraft: dbDeal.related_aircraft,
+            dealValue: dbDeal.deal_value || 0,
+            estimatedClosing: dbDeal.estimated_closing || '',
+            status: dbDeal.status || 'LOI Signed',
+            nextStep: dbDeal.next_step || '',
+            followUpDate: dbDeal.follow_up_date || ''
+          };
+        }
+        return convertDealMinimalFromDB(dbDeal);
+      });
+
+      set({ deals: newDeals });
     }
   },
 

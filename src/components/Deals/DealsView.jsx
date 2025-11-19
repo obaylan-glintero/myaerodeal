@@ -5,15 +5,50 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import logo from '../../assets/MyAeroDeal_dark.png';
+import ConfirmDialog from '../Common/ConfirmDialog';
 
 const DealsView = ({ openModal }) => {
-  const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask, currentUserProfile } = useStore();
+  const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask, currentUserProfile, loadFullDealData, dealsLoading } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showDocTypeModal, setShowDocTypeModal] = useState(false);
   const [selectedDealId, setSelectedDealId] = useState(null);
   const [viewMode, setViewMode] = useState('card');
+  const [showTimeline, setShowTimeline] = useState({});
+  const [editingTimelineItem, setEditingTimelineItem] = useState(null); // { dealId, itemIndex }
+  const [editingTimelineDueDate, setEditingTimelineDueDate] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, dealId: null, dealName: '' });
+
+  // Helper to ensure full deal data is loaded before action
+  const handleActionWithFullDealData = async (dealId, action) => {
+    await loadFullDealData(dealId);
+    // Get the updated deal directly from the store (not from the stale closure)
+    const updatedDeal = useStore.getState().deals.find(d => d.id === dealId);
+    if (updatedDeal) {
+      action(updatedDeal);
+    }
+  };
+
+  // Delete confirmation handlers
+  const handleDeleteClick = (deal) => {
+    const dealName = deal.clientName || deal.dealName || 'this deal';
+    setDeleteConfirm({
+      isOpen: true,
+      dealId: deal.id,
+      dealName: dealName
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirm.dealId) {
+      deleteDeal(deleteConfirm.dealId);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirm({ isOpen: false, dealId: null, dealName: '' });
+  };
 
   const handleViewDocument = (deal) => {
     if (deal.documentData) {
@@ -127,6 +162,31 @@ const DealsView = ({ openModal }) => {
     } catch (error) {
       alert(`Error generating action items: ${error.message}\n\nPlease ensure:\n1. A document is uploaded to this deal\n2. The document is a PDF file\n3. Try again or contact support`);
     }
+  };
+
+  const handleEditTimelineDueDate = (dealId, itemIndex, currentDueDate) => {
+    setEditingTimelineItem({ dealId, itemIndex });
+    setEditingTimelineDueDate(currentDueDate || '');
+  };
+
+  const handleSaveTimelineDueDate = async (dealId, itemIndex) => {
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal || !deal.timeline) return;
+
+    const updatedTimeline = [...deal.timeline];
+    updatedTimeline[itemIndex] = {
+      ...updatedTimeline[itemIndex],
+      dueDate: editingTimelineDueDate
+    };
+
+    await updateDeal(dealId, { timeline: updatedTimeline });
+    setEditingTimelineItem(null);
+    setEditingTimelineDueDate('');
+  };
+
+  const handleCancelTimelineEdit = () => {
+    setEditingTimelineItem(null);
+    setEditingTimelineDueDate('');
   };
 
   const filteredDeals = deals.filter(deal => {
@@ -244,7 +304,7 @@ const DealsView = ({ openModal }) => {
                       key={deal.id}
                       className="hover:opacity-80 cursor-pointer"
                       style={{ borderBottom: `1px solid ${colors.border}` }}
-                      onClick={() => openModal('deal', deal)}
+                      onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
                     >
                       <td className="px-4 py-3">
                         <div>
@@ -287,17 +347,18 @@ const DealsView = ({ openModal }) => {
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={() => openModal('deal', deal)}
+                            onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
                             className="p-2 rounded hover:opacity-70"
                             style={{ color: colors.textPrimary }}
                             title="Edit"
+                            disabled={dealsLoading.has(deal.id)}
                           >
                             <Edit2 size={18} />
                           </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteDeal(deal.id);
+                              handleDeleteClick(deal);
                             }}
                             className="p-2 rounded hover:opacity-70"
                             style={{ color: colors.error }}
@@ -329,14 +390,15 @@ const DealsView = ({ openModal }) => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => openModal('deal', deal)}
+                    onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
                     className="p-2 rounded"
                     style={{ color: colors.textPrimary }}
+                    disabled={dealsLoading.has(deal.id)}
                   >
                     <Edit2 size={18} />
                   </button>
                   <button
-                    onClick={() => deleteDeal(deal.id)}
+                    onClick={() => handleDeleteClick(deal)}
                     className="p-2 rounded"
                     style={{ color: colors.error }}
                   >
@@ -437,33 +499,86 @@ const DealsView = ({ openModal }) => {
 
               {deal.timeline && deal.timeline.length > 0 && (
                 <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-semibold flex items-center gap-2" style={{ color: colors.primary }}>
-                      <ListChecks size={18} />
-                      Deal Timeline
-                    </p>
-                    <span className="text-xs" style={{ color: colors.textSecondary }}>
+                  <button
+                    onClick={() => setShowTimeline({ ...showTimeline, [deal.id]: !showTimeline[deal.id] })}
+                    className="flex items-center gap-2 font-semibold mb-2 w-full"
+                    style={{ color: colors.primary }}
+                  >
+                    <ListChecks size={18} />
+                    Deal Timeline ({deal.timeline.length})
+                    <span className="text-xs ml-auto" style={{ color: colors.textSecondary }}>
                       Generated {new Date(deal.timelineGenerated).toLocaleDateString()}
                     </span>
-                  </div>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {deal.timeline.map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-sm p-2 rounded" style={{ backgroundColor: colors.secondary }}>
-                        <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" style={{ color: colors.textSecondary }} />
-                        <div className="flex-1">
-                          <p className="font-medium" style={{ color: colors.textPrimary }}>{item.title}</p>
-                          <p className="text-xs" style={{ color: colors.textSecondary }}>Due: {new Date(item.dueDate).toLocaleDateString()}</p>
-                        </div>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          item.priority === 'high' ? 'bg-red-100 text-red-700' :
-                          item.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {item.priority}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+                    <span className="text-xs" style={{ color: colors.textSecondary }}>{showTimeline[deal.id] ? '▼' : '▶'}</span>
+                  </button>
+
+                  {showTimeline[deal.id] && (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {[...deal.timeline].sort((a, b) => {
+                        // Handle items without due dates - put them at the end
+                        if (!a.dueDate && !b.dueDate) return 0;
+                        if (!a.dueDate) return 1;
+                        if (!b.dueDate) return -1;
+                        return new Date(a.dueDate) - new Date(b.dueDate);
+                      }).map((item, idx) => {
+                        const originalIndex = deal.timeline.findIndex(t => t === item);
+                        return (
+                          <div key={idx} className="flex items-start gap-2 text-sm p-2 rounded" style={{ backgroundColor: colors.secondary }}>
+                            <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" style={{ color: colors.textSecondary }} />
+                            <div className="flex-1">
+                              <p className="font-medium" style={{ color: colors.textPrimary }}>{item.title}</p>
+                              {editingTimelineItem?.dealId === deal.id && editingTimelineItem?.itemIndex === originalIndex ? (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <input
+                                    type="date"
+                                    value={editingTimelineDueDate}
+                                    onChange={(e) => setEditingTimelineDueDate(e.target.value)}
+                                    className="text-xs px-2 py-1 rounded"
+                                    style={{
+                                      backgroundColor: colors.cardBg,
+                                      color: colors.textPrimary,
+                                      border: `1px solid ${colors.border}`
+                                    }}
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleSaveTimelineDueDate(deal.id, originalIndex)}
+                                    className="text-xs px-2 py-1 rounded font-semibold"
+                                    style={{ backgroundColor: colors.primary, color: colors.secondary }}
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={handleCancelTimelineEdit}
+                                    className="text-xs px-2 py-1 rounded"
+                                    style={{ border: `1px solid ${colors.border}`, color: colors.textSecondary }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <p
+                                  className="text-xs cursor-pointer hover:underline"
+                                  style={{ color: colors.textSecondary }}
+                                  onClick={() => handleEditTimelineDueDate(deal.id, originalIndex, item.dueDate)}
+                                  title="Click to edit due date"
+                                >
+                                  Due: {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'No date set'} ✏️
+                                </p>
+                              )}
+                            </div>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              item.priority === 'high' ? 'bg-red-100 text-red-700' :
+                              item.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
+                              'bg-blue-100 text-blue-700'
+                            }`}>
+                              {item.priority}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -557,6 +672,18 @@ const DealsView = ({ openModal }) => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title="Delete Deal"
+        message={`Are you sure you want to delete the deal with "${deleteConfirm.dealName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonStyle="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 };
