@@ -2486,22 +2486,8 @@ export const useStore = create((set, get) => ({
 
     console.log(`✅ Successfully created ${successCount} out of ${actionItems.length} tasks`);
 
-    // Update deal with timeline - only include items with valid dates
-    const timeline = actionItems
-      .filter(item => item.dueDate && item.dueDate.trim() !== '')
-      .map(item => ({
-        title: item.title,
-        dueDate: item.dueDate,
-        priority: item.priority || 'medium',
-        completed: false,
-        source: 'AI-extracted',
-        responsibleParty: item.responsibleParty || null,
-        dayNumber: item.dayNumber || null
-      }));
-
+    // Update deal to mark document as parsed and store overview
     const updatedDealData = {
-      timeline: timeline,
-      timelineGenerated: new Date().toISOString(),
       documentParsed: true,
       documentOverview: documentOverview
     };
@@ -2522,14 +2508,12 @@ export const useStore = create((set, get) => ({
         await supabase
           .from('deals')
           .update({
-            timeline: timeline,
-            timeline_generated: updatedDealData.timelineGenerated,
             document_parsed: true,
             document_overview: documentOverview
           })
           .eq('id', dealId);
       } catch (error) {
-        console.error('Error syncing deal timeline to Supabase:', error);
+        console.error('Error syncing deal metadata to Supabase:', error);
       }
     } else {
       get().saveToLocalStorage();
@@ -2549,16 +2533,16 @@ export const useStore = create((set, get) => ({
 
     if (GEMINI_API_KEY) {
       try {
-        const prompt = `You are an aircraft transaction timeline specialist. Your task is to analyze letters of intent (LOI) or aircraft purchase agreements and create a detailed, actionable timeline with specific tasks.
+        const prompt = `You are an aircraft transaction document specialist. Your task is to analyze letters of intent (LOI) or aircraft purchase agreements and extract ALL actionable tasks, deadlines, and obligations mentioned in the document.
 
 DOCUMENT TEXT TO ANALYZE:
 ${documentText}
 
 YOUR TASK:
 1. Identify the effective date of the document - this is your Day 0/starting point
-2. Extract all time-sensitive clauses, deadlines, and milestones mentioned in the document
-3. Create a chronological timeline starting from the effective date
-4. Define specific, actionable tasks for each milestone
+2. Extract ONLY the time-sensitive clauses, deadlines, and milestones that are EXPLICITLY mentioned in the document
+3. DO NOT add standard industry tasks - extract ONLY what is written in this specific document
+4. Define specific, actionable tasks for each obligation or deadline found
 5. Calculate exact dates based on the effective date and any relative timeframes mentioned (e.g., "within 30 days of execution")
 
 KEY ITEMS TO EXTRACT AND TRACK:
@@ -2613,7 +2597,12 @@ PRIORITY GUIDELINES:
 - medium: Important documentation requirements, insurance deadlines, registration transfers, financing milestones
 - low: Informational items, warranty periods, optional inspections, post-delivery activities
 
-CRITICAL: Return ONLY the JSON object. Do not include any explanatory text, markdown formatting, or code blocks. The response must be valid, parseable JSON.`;
+CRITICAL RULES:
+1. Extract ONLY tasks explicitly mentioned in the document - DO NOT add standard industry tasks
+2. If a task is not clearly stated in the document, DO NOT include it
+3. Return ONLY the JSON object - no explanatory text, markdown formatting, or code blocks
+4. The response must be valid, parseable JSON
+5. If no specific tasks are found in the document, return an empty actionItems array`;
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
@@ -2679,55 +2668,24 @@ CRITICAL: Return ONLY the JSON object. Do not include any explanatory text, mark
 
   intelligentDemoParser: (documentType, deal, documentText = '') => {
     const today = new Date();
-    const addDays = (days) => {
-      const date = new Date(today);
-      date.setDate(date.getDate() + days);
-      return date.toISOString().split('T')[0];
-    };
 
-    // Smart extraction from text if available
-    const hasText = documentText && documentText.length > 100;
-    let actionItems = [];
-
-    // Create demo document overview
+    // Create document overview
     const documentOverview = {
       documentType: documentType,
       effectiveDate: today.toISOString().split('T')[0],
-      buyer: deal?.clientName || 'Demo Buyer',
-      seller: 'Demo Seller',
-      aircraft: deal?.relatedAircraft || 'Demo Aircraft'
+      buyer: deal?.clientName || null,
+      seller: null,
+      aircraft: deal?.relatedAircraft || null
     };
 
-    if (documentType === 'LOI') {
-      actionItems = [
-        { title: 'Review and execute LOI', dueDate: addDays(2), priority: 'high', description: hasText ? 'Extracted from document section 1' : 'Initial LOI execution', dayNumber: 2, responsibleParty: 'Both', penalties: null },
-        { title: 'Submit earnest money deposit', dueDate: addDays(3), priority: 'high', description: hasText ? 'Per deposit terms in document' : 'Initial deposit', dayNumber: 3, responsibleParty: 'Buyer', penalties: 'Deal may be terminated' },
-        { title: 'Conduct initial aircraft inspection', dueDate: addDays(7), priority: 'high', description: 'Visual and documentation review', dayNumber: 7, responsibleParty: 'Buyer', penalties: null },
-        { title: 'Review maintenance records', dueDate: addDays(7), priority: 'medium', description: 'Complete logbook review', dayNumber: 7, responsibleParty: 'Buyer', penalties: null },
-        { title: 'Verify aircraft registration and title', dueDate: addDays(10), priority: 'medium', description: 'FAA registration check', dayNumber: 10, responsibleParty: 'Buyer', penalties: null },
-        { title: 'Draft Purchase Agreement', dueDate: addDays(14), priority: 'high', description: 'Prepare full APA', dayNumber: 14, responsibleParty: 'Both', penalties: null },
-        { title: 'Schedule pre-purchase inspection', dueDate: addDays(14), priority: 'high', description: 'Coordinate with inspection facility', dayNumber: 14, responsibleParty: 'Buyer', penalties: null }
-      ];
-    } else if (documentType === 'APA') {
-      actionItems = [
-        { title: 'Execute Aircraft Purchase Agreement', dueDate: addDays(1), priority: 'high', description: hasText ? 'Per document execution clause' : 'Sign APA', dayNumber: 1, responsibleParty: 'Both', penalties: null },
-        { title: 'Submit balance of deposit', dueDate: addDays(2), priority: 'high', description: hasText ? 'Extracted from payment terms' : 'Additional deposit', dayNumber: 2, responsibleParty: 'Buyer', penalties: 'Deal termination and deposit forfeiture' },
-        { title: 'Complete pre-purchase inspection', dueDate: addDays(7), priority: 'high', description: 'Full aircraft inspection', dayNumber: 7, responsibleParty: 'Buyer', penalties: null },
-        { title: 'Review inspection report', dueDate: addDays(9), priority: 'high', description: 'Analyze findings and discrepancies', dayNumber: 9, responsibleParty: 'Buyer', penalties: null },
-        { title: 'Negotiate any discrepancies', dueDate: addDays(12), priority: 'medium', description: 'Address inspection items', dayNumber: 12, responsibleParty: 'Both', penalties: null },
-        { title: 'Finalize financing documents', dueDate: addDays(14), priority: 'high', description: 'Complete lender requirements', dayNumber: 14, responsibleParty: 'Buyer', penalties: 'Financing contingency expires' },
-        { title: 'Obtain insurance certificate', dueDate: addDays(14), priority: 'high', description: 'Full hull and liability coverage', dayNumber: 14, responsibleParty: 'Buyer', penalties: 'Cannot take delivery' },
-        { title: 'Complete FAA registration transfer', dueDate: addDays(20), priority: 'medium', description: 'File ownership documents', dayNumber: 20, responsibleParty: 'Both', penalties: null },
-        { title: 'Schedule closing date', dueDate: addDays(21), priority: 'high', description: 'Coordinate all parties', dayNumber: 21, responsibleParty: 'Both', penalties: null },
-        { title: 'Wire final payment', dueDate: addDays(28), priority: 'high', description: hasText ? 'Per closing instructions' : 'Transfer remaining funds', dayNumber: 28, responsibleParty: 'Buyer', penalties: 'Deal termination and deposit forfeiture' },
-        { title: 'Physical aircraft delivery', dueDate: addDays(30), priority: 'high', description: 'Accept aircraft at location', dayNumber: 30, responsibleParty: 'Both', penalties: null },
-        { title: 'Post-delivery inspection', dueDate: addDays(31), priority: 'medium', description: 'Verify condition and documentation', dayNumber: 31, responsibleParty: 'Buyer', penalties: null }
-      ];
-    }
+    // DO NOT create standard task lists
+    // Only return empty array - tasks should come from actual document parsing
+    console.log('⚠️ No valid document text found. Cannot extract tasks without a real document.');
+    console.log('Please upload a PDF document (LOI or APA) to generate tasks from actual content.');
 
     return {
       documentOverview: documentOverview,
-      actionItems: actionItems
+      actionItems: [] // Empty - no tasks without actual document content
     };
   },
 
