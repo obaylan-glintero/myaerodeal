@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import SearchableDropdown from './SearchableDropdown';
@@ -1053,7 +1053,6 @@ const AircraftDetailView = ({ aircraft, closeModal }) => {
   const { colors } = useTheme();
   const { leads, addNoteToAircraft, deleteAircraft, presentAircraftToLead } = useStore();
   const [noteText, setNoteText] = useState('');
-  const { MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart } = require('lucide-react');
 
   if (!aircraft) return null;
 
