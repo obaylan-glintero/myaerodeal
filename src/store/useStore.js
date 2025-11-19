@@ -248,7 +248,7 @@ export const useStore = create((set, get) => ({
 
       // Only fetch minimal fields for faster initial load
       const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, presentations, timestamped_notes, created_at';
-      const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, created_at';
+      const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, created_at';
       const dealsMinimalFields = 'id, deal_name, client_name, related_lead, related_aircraft, deal_value, estimated_closing, status, next_step, follow_up_date, created_at';
 
       const [leadsResult, aircraftResult, dealsResult, tasksResult] = await Promise.all([
@@ -346,15 +346,15 @@ export const useStore = create((set, get) => ({
         imageUrl: aircraft.image_url,
         accessType: aircraft.access_type || 'Direct',
         specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
+        summary: aircraft.summary || '', // AI-generated summary for display
+        presentations: aircraft.presentations || [], // Which leads this was presented to
         createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         // Placeholders for full data (will be loaded on demand)
         serialNumber: null,
         registration: null,
-        summary: null,
         specSheetData: null,
         specSheetType: null,
         imageData: null,
-        presentations: [],
         timestampedNotes: []
       });
 
@@ -817,7 +817,7 @@ export const useStore = create((set, get) => ({
     if (!get().isAuthenticated) return;
 
     // Only fetch minimal fields for refresh
-    const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, created_at';
+    const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, created_at';
     const { data } = await supabase.from('aircraft').select(aircraftMinimalFields);
 
     if (data) {
@@ -834,15 +834,15 @@ export const useStore = create((set, get) => ({
         imageUrl: aircraft.image_url,
         accessType: aircraft.access_type || 'Direct',
         specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
+        summary: aircraft.summary || '', // AI-generated summary for display
+        presentations: aircraft.presentations || [], // Which leads this was presented to
         createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         // Placeholders for full data
         serialNumber: null,
         registration: null,
-        summary: null,
         specSheetData: null,
         specSheetType: null,
         imageData: null,
-        presentations: [],
         timestampedNotes: []
       });
 
@@ -864,7 +864,9 @@ export const useStore = create((set, get) => ({
             seller: dbAircraft.seller || '',
             imageUrl: dbAircraft.image_url,
             accessType: dbAircraft.access_type || 'Direct',
-            specSheet: dbAircraft.spec_sheet
+            specSheet: dbAircraft.spec_sheet,
+            summary: dbAircraft.summary || '',
+            presentations: dbAircraft.presentations || []
           };
         }
         return convertAircraftMinimalFromDB(dbAircraft);
