@@ -41,8 +41,8 @@ const AircraftView = ({ openModal }) => {
   // Helper to ensure full data is loaded before action
   const handleActionWithFullData = async (aircraftId, action) => {
     await loadFullAircraftData(aircraftId);
-    // Get the updated aircraft from the store after loading
-    const updatedAircraft = aircraft.find(ac => ac.id === aircraftId);
+    // Get the updated aircraft directly from the store (not from the stale closure)
+    const updatedAircraft = useStore.getState().aircraft.find(ac => ac.id === aircraftId);
     if (updatedAircraft) {
       action(updatedAircraft);
     }

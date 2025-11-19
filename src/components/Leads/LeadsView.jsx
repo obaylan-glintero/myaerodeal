@@ -15,8 +15,8 @@ const LeadsView = ({ openModal }) => {
   // Helper to ensure full aircraft data is loaded before action
   const handleActionWithFullAircraftData = async (aircraftId, action) => {
     await loadFullAircraftData(aircraftId);
-    // Get the updated aircraft from the store after loading
-    const updatedAircraft = aircraft.find(ac => ac.id === aircraftId);
+    // Get the updated aircraft directly from the store (not from the stale closure)
+    const updatedAircraft = useStore.getState().aircraft.find(ac => ac.id === aircraftId);
     if (updatedAircraft) {
       action(updatedAircraft);
     }
@@ -25,8 +25,8 @@ const LeadsView = ({ openModal }) => {
   // Helper to ensure full lead data is loaded before action
   const handleActionWithFullLeadData = async (leadId, action) => {
     await loadFullLeadData(leadId);
-    // Get the updated lead from the store after loading
-    const updatedLead = leads.find(l => l.id === leadId);
+    // Get the updated lead directly from the store (not from the stale closure)
+    const updatedLead = useStore.getState().leads.find(l => l.id === leadId);
     if (updatedLead) {
       action(updatedLead);
     }

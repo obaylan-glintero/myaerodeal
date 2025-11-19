@@ -21,8 +21,8 @@ const DealsView = ({ openModal }) => {
   // Helper to ensure full deal data is loaded before action
   const handleActionWithFullDealData = async (dealId, action) => {
     await loadFullDealData(dealId);
-    // Get the updated deal from the store after loading
-    const updatedDeal = deals.find(d => d.id === dealId);
+    // Get the updated deal directly from the store (not from the stale closure)
+    const updatedDeal = useStore.getState().deals.find(d => d.id === dealId);
     if (updatedDeal) {
       action(updatedDeal);
     }
