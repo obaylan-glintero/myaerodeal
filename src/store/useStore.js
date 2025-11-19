@@ -984,15 +984,27 @@ export const useStore = create((set, get) => ({
           specSheetType: fullAircraft.specSheetType
         });
 
-        // Update aircraft in state
-        const updatedAircraft = aircraft.map(a => a.id === aircraftId ? fullAircraft : a);
+        // Update aircraft in state - get fresh aircraft array to avoid stale closures
+        const { aircraft: currentAircraft, aircraftFullDataLoaded: currentFullDataLoaded, aircraftLoading: currentLoading } = get();
+
+        const updatedAircraft = currentAircraft.map(a => {
+          if (a.id === aircraftId) {
+            console.log(`🔄 Replacing aircraft ${aircraftId} with full data, specSheetData exists: ${!!fullAircraft.specSheetData}`);
+            return fullAircraft;
+          }
+          // Preserve existing aircraft - check if it has specSheetData and keep it
+          if (a.specSheetData) {
+            console.log(`✅ Preserving specSheetData for aircraft ${a.id} during update`);
+          }
+          return a;
+        });
 
         // Mark as loaded
-        const newFullDataLoaded = new Set(aircraftFullDataLoaded);
+        const newFullDataLoaded = new Set(currentFullDataLoaded);
         newFullDataLoaded.add(aircraftId);
 
         // Remove from loading
-        const updatedLoading = new Set(aircraftLoading);
+        const updatedLoading = new Set(currentLoading);
         updatedLoading.delete(aircraftId);
 
         set({
