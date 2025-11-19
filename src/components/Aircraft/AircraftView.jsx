@@ -653,8 +653,8 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
         {/* Status Badge */}
         {aircraft.status && aircraft.status !== 'For Sale' && (
           <div className="absolute top-4 right-4 px-4 py-2 rounded-lg font-bold text-sm" style={{
-            backgroundColor: 'rgba(100, 100, 100, 0.8)',
-            color: '#fff'
+            backgroundColor: getStatusColors(aircraft.status).bg,
+            color: getStatusColors(aircraft.status).text
           }}>
             {aircraft.status === 'Under Contract' ? 'UNDER CONTRACT' : aircraft.status === 'Not for Sale' ? 'SOLD' : aircraft.status.toUpperCase()}
           </div>
@@ -662,9 +662,9 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
 
         {/* Aircraft Title Overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-6" style={{
-          background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent)'
+          background: `linear-gradient(to top, ${colors.background}dd, transparent)`
         }}>
-          <h3 className="text-2xl font-bold text-white">
+          <h3 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
             {aircraft.yom} {aircraft.manufacturer} {aircraft.model}
           </h3>
         </div>
@@ -674,7 +674,7 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
           <button
             onClick={onEdit}
             className="p-2 rounded-full hover:opacity-80"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+            style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
             disabled={isLoading}
             title="Edit"
           >
@@ -683,7 +683,7 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
           <button
             onClick={onDelete}
             className="p-2 rounded-full hover:opacity-80"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+            style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
             title="Delete"
           >
             <Trash2 size={18} style={{ color: colors.error }} />
@@ -695,7 +695,7 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
       <div className="p-6">
         <div className="grid grid-cols-3 gap-4 mb-6">
           {/* MSN (Serial Number) */}
-          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(26, 43, 69, 0.3)' }}>
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
             <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>MSN</div>
             <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
               {aircraft.serialNumber || 'N/A'}
@@ -703,7 +703,7 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
           </div>
 
           {/* Registration */}
-          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(26, 43, 69, 0.3)' }}>
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
             <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Registration</div>
             <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
               {aircraft.registration || 'N/A'}
@@ -711,7 +711,7 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
           </div>
 
           {/* Location */}
-          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(26, 43, 69, 0.3)' }}>
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
             <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Location</div>
             <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
               {aircraft.location || 'N/A'}
@@ -722,7 +722,7 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
         {/* Asking Price */}
         <div className="mb-4">
           <div className="text-sm" style={{ color: colors.textSecondary }}>Asking Price</div>
-          <div className="text-4xl font-bold" style={{ color: colors.secondary }}>
+          <div className="text-4xl font-bold" style={{ color: colors.primary }}>
             ${(aircraft.price / 1000000).toFixed(2)}M
           </div>
         </div>
@@ -731,7 +731,7 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
         <button
           onClick={onViewDetails}
           className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90"
-          style={{ color: colors.textSecondary }}
+          style={{ backgroundColor: colors.secondary, color: colors.textPrimary }}
           disabled={isLoading}
         >
           View Details →
