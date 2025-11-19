@@ -1203,7 +1203,16 @@ const DealSummaryCard = ({ deal, aircraft, colors, onViewDetails, onEdit, onDele
           <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
             <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Aircraft</div>
             <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
-              {aircraft ? `${aircraft.manufacturer} ${aircraft.model}` : 'Not specified'}
+              {aircraft ? (
+                <>
+                  <div>{aircraft.model}</div>
+                  {aircraft.serialNumber && (
+                    <div className="text-xs font-normal mt-1" style={{ color: colors.textSecondary }}>
+                      S/N: {aircraft.serialNumber}
+                    </div>
+                  )}
+                </>
+              ) : 'Not specified'}
             </div>
           </div>
 
