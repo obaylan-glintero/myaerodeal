@@ -248,7 +248,7 @@ export const useStore = create((set, get) => ({
 
       // Only fetch minimal fields for faster initial load
       const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, presentations, timestamped_notes, created_at';
-      const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, created_at';
+      const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, serial_number, registration, created_at';
       const dealsMinimalFields = 'id, deal_name, client_name, related_lead, related_aircraft, deal_value, estimated_closing, status, next_step, follow_up_date, created_at';
 
       const [leadsResult, aircraftResult, dealsResult, tasksResult] = await Promise.all([
@@ -344,17 +344,17 @@ export const useStore = create((set, get) => ({
         status: aircraft.status || 'For Sale',
         seller: aircraft.seller || '',
         imageUrl: aircraft.image_url,
+        imageData: null, // Will be loaded on demand
         accessType: aircraft.access_type || 'Direct',
         specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
         summary: aircraft.summary || '', // AI-generated summary for display
         presentations: aircraft.presentations || [], // Which leads this was presented to
+        serialNumber: aircraft.serial_number || '', // Include for summary card display
+        registration: aircraft.registration || '', // Include for summary card display
         createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         // Placeholders for full data (will be loaded on demand)
-        serialNumber: null,
-        registration: null,
         specSheetData: null,
         specSheetType: null,
-        imageData: null,
         timestampedNotes: []
       });
 
@@ -1668,6 +1668,9 @@ export const useStore = create((set, get) => ({
           summary: aircraftData.summary || null,
           status: aircraftData.status || 'For Sale',
           seller: aircraftData.seller || null,
+          total_time: aircraftData.totalTime || null,
+          range: aircraftData.range || null,
+          pax: aircraftData.pax || null,
           spec_sheet: aircraftData.specSheet,
           spec_sheet_data: aircraftData.specSheetData,
           spec_sheet_type: aircraftData.specSheetType,
@@ -1701,6 +1704,9 @@ export const useStore = create((set, get) => ({
         summary: data.summary || '',
         status: data.status || 'For Sale',
         seller: data.seller || '',
+        totalTime: data.total_time,
+        range: data.range,
+        pax: data.pax,
         specSheet: data.spec_sheet,
         specSheetData: data.spec_sheet_data,
         specSheetType: data.spec_sheet_type,

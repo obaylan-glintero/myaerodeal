@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import SearchableDropdown from './SearchableDropdown';
+import logo from '../../assets/MyAeroDeal_dark.png';
 
-const Modal = ({ modalType, editingItem, closeModal }) => {
+const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
   // Initialize formData with proper defaults for dealFromLead
   const [formData, setFormData] = useState(() => {
     if (modalType === 'dealFromLead' && editingItem) {
@@ -76,6 +78,7 @@ const Modal = ({ modalType, editingItem, closeModal }) => {
     const action = editingItem ? 'Edit' : 'Add';
     if (modalType === 'dealFromLead') return 'Add Deal';
     if (modalType === 'presentationFromAircraft' || modalType === 'presentation') return 'Present Aircraft';
+    if (modalType === 'aircraftDetail') return 'Aircraft Details';
     return `${action} ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`;
   };
 
@@ -92,6 +95,7 @@ const Modal = ({ modalType, editingItem, closeModal }) => {
         <div className="p-6">
           {modalType === 'lead' && <LeadForm formData={formData} setFormData={setFormData} />}
           {modalType === 'aircraft' && <AircraftForm formData={formData} setFormData={setFormData} />}
+          {modalType === 'aircraftDetail' && <AircraftDetailView aircraft={editingItem} closeModal={closeModal} openModal={openModal} />}
           {(modalType === 'deal' || modalType === 'dealFromLead') && (
             <DealForm formData={formData} setFormData={setFormData} editingItem={editingItem} modalType={modalType} />
           )}
@@ -100,22 +104,24 @@ const Modal = ({ modalType, editingItem, closeModal }) => {
             <PresentationForm formData={formData} setFormData={setFormData} modalType={modalType} editingItem={editingItem} />
           )}
 
-          <div className="flex gap-4 mt-6">
-            <button
-              onClick={handleSubmit}
-              className="flex-1 px-6 py-3 rounded-lg font-semibold"
-              style={{ backgroundColor: colors.primary, color: colors.secondary }}
-            >
-              {editingItem ? 'Update' : 'Create'}
-            </button>
-            <button
-              onClick={closeModal}
-              className="flex-1 px-6 py-3 rounded-lg border-2 font-semibold"
-              style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
-            >
-              Cancel
-            </button>
-          </div>
+          {modalType !== 'aircraftDetail' && (
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={handleSubmit}
+                className="flex-1 px-6 py-3 rounded-lg font-semibold"
+                style={{ backgroundColor: colors.primary, color: colors.secondary }}
+              >
+                {editingItem ? 'Update' : 'Create'}
+              </button>
+              <button
+                onClick={closeModal}
+                className="flex-1 px-6 py-3 rounded-lg border-2 font-semibold"
+                style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -277,7 +283,8 @@ const LeadForm = ({ formData, setFormData }) => {
 const AircraftForm = ({ formData, setFormData }) => {
   const fileInputRef = React.useRef(null);
   const imageInputRef = React.useRef(null);
-  const [isSearching, setIsSearching] = React.useState(false);
+  const [imageUrl, setImageUrl] = React.useState('');
+  const [isLoadingUrl, setIsLoadingUrl] = React.useState(false);
   const [isExtracting, setIsExtracting] = React.useState(false);
   const [priceError, setPriceError] = React.useState('');
   const { extractAircraftDataFromPDF } = useStore();
@@ -362,24 +369,58 @@ const AircraftForm = ({ formData, setFormData }) => {
     }
   };
 
-  const searchAircraftImage = async () => {
-    if (!formData.serialNumber && !formData.registration) {
-      alert('Please enter a Serial Number or Registration to search for images');
+  const loadImageFromURL = async () => {
+    if (!imageUrl.trim()) {
+      alert('Please enter an image URL');
       return;
     }
 
-    setIsSearching(true);
+    setIsLoadingUrl(true);
 
-    // Simulate API search - In production, you would integrate with:
-    // - Aviation Stack API
-    // - PlaneSpotter API
-    // - Custom Google Image Search
-    // - JetPhotos API
+    try {
+      // Create a new image element
+      const img = new Image();
 
-    setTimeout(() => {
-      setIsSearching(false);
-      alert('Image search feature requires API integration.\n\nTo enable automatic image search:\n1. Sign up for an aviation API (e.g., Aviation Stack)\n2. Add API key to your environment\n3. Implement the search logic\n\nFor now, please upload an image manually.');
-    }, 1500);
+      // Set crossOrigin to anonymous to try to load with CORS
+      img.crossOrigin = 'anonymous';
+
+      // Set up the onload handler
+      img.onload = () => {
+        try {
+          // Create a canvas to convert the image to base64
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+
+          // Convert to base64
+          const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+
+          setFormData({ ...formData, imageData: dataURL });
+          setImageUrl(''); // Clear the URL input after successful load
+          setIsLoadingUrl(false);
+        } catch (error) {
+          console.error('Error converting image:', error);
+          alert('Failed to process the image. This may be due to CORS restrictions. Try downloading the image and uploading it directly.');
+          setIsLoadingUrl(false);
+        }
+      };
+
+      // Set up the onerror handler
+      img.onerror = () => {
+        alert('Failed to load image from URL. Please check the URL and try again, or download the image and upload it directly.');
+        setIsLoadingUrl(false);
+      };
+
+      // Start loading the image
+      img.src = imageUrl;
+    } catch (error) {
+      console.error('Error loading image from URL:', error);
+      alert('Failed to load image from URL. Please check the URL and try again.');
+      setIsLoadingUrl(false);
+    }
   };
 
   return (
@@ -528,35 +569,52 @@ const AircraftForm = ({ formData, setFormData }) => {
           </div>
         )}
 
-        <div className="flex gap-2 justify-center">
-          <input
-            ref={imageInputRef}
-            type="file"
-            className="hidden"
-            accept="image/*"
-            onChange={handleImageChange}
-          />
-          <button
-            type="button"
-            onClick={() => imageInputRef.current?.click()}
-            className="px-4 py-2 text-sm border rounded-lg"
-            style={{
-              backgroundColor: colors.primary,
-              color: colors.secondary,
-              borderColor: colors.border,
-            }}
-          >
-            Upload Image
-          </button>
-          <button
-            type="button"
-            onClick={searchAircraftImage}
-            disabled={isSearching}
-            className="px-4 py-2 text-sm rounded-lg disabled:opacity-50"
-            style={{ backgroundColor: colors.primary, color: colors.secondary }}
-          >
-            {isSearching ? 'Searching...' : 'Auto Search'}
-          </button>
+        <div className="space-y-3">
+          <div className="flex gap-2 justify-center">
+            <input
+              ref={imageInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              className="px-4 py-2 text-sm border rounded-lg"
+              style={{
+                backgroundColor: colors.primary,
+                color: colors.secondary,
+                borderColor: colors.border,
+              }}
+            >
+              Upload Image
+            </button>
+          </div>
+
+          <div className="flex gap-2 items-center">
+            <input
+              type="text"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="Or paste image URL here..."
+              className="flex-1 px-3 py-2 text-sm rounded-lg border"
+              style={{
+                backgroundColor: colors.cardBg,
+                color: colors.textPrimary,
+                borderColor: colors.border,
+              }}
+            />
+            <button
+              type="button"
+              onClick={loadImageFromURL}
+              disabled={isLoadingUrl}
+              className="px-4 py-2 text-sm rounded-lg disabled:opacity-50 whitespace-nowrap"
+              style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            >
+              {isLoadingUrl ? 'Loading...' : 'Get From URL'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1015,6 +1073,419 @@ const PresentationForm = ({ formData, setFormData, modalType, editingItem }) => 
         className="w-full px-4 py-2 border rounded-lg h-32"
         style={inputStyle}
       />
+    </div>
+  );
+};
+
+const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
+  const { colors } = useTheme();
+  const { leads, addNoteToAircraft, deleteAircraft, presentAircraftToLead, currentUserProfile } = useStore();
+  const [noteText, setNoteText] = useState('');
+
+  if (!aircraft) return null;
+
+  const handleAddNote = () => {
+    if (noteText.trim()) {
+      addNoteToAircraft(aircraft.id, noteText.trim());
+      setNoteText('');
+    }
+  };
+
+  const handleViewSpec = () => {
+    if (aircraft.specSheetData) {
+      if (aircraft.specSheetType && aircraft.specSheetType.includes('pdf')) {
+        try {
+          const base64Data = aircraft.specSheetData.split(',')[1];
+          const binaryData = atob(base64Data);
+          const bytes = new Uint8Array(binaryData.length);
+          for (let i = 0; i < binaryData.length; i++) {
+            bytes[i] = binaryData.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(blob);
+          window.open(blobUrl, '_blank');
+        } catch (error) {
+          console.error('Error viewing PDF:', error);
+          alert('Error opening PDF. Please try downloading it instead.');
+        }
+      } else {
+        const link = document.createElement('a');
+        link.href = aircraft.specSheetData;
+        link.download = aircraft.specSheet;
+        link.click();
+      }
+    }
+  };
+
+  const generateMarketingReport = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 20;
+    let y = margin;
+
+    const addText = (text, x, fontSize = 10, maxWidth = pageWidth - 2 * margin) => {
+      doc.setFontSize(fontSize);
+      const lines = doc.splitTextToSize(text, maxWidth);
+      lines.forEach(line => {
+        if (y > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, x, y);
+        y += fontSize * 0.5;
+      });
+    };
+
+    // Header
+    doc.setFillColor(26, 43, 69);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+
+    try {
+      const img = new Image();
+      img.src = logo;
+      doc.addImage(img, 'PNG', margin, 10, 30, 20);
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+
+    doc.setTextColor(212, 175, 55);
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text('Marketing Report', margin + 35, 25);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'normal');
+    doc.text('MyAeroDeal', pageWidth - margin - 30, 25);
+
+    doc.setTextColor(0, 0, 0);
+    y = 50;
+
+    // Aircraft Details
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text('Aircraft Information', margin, y);
+    y += 10;
+
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+
+    const aircraftInfo = [
+      `Manufacturer: ${aircraft.manufacturer || 'N/A'}`,
+      `Model: ${aircraft.model || 'N/A'}`,
+      `Year of Manufacture: ${aircraft.yom || 'N/A'}`,
+      `Serial Number: ${aircraft.serialNumber || 'N/A'}`,
+      `Registration: ${aircraft.registration || 'N/A'}`,
+      `Category: ${aircraft.category || 'N/A'}`,
+      `Location: ${aircraft.location || 'N/A'}`,
+      `Price: $${aircraft.price ? (aircraft.price / 1000000).toFixed(2) + 'M' : 'N/A'}`
+    ];
+
+    aircraftInfo.forEach(info => {
+      addText(info, margin, 10);
+      y += 2;
+    });
+
+    if (aircraft.summary) {
+      y += 10;
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('Description', margin, y);
+      y += 8;
+      doc.setFont(undefined, 'normal');
+      addText(aircraft.summary, margin, 10);
+      y += 5;
+    }
+
+    // Marketing Activity
+    y += 10;
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text('Marketing Activity', margin, y);
+    y += 10;
+
+    if (aircraft.presentations && aircraft.presentations.length > 0) {
+      doc.setFontSize(12);
+      doc.text(`Total Presentations: ${aircraft.presentations.length}`, margin, y);
+      y += 10;
+
+      aircraft.presentations.forEach((pres, idx) => {
+        const lead = leads.find(l => l.id === pres.leadId);
+
+        if (y > pageHeight - 60) {
+          doc.addPage();
+          y = margin;
+        }
+
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Presentation #${idx + 1}`, margin, y);
+        y += 8;
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+
+        const presDetails = [
+          `Lead: ${lead?.name || 'Unknown'} (${lead?.company || 'N/A'})`,
+          `Date: ${new Date(pres.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
+          `Price Given: $${pres.priceGiven ? (pres.priceGiven / 1000000).toFixed(2) + 'M' : 'N/A'}`,
+          `Lead Status: ${lead?.status || 'Unknown'}`
+        ];
+
+        presDetails.forEach(detail => {
+          addText(detail, margin + 5, 10);
+          y += 2;
+        });
+
+        if (pres.notes && pres.notes.trim()) {
+          y += 3;
+          doc.setFont(undefined, 'bold');
+          addText('Notes:', margin + 5, 10);
+          y += 2;
+          doc.setFont(undefined, 'italic');
+          addText(pres.notes, margin + 5, 9);
+          y += 2;
+          doc.setFont(undefined, 'normal');
+        }
+
+        y += 5;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 8;
+      });
+    } else {
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'italic');
+      doc.text('No presentations recorded yet.', margin, y);
+      y += 10;
+    }
+
+    // Footer
+    const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const userName = currentUserProfile?.first_name && currentUserProfile?.last_name
+      ? `${currentUserProfile.first_name} ${currentUserProfile.last_name}`
+      : 'User';
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Report Generated: ${currentDate}`, margin, pageHeight - 10);
+    doc.text(`Exported by: ${userName}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text('MyAeroDeal CRM', pageWidth - margin - 30, pageHeight - 10);
+
+    const fileName = `Marketing_Report_${aircraft.manufacturer}_${aircraft.model}_${aircraft.serialNumber || aircraft.registration || 'Aircraft'}.pdf`;
+    doc.save(fileName);
+  };
+
+  const inputStyle = {
+    backgroundColor: colors.cardBg,
+    color: colors.textPrimary,
+    borderColor: colors.border,
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Aircraft Image */}
+      {aircraft.imageData && (
+        <div className="w-full h-64 overflow-hidden rounded-lg">
+          <img
+            src={aircraft.imageData}
+            alt={`${aircraft.manufacturer} ${aircraft.model}`}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
+      {/* Summary */}
+      {aircraft.summary && (
+        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+          <p className="italic leading-relaxed" style={{ color: colors.textPrimary }}>
+            {aircraft.summary}
+          </p>
+        </div>
+      )}
+
+      {/* Aircraft Specifications */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Manufacturer</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.manufacturer}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Model</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.model}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Year of Manufacture</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.yom}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Category</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.category}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Serial Number (MSN)</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.serialNumber || 'N/A'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Registration</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.registration || 'N/A'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Location</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.location}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Access Type</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.accessType}</p>
+        </div>
+        {aircraft.seller && (
+          <div>
+            <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Seller</label>
+            <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.seller}</p>
+          </div>
+        )}
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Status</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.status || 'For Sale'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Created</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
+            {aircraft.createdAt ? new Date(aircraft.createdAt).toLocaleDateString() : 'N/A'}
+          </p>
+        </div>
+      </div>
+
+      {/* Price */}
+      <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+        <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Asking Price</label>
+        <p className="text-3xl font-bold" style={{ color: colors.primary }}>
+          ${(aircraft.price / 1000000).toFixed(2)}M
+        </p>
+      </div>
+
+      {/* Spec Sheet */}
+      {aircraft.specSheet && (
+        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText size={18} style={{ color: colors.primary }} />
+              <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>{aircraft.specSheet}</span>
+            </div>
+            <button
+              onClick={handleViewSpec}
+              className="flex items-center gap-1 px-3 py-1 text-sm rounded font-semibold hover:opacity-90"
+              style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            >
+              <Download size={14} />
+              View
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Presentations */}
+      {aircraft.presentations && aircraft.presentations.length > 0 && (
+        <div>
+          <h4 className="font-semibold mb-3" style={{ color: colors.primary }}>
+            Presented to ({aircraft.presentations.length})
+          </h4>
+          <div className="space-y-2">
+            {aircraft.presentations.map((pres, idx) => {
+              const lead = leads.find(l => l.id === pres.leadId);
+              return (
+                <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                  <p className="font-medium" style={{ color: colors.primary }}>
+                    {lead?.name || 'Unknown Lead'}
+                  </p>
+                  <p className="text-xs" style={{ color: colors.textSecondary }}>
+                    {new Date(pres.date).toLocaleDateString()}
+                  </p>
+                  {pres.notes && (
+                    <p className="text-xs mt-2 italic" style={{ color: colors.textSecondary }}>
+                      Note: {pres.notes}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      <div>
+        <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+          <MessageSquare size={18} />
+          Notes ({aircraft.timestampedNotes?.length || 0})
+        </h4>
+        <div className="space-y-3">
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {(!aircraft.timestampedNotes || aircraft.timestampedNotes.length === 0) ? (
+              <p className="text-sm italic" style={{ color: colors.textSecondary }}>No notes yet</p>
+            ) : (
+              aircraft.timestampedNotes.slice().reverse().map((note) => (
+                <div key={note.id} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                  <p style={{ color: colors.textPrimary }}>{note.text}</p>
+                  <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                    {new Date(note.timestamp).toLocaleString()}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddNote()}
+              placeholder="Add a note..."
+              className="flex-1 px-3 py-2 text-sm rounded-lg border"
+              style={inputStyle}
+            />
+            <button
+              onClick={handleAddNote}
+              className="px-4 py-2 rounded-lg font-semibold"
+              style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="space-y-3 pt-4 border-t" style={{ borderColor: colors.border }}>
+        <button
+          onClick={() => {
+            closeModal();
+            openModal('presentationFromAircraft', aircraft);
+          }}
+          className="w-full px-6 py-3 rounded-lg font-semibold"
+          style={{ backgroundColor: colors.primary, color: colors.secondary }}
+        >
+          Present to Lead
+        </button>
+
+        {aircraft.presentations && aircraft.presentations.length > 0 && (
+          <button
+            onClick={generateMarketingReport}
+            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.secondary, color: colors.primary, border: `2px solid ${colors.primary}` }}
+          >
+            <FileBarChart size={18} />
+            Generate Marketing Report
+          </button>
+        )}
+
+        <button
+          onClick={closeModal}
+          className="w-full px-6 py-3 rounded-lg font-semibold border-2"
+          style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 };
