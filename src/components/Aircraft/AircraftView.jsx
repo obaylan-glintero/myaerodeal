@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, MessageSquare, Send, FileText, Download, Search, FileBarChart, LayoutGrid, List } from 'lucide-react';
+import { Plus, Edit2, Trash2, MessageSquare, Send, FileText, Download, Search, FileBarChart, LayoutGrid, List, Loader2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -31,14 +31,6 @@ const AircraftView = ({ openModal }) => {
     }
   };
 
-  // Debug: Check aircraft data
-  React.useEffect(() => {
-    console.log('🛩️ Aircraft data:', aircraft);
-    if (aircraft.length > 0) {
-      console.log('🛩️ First aircraft summary:', aircraft[0].summary);
-      console.log('🛩️ First aircraft full data:', aircraft[0]);
-    }
-  }, [aircraft]);
 
   // Helper to ensure full data is loaded before action
   const handleActionWithFullData = async (aircraftId, action) => {
@@ -684,6 +676,9 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
           <h3 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
             {aircraft.yom} {aircraft.manufacturer} {aircraft.model}
           </h3>
+          <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+            {aircraft.seller || 'N/A'} ({aircraft.accessType || 'Direct'})
+          </p>
         </div>
 
         {/* Edit and Delete Buttons */}
@@ -753,12 +748,22 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onViewDetails();
+            if (!isLoading) {
+              onViewDetails();
+            }
           }}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90"
+          disabled={isLoading}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-60 disabled:cursor-wait"
           style={{ backgroundColor: colors.primary, color: colors.secondary }}
         >
-          View Details →
+          {isLoading ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              Loading Data...
+            </>
+          ) : (
+            'View Details →'
+          )}
         </button>
       </div>
     </div>

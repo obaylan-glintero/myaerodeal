@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart, Clock, ListChecks, CheckCircle2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
@@ -1088,6 +1088,9 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
 
   if (!aircraft) return null;
 
+  // Aircraft prop already contains full data (loaded before modal opens)
+  const displayAircraft = aircraft;
+
   const handleAddNote = () => {
     if (noteText.trim()) {
       addNoteToAircraft(aircraft.id, noteText.trim());
@@ -1096,10 +1099,11 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
   };
 
   const handleViewSpec = () => {
-    if (aircraft.specSheetData) {
-      if (aircraft.specSheetType && aircraft.specSheetType.includes('pdf')) {
+    if (displayAircraft.specSheetData) {
+      if (displayAircraft.specSheetType && displayAircraft.specSheetType.includes('pdf')) {
         try {
-          const base64Data = aircraft.specSheetData.split(',')[1];
+          // Convert data URL to Blob for better browser compatibility
+          const base64Data = displayAircraft.specSheetData.split(',')[1];
           const binaryData = atob(base64Data);
           const bytes = new Uint8Array(binaryData.length);
           for (let i = 0; i < binaryData.length; i++) {
@@ -1107,17 +1111,92 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
           }
           const blob = new Blob([bytes], { type: 'application/pdf' });
           const blobUrl = URL.createObjectURL(blob);
-          window.open(blobUrl, '_blank');
+
+          // Detect mobile devices
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+          if (isMobile) {
+            // Mobile: Open blob URL directly (triggers native viewer)
+            window.open(blobUrl, '_blank');
+          } else {
+            // Desktop: Create viewer window with iframe
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+              newWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <title>${displayAircraft.specSheet || 'Document'}</title>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    html, body { width: 100%; height: 100%; overflow: hidden; }
+                    .container { width: 100%; height: 100%; display: flex; flex-direction: column; }
+                    .toolbar {
+                      background: #0A1628;
+                      color: white;
+                      padding: 12px 20px;
+                      display: flex;
+                      justify-content: space-between;
+                      align-items: center;
+                      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                      z-index: 10;
+                    }
+                    .toolbar h3 { font-size: 14px; font-weight: 500; }
+                    .toolbar button {
+                      color: #D4AF37;
+                      background: transparent;
+                      text-decoration: none;
+                      font-size: 13px;
+                      padding: 6px 12px;
+                      border: 1px solid #D4AF37;
+                      border-radius: 4px;
+                      cursor: pointer;
+                      transition: all 0.2s;
+                    }
+                    .toolbar button:hover {
+                      background: #D4AF37;
+                      color: #0A1628;
+                    }
+                    iframe {
+                      flex: 1;
+                      width: 100%;
+                      height: 100%;
+                      border: none;
+                      background: #525252;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <div class="toolbar">
+                      <h3>${displayAircraft.specSheet || 'Document'}</h3>
+                      <button onclick="window.open('${blobUrl}', '_blank')">Download PDF</button>
+                    </div>
+                    <iframe src="${blobUrl}"></iframe>
+                  </div>
+                </body>
+                </html>
+              `);
+              newWindow.document.close();
+            } else {
+              alert('Popup was blocked. Please allow popups for this site and try again.');
+            }
+          }
         } catch (error) {
           console.error('Error viewing PDF:', error);
           alert('Error opening PDF. Please try downloading it instead.');
         }
       } else {
+        // For other file types, trigger download
         const link = document.createElement('a');
-        link.href = aircraft.specSheetData;
-        link.download = aircraft.specSheet;
+        link.href = displayAircraft.specSheetData;
+        link.download = displayAircraft.specSheet;
         link.click();
       }
+    } else {
+      alert('No spec sheet data available. The spec sheet may not have been uploaded with this aircraft.');
     }
   };
 
@@ -1174,14 +1253,14 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
     doc.setFont(undefined, 'normal');
 
     const aircraftInfo = [
-      `Manufacturer: ${aircraft.manufacturer || 'N/A'}`,
-      `Model: ${aircraft.model || 'N/A'}`,
-      `Year of Manufacture: ${aircraft.yom || 'N/A'}`,
-      `Serial Number: ${aircraft.serialNumber || 'N/A'}`,
-      `Registration: ${aircraft.registration || 'N/A'}`,
-      `Category: ${aircraft.category || 'N/A'}`,
-      `Location: ${aircraft.location || 'N/A'}`,
-      `Price: $${aircraft.price ? (aircraft.price / 1000000).toFixed(2) + 'M' : 'N/A'}`
+      `Manufacturer: ${displayAircraft.manufacturer || 'N/A'}`,
+      `Model: ${displayAircraft.model || 'N/A'}`,
+      `Year of Manufacture: ${displayAircraft.yom || 'N/A'}`,
+      `Serial Number: ${displayAircraft.serialNumber || 'N/A'}`,
+      `Registration: ${displayAircraft.registration || 'N/A'}`,
+      `Category: ${displayAircraft.category || 'N/A'}`,
+      `Location: ${displayAircraft.location || 'N/A'}`,
+      `Price: $${displayAircraft.price ? (displayAircraft.price / 1000000).toFixed(2) + 'M' : 'N/A'}`
     ];
 
     aircraftInfo.forEach(info => {
@@ -1189,14 +1268,14 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
       y += 2;
     });
 
-    if (aircraft.summary) {
+    if (displayAircraft.summary) {
       y += 10;
       doc.setFontSize(14);
       doc.setFont(undefined, 'bold');
       doc.text('Description', margin, y);
       y += 8;
       doc.setFont(undefined, 'normal');
-      addText(aircraft.summary, margin, 10);
+      addText(displayAircraft.summary, margin, 10);
       y += 5;
     }
 
@@ -1207,12 +1286,12 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
     doc.text('Marketing Activity', margin, y);
     y += 10;
 
-    if (aircraft.presentations && aircraft.presentations.length > 0) {
+    if (displayAircraft.presentations && displayAircraft.presentations.length > 0) {
       doc.setFontSize(12);
-      doc.text(`Total Presentations: ${aircraft.presentations.length}`, margin, y);
+      doc.text(`Total Presentations: ${displayAircraft.presentations.length}`, margin, y);
       y += 10;
 
-      aircraft.presentations.forEach((pres, idx) => {
+      displayAircraft.presentations.forEach((pres, idx) => {
         const lead = leads.find(l => l.id === pres.leadId);
 
         if (y > pageHeight - 60) {
@@ -1274,7 +1353,7 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
     doc.text(`Exported by: ${userName}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
     doc.text('MyAeroDeal CRM', pageWidth - margin - 30, pageHeight - 10);
 
-    const fileName = `Marketing_Report_${aircraft.manufacturer}_${aircraft.model}_${aircraft.serialNumber || aircraft.registration || 'Aircraft'}.pdf`;
+    const fileName = `Marketing_Report_${displayAircraft.manufacturer}_${displayAircraft.model}_${displayAircraft.serialNumber || displayAircraft.registration || 'Aircraft'}.pdf`;
     doc.save(fileName);
   };
 
@@ -1287,21 +1366,21 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
   return (
     <div className="space-y-6">
       {/* Aircraft Image */}
-      {aircraft.imageData && (
+      {displayAircraft.imageData && (
         <div className="w-full h-64 overflow-hidden rounded-lg">
           <img
-            src={aircraft.imageData}
-            alt={`${aircraft.manufacturer} ${aircraft.model}`}
+            src={displayAircraft.imageData}
+            alt={`${displayAircraft.manufacturer} ${displayAircraft.model}`}
             className="w-full h-full object-cover"
           />
         </div>
       )}
 
       {/* Summary */}
-      {aircraft.summary && (
+      {displayAircraft.summary && (
         <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
           <p className="italic leading-relaxed" style={{ color: colors.textPrimary }}>
-            {aircraft.summary}
+            {displayAircraft.summary}
           </p>
         </div>
       )}
@@ -1310,50 +1389,50 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Manufacturer</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.manufacturer}</p>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.manufacturer}</p>
         </div>
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Model</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.model}</p>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.model}</p>
         </div>
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Year of Manufacture</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.yom}</p>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.yom}</p>
         </div>
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Category</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.category}</p>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.category}</p>
         </div>
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Serial Number (MSN)</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.serialNumber || 'N/A'}</p>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.serialNumber || 'N/A'}</p>
         </div>
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Registration</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.registration || 'N/A'}</p>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.registration || 'N/A'}</p>
         </div>
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Location</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.location}</p>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.location}</p>
         </div>
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Access Type</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.accessType}</p>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.accessType}</p>
         </div>
-        {aircraft.seller && (
+        {displayAircraft.seller && (
           <div>
             <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Seller</label>
-            <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.seller}</p>
+            <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.seller}</p>
           </div>
         )}
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Status</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.status || 'For Sale'}</p>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.status || 'For Sale'}</p>
         </div>
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Created</label>
           <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
-            {aircraft.createdAt ? new Date(aircraft.createdAt).toLocaleDateString() : 'N/A'}
+            {displayAircraft.createdAt ? new Date(displayAircraft.createdAt).toLocaleDateString() : 'N/A'}
           </p>
         </div>
       </div>
@@ -1362,17 +1441,17 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
       <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
         <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Asking Price</label>
         <p className="text-3xl font-bold" style={{ color: colors.primary }}>
-          ${(aircraft.price / 1000000).toFixed(2)}M
+          ${(displayAircraft.price / 1000000).toFixed(2)}M
         </p>
       </div>
 
       {/* Spec Sheet */}
-      {aircraft.specSheet && (
+      {displayAircraft.specSheet && (
         <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText size={18} style={{ color: colors.primary }} />
-              <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>{aircraft.specSheet}</span>
+              <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>{displayAircraft.specSheet}</span>
             </div>
             <button
               onClick={handleViewSpec}
@@ -1387,13 +1466,13 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
       )}
 
       {/* Presentations */}
-      {aircraft.presentations && aircraft.presentations.length > 0 && (
+      {displayAircraft.presentations && displayAircraft.presentations.length > 0 && (
         <div>
           <h4 className="font-semibold mb-3" style={{ color: colors.primary }}>
-            Presented to ({aircraft.presentations.length})
+            Presented to ({displayAircraft.presentations.length})
           </h4>
           <div className="space-y-2">
-            {aircraft.presentations.map((pres, idx) => {
+            {displayAircraft.presentations.map((pres, idx) => {
               const lead = leads.find(l => l.id === pres.leadId);
               return (
                 <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
@@ -1419,14 +1498,14 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
       <div>
         <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
           <MessageSquare size={18} />
-          Notes ({aircraft.timestampedNotes?.length || 0})
+          Notes ({displayAircraft.timestampedNotes?.length || 0})
         </h4>
         <div className="space-y-3">
           <div className="space-y-2 max-h-48 overflow-y-auto">
-            {(!aircraft.timestampedNotes || aircraft.timestampedNotes.length === 0) ? (
+            {(!displayAircraft.timestampedNotes || displayAircraft.timestampedNotes.length === 0) ? (
               <p className="text-sm italic" style={{ color: colors.textSecondary }}>No notes yet</p>
             ) : (
-              aircraft.timestampedNotes.slice().reverse().map((note) => (
+              displayAircraft.timestampedNotes.slice().reverse().map((note) => (
                 <div key={note.id} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
                   <p style={{ color: colors.textPrimary }}>{note.text}</p>
                   <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
@@ -1463,7 +1542,7 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
         <button
           onClick={() => {
             closeModal();
-            openModal('presentationFromAircraft', aircraft);
+            openModal('presentationFromAircraft', displayAircraft);
           }}
           className="w-full px-6 py-3 rounded-lg font-semibold"
           style={{ backgroundColor: colors.primary, color: colors.secondary }}
@@ -1471,7 +1550,7 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
           Present to Lead
         </button>
 
-        {aircraft.presentations && aircraft.presentations.length > 0 && (
+        {displayAircraft.presentations && displayAircraft.presentations.length > 0 && (
           <button
             onClick={generateMarketingReport}
             className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold"

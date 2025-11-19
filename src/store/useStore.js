@@ -833,9 +833,9 @@ export const useStore = create((set, get) => ({
         seller: aircraft.seller || '',
         imageUrl: aircraft.image_url,
         accessType: aircraft.access_type || 'Direct',
-        specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
-        summary: aircraft.summary || '', // AI-generated summary for display
-        presentations: aircraft.presentations || [], // Which leads this was presented to
+        specSheet: aircraft.spec_sheet,
+        summary: aircraft.summary || '',
+        presentations: aircraft.presentations || [],
         createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         // Placeholders for full data
         serialNumber: null,
@@ -848,9 +848,12 @@ export const useStore = create((set, get) => ({
 
       // Preserve full data for aircraft that have been loaded
       const { aircraft: currentAircraft, aircraftFullDataLoaded } = get();
+
       const newAircraft = data.map(dbAircraft => {
         const existingAircraft = currentAircraft.find(a => a.id === dbAircraft.id);
-        if (existingAircraft && aircraftFullDataLoaded.has(dbAircraft.id)) {
+        const isFullyLoaded = aircraftFullDataLoaded.has(dbAircraft.id);
+
+        if (existingAircraft && isFullyLoaded) {
           // Keep full data for already loaded aircraft, but update minimal fields
           return {
             ...existingAircraft,
@@ -869,6 +872,27 @@ export const useStore = create((set, get) => ({
             presentations: dbAircraft.presentations || []
           };
         }
+
+        // Safety net: preserve specSheetData if it exists, even if not in tracking Set
+        if (existingAircraft && existingAircraft.specSheetData) {
+          return {
+            ...existingAircraft,
+            manufacturer: dbAircraft.manufacturer || '',
+            model: dbAircraft.model || '',
+            yom: dbAircraft.yom,
+            category: dbAircraft.category || '',
+            location: dbAircraft.location || '',
+            price: dbAircraft.price || 0,
+            status: dbAircraft.status || 'For Sale',
+            seller: dbAircraft.seller || '',
+            imageUrl: dbAircraft.image_url,
+            accessType: dbAircraft.access_type || 'Direct',
+            specSheet: dbAircraft.spec_sheet,
+            summary: dbAircraft.summary || '',
+            presentations: dbAircraft.presentations || []
+          };
+        }
+
         return convertAircraftMinimalFromDB(dbAircraft);
       });
 
@@ -877,19 +901,19 @@ export const useStore = create((set, get) => ({
   },
 
   // Load full aircraft data on demand (lazy loading)
-  loadFullAircraftData: async (aircraftId) => {
+  loadFullAircraftData: async (aircraftId, forceReload = false) => {
     const { aircraft, aircraftFullDataLoaded, aircraftLoading, isAuthenticated } = get();
 
-    // If not authenticated or already loaded, skip
+    // If not authenticated, skip
     if (!isAuthenticated) return;
-    if (aircraftFullDataLoaded.has(aircraftId)) {
-      console.log(`✅ Aircraft ${aircraftId} full data already loaded`);
+
+    // If already loaded and not forcing reload, skip
+    if (aircraftFullDataLoaded.has(aircraftId) && !forceReload) {
       return;
     }
 
     // If already loading, skip
     if (aircraftLoading.has(aircraftId)) {
-      console.log(`⏳ Aircraft ${aircraftId} is already being loaded`);
       return;
     }
 
@@ -898,8 +922,6 @@ export const useStore = create((set, get) => ({
       const newLoading = new Set(aircraftLoading);
       newLoading.add(aircraftId);
       set({ aircraftLoading: newLoading });
-
-      console.log(`🔄 Loading full data for aircraft ${aircraftId}...`);
 
       // Fetch all fields for this specific aircraft
       const { data, error } = await supabase
@@ -936,15 +958,22 @@ export const useStore = create((set, get) => ({
           createdAt: data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
         };
 
-        // Update aircraft in state
-        const updatedAircraft = aircraft.map(a => a.id === aircraftId ? fullAircraft : a);
+        // Update aircraft in state - get fresh aircraft array to avoid stale closures
+        const { aircraft: currentAircraft, aircraftFullDataLoaded: currentFullDataLoaded, aircraftLoading: currentLoading } = get();
+
+        const updatedAircraft = currentAircraft.map(a => {
+          if (a.id === aircraftId) {
+            return fullAircraft;
+          }
+          return a;
+        });
 
         // Mark as loaded
-        const newFullDataLoaded = new Set(aircraftFullDataLoaded);
+        const newFullDataLoaded = new Set(currentFullDataLoaded);
         newFullDataLoaded.add(aircraftId);
 
         // Remove from loading
-        const updatedLoading = new Set(aircraftLoading);
+        const updatedLoading = new Set(currentLoading);
         updatedLoading.delete(aircraftId);
 
         set({
@@ -952,8 +981,6 @@ export const useStore = create((set, get) => ({
           aircraftFullDataLoaded: newFullDataLoaded,
           aircraftLoading: updatedLoading
         });
-
-        console.log(`✅ Full data loaded for aircraft ${aircraftId}`);
       }
     } catch (error) {
       console.error(`❌ Error loading full aircraft data for ${aircraftId}:`, error);
