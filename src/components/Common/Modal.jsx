@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import SearchableDropdown from './SearchableDropdown';
+import logo from '../../assets/MyAeroDeal_dark.png';
 
-const Modal = ({ modalType, editingItem, closeModal }) => {
+const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
   // Initialize formData with proper defaults for dealFromLead
   const [formData, setFormData] = useState(() => {
     if (modalType === 'dealFromLead' && editingItem) {
@@ -93,7 +95,7 @@ const Modal = ({ modalType, editingItem, closeModal }) => {
         <div className="p-6">
           {modalType === 'lead' && <LeadForm formData={formData} setFormData={setFormData} />}
           {modalType === 'aircraft' && <AircraftForm formData={formData} setFormData={setFormData} />}
-          {modalType === 'aircraftDetail' && <AircraftDetailView aircraft={editingItem} closeModal={closeModal} />}
+          {modalType === 'aircraftDetail' && <AircraftDetailView aircraft={editingItem} closeModal={closeModal} openModal={openModal} />}
           {(modalType === 'deal' || modalType === 'dealFromLead') && (
             <DealForm formData={formData} setFormData={setFormData} editingItem={editingItem} modalType={modalType} />
           )}
@@ -515,32 +517,6 @@ const AircraftForm = ({ formData, setFormData }) => {
         className="w-full px-4 py-2 border rounded-lg"
         style={inputStyle}
       />
-      <div className="grid grid-cols-3 gap-4">
-        <input
-          type="number"
-          placeholder="Total Hours"
-          value={formData.totalTime || ''}
-          onChange={(e) => setFormData({ ...formData, totalTime: e.target.value ? Number(e.target.value) : '' })}
-          className="w-full px-4 py-2 border rounded-lg"
-          style={inputStyle}
-        />
-        <input
-          type="number"
-          placeholder="Range (nm)"
-          value={formData.range || ''}
-          onChange={(e) => setFormData({ ...formData, range: e.target.value ? Number(e.target.value) : '' })}
-          className="w-full px-4 py-2 border rounded-lg"
-          style={inputStyle}
-        />
-        <input
-          type="number"
-          placeholder="Pax"
-          value={formData.pax || ''}
-          onChange={(e) => setFormData({ ...formData, pax: e.target.value ? Number(e.target.value) : '' })}
-          className="w-full px-4 py-2 border rounded-lg"
-          style={inputStyle}
-        />
-      </div>
 
       <div className="border-2 border-dashed rounded-lg p-6 text-center" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
         <Upload className="mx-auto mb-2" size={32} style={{ color: colors.primary }} />
@@ -1049,9 +1025,9 @@ const PresentationForm = ({ formData, setFormData, modalType, editingItem }) => 
   );
 };
 
-const AircraftDetailView = ({ aircraft, closeModal }) => {
+const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { leads, addNoteToAircraft, deleteAircraft, presentAircraftToLead } = useStore();
+  const { leads, addNoteToAircraft, deleteAircraft, presentAircraftToLead, currentUserProfile } = useStore();
   const [noteText, setNoteText] = useState('');
 
   if (!aircraft) return null;
@@ -1087,6 +1063,163 @@ const AircraftDetailView = ({ aircraft, closeModal }) => {
         link.click();
       }
     }
+  };
+
+  const generateMarketingReport = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 20;
+    let y = margin;
+
+    const addText = (text, x, fontSize = 10, maxWidth = pageWidth - 2 * margin) => {
+      doc.setFontSize(fontSize);
+      const lines = doc.splitTextToSize(text, maxWidth);
+      lines.forEach(line => {
+        if (y > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, x, y);
+        y += fontSize * 0.5;
+      });
+    };
+
+    // Header
+    doc.setFillColor(26, 43, 69);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+
+    try {
+      const img = new Image();
+      img.src = logo;
+      doc.addImage(img, 'PNG', margin, 10, 30, 20);
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+
+    doc.setTextColor(212, 175, 55);
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text('Marketing Report', margin + 35, 25);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'normal');
+    doc.text('MyAeroDeal', pageWidth - margin - 30, 25);
+
+    doc.setTextColor(0, 0, 0);
+    y = 50;
+
+    // Aircraft Details
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text('Aircraft Information', margin, y);
+    y += 10;
+
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+
+    const aircraftInfo = [
+      `Manufacturer: ${aircraft.manufacturer || 'N/A'}`,
+      `Model: ${aircraft.model || 'N/A'}`,
+      `Year of Manufacture: ${aircraft.yom || 'N/A'}`,
+      `Serial Number: ${aircraft.serialNumber || 'N/A'}`,
+      `Registration: ${aircraft.registration || 'N/A'}`,
+      `Category: ${aircraft.category || 'N/A'}`,
+      `Location: ${aircraft.location || 'N/A'}`,
+      `Price: $${aircraft.price ? (aircraft.price / 1000000).toFixed(2) + 'M' : 'N/A'}`
+    ];
+
+    aircraftInfo.forEach(info => {
+      addText(info, margin, 10);
+      y += 2;
+    });
+
+    if (aircraft.summary) {
+      y += 10;
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('Description', margin, y);
+      y += 8;
+      doc.setFont(undefined, 'normal');
+      addText(aircraft.summary, margin, 10);
+      y += 5;
+    }
+
+    // Marketing Activity
+    y += 10;
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text('Marketing Activity', margin, y);
+    y += 10;
+
+    if (aircraft.presentations && aircraft.presentations.length > 0) {
+      doc.setFontSize(12);
+      doc.text(`Total Presentations: ${aircraft.presentations.length}`, margin, y);
+      y += 10;
+
+      aircraft.presentations.forEach((pres, idx) => {
+        const lead = leads.find(l => l.id === pres.leadId);
+
+        if (y > pageHeight - 60) {
+          doc.addPage();
+          y = margin;
+        }
+
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Presentation #${idx + 1}`, margin, y);
+        y += 8;
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+
+        const presDetails = [
+          `Lead: ${lead?.name || 'Unknown'} (${lead?.company || 'N/A'})`,
+          `Date: ${new Date(pres.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
+          `Price Given: $${pres.priceGiven ? (pres.priceGiven / 1000000).toFixed(2) + 'M' : 'N/A'}`,
+          `Lead Status: ${lead?.status || 'Unknown'}`
+        ];
+
+        presDetails.forEach(detail => {
+          addText(detail, margin + 5, 10);
+          y += 2;
+        });
+
+        if (pres.notes && pres.notes.trim()) {
+          y += 3;
+          doc.setFont(undefined, 'bold');
+          addText('Notes:', margin + 5, 10);
+          y += 2;
+          doc.setFont(undefined, 'italic');
+          addText(pres.notes, margin + 5, 9);
+          y += 2;
+          doc.setFont(undefined, 'normal');
+        }
+
+        y += 5;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 8;
+      });
+    } else {
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'italic');
+      doc.text('No presentations recorded yet.', margin, y);
+      y += 10;
+    }
+
+    // Footer
+    const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const userName = currentUserProfile?.first_name && currentUserProfile?.last_name
+      ? `${currentUserProfile.first_name} ${currentUserProfile.last_name}`
+      : 'User';
+    doc.setFontSize(8);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Report Generated: ${currentDate}`, margin, pageHeight - 10);
+    doc.text(`Exported by: ${userName}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text('MyAeroDeal CRM', pageWidth - margin - 30, pageHeight - 10);
+
+    const fileName = `Marketing_Report_${aircraft.manufacturer}_${aircraft.model}_${aircraft.serialNumber || aircraft.registration || 'Aircraft'}.pdf`;
+    doc.save(fileName);
   };
 
   const inputStyle = {
@@ -1160,18 +1293,6 @@ const AircraftDetailView = ({ aircraft, closeModal }) => {
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Status</label>
           <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.status || 'For Sale'}</p>
-        </div>
-        <div>
-          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Total Hours</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.totalTime || 'N/A'}</p>
-        </div>
-        <div>
-          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Range</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.range ? `${aircraft.range}nm` : 'N/A'}</p>
-        </div>
-        <div>
-          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Passenger Capacity</label>
-          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.pax || 'N/A'}</p>
         </div>
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Created</label>
@@ -1282,10 +1403,32 @@ const AircraftDetailView = ({ aircraft, closeModal }) => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3 pt-4 border-t" style={{ borderColor: colors.border }}>
+      <div className="space-y-3 pt-4 border-t" style={{ borderColor: colors.border }}>
+        <button
+          onClick={() => {
+            closeModal();
+            openModal('presentationFromAircraft', aircraft);
+          }}
+          className="w-full px-6 py-3 rounded-lg font-semibold"
+          style={{ backgroundColor: colors.primary, color: colors.secondary }}
+        >
+          Present to Lead
+        </button>
+
+        {aircraft.presentations && aircraft.presentations.length > 0 && (
+          <button
+            onClick={generateMarketingReport}
+            className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.secondary, color: colors.primary, border: `2px solid ${colors.primary}` }}
+          >
+            <FileBarChart size={18} />
+            Generate Marketing Report
+          </button>
+        )}
+
         <button
           onClick={closeModal}
-          className="flex-1 px-6 py-3 rounded-lg font-semibold border-2"
+          className="w-full px-6 py-3 rounded-lg font-semibold border-2"
           style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
         >
           Close
