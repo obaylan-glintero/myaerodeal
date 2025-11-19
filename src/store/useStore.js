@@ -247,8 +247,8 @@ export const useStore = create((set, get) => ({
       console.log('Fetching data from Supabase...');
 
       // Only fetch minimal fields for faster initial load
-      const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, created_at';
-      const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, created_at';
+      const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, presentations, timestamped_notes, created_at';
+      const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, created_at';
       const dealsMinimalFields = 'id, deal_name, client_name, related_lead, related_aircraft, deal_value, estimated_closing, status, next_step, follow_up_date, created_at';
 
       const [leadsResult, aircraftResult, dealsResult, tasksResult] = await Promise.all([
@@ -302,11 +302,11 @@ export const useStore = create((set, get) => ({
           budgetKnown: lead.budget_known || false,
           yearPreference: lead.year_preference || { oldest: null, newest: null },
           status: lead.status || 'Inquiry',
+          presentations: lead.presentations || [],
+          timestampedNotes: lead.timestamped_notes || [],
           createdAt: lead.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-          // Placeholders for full data (will be loaded on demand)
-          notes: '',
-          presentations: [],
-          timestampedNotes: []
+          // Placeholder for full data (will be loaded on demand)
+          notes: ''
         };
         console.log('🔄 Converting lead (minimal) from DB:', lead.name, 'status:', lead.status, '→', converted.status);
         return converted;
@@ -344,13 +344,13 @@ export const useStore = create((set, get) => ({
         status: aircraft.status || 'For Sale',
         seller: aircraft.seller || '',
         imageUrl: aircraft.image_url,
+        accessType: aircraft.access_type || 'Direct',
+        specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
         createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         // Placeholders for full data (will be loaded on demand)
         serialNumber: null,
         registration: null,
         summary: null,
-        accessType: aircraft.access_type || 'Direct',
-        specSheet: null,
         specSheetData: null,
         specSheetType: null,
         imageData: null,
@@ -764,7 +764,7 @@ export const useStore = create((set, get) => ({
     if (!get().isAuthenticated) return;
 
     // Only fetch minimal fields for refresh
-    const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, created_at';
+    const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, presentations, timestamped_notes, created_at';
     const { data } = await supabase.from('leads').select(leadsMinimalFields);
 
     if (data) {
@@ -778,11 +778,11 @@ export const useStore = create((set, get) => ({
           budgetKnown: lead.budget_known || false,
           yearPreference: lead.year_preference || { oldest: null, newest: null },
           status: lead.status || 'Inquiry',
+          presentations: lead.presentations || [],
+          timestampedNotes: lead.timestamped_notes || [],
           createdAt: lead.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-          // Placeholders for full data
-          notes: '',
-          presentations: [],
-          timestampedNotes: []
+          // Placeholder for full data
+          notes: ''
         };
         return converted;
       };
@@ -801,7 +801,9 @@ export const useStore = create((set, get) => ({
             budget: dbLead.budget,
             budgetKnown: dbLead.budget_known || false,
             yearPreference: dbLead.year_preference || { oldest: null, newest: null },
-            status: dbLead.status || 'Inquiry'
+            status: dbLead.status || 'Inquiry',
+            presentations: dbLead.presentations || [],
+            timestampedNotes: dbLead.timestamped_notes || []
           };
         }
         return convertLeadMinimalFromDB(dbLead);
@@ -815,7 +817,7 @@ export const useStore = create((set, get) => ({
     if (!get().isAuthenticated) return;
 
     // Only fetch minimal fields for refresh
-    const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, created_at';
+    const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, created_at';
     const { data } = await supabase.from('aircraft').select(aircraftMinimalFields);
 
     if (data) {
@@ -830,13 +832,13 @@ export const useStore = create((set, get) => ({
         status: aircraft.status || 'For Sale',
         seller: aircraft.seller || '',
         imageUrl: aircraft.image_url,
+        accessType: aircraft.access_type || 'Direct',
+        specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
         createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         // Placeholders for full data
         serialNumber: null,
         registration: null,
         summary: null,
-        accessType: aircraft.access_type || 'Direct',
-        specSheet: null,
         specSheetData: null,
         specSheetType: null,
         imageData: null,
@@ -861,7 +863,8 @@ export const useStore = create((set, get) => ({
             status: dbAircraft.status || 'For Sale',
             seller: dbAircraft.seller || '',
             imageUrl: dbAircraft.image_url,
-            accessType: dbAircraft.access_type || 'Direct'
+            accessType: dbAircraft.access_type || 'Direct',
+            specSheet: dbAircraft.spec_sheet
           };
         }
         return convertAircraftMinimalFromDB(dbAircraft);
