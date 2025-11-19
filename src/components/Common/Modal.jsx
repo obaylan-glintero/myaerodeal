@@ -378,26 +378,44 @@ const AircraftForm = ({ formData, setFormData }) => {
     setIsLoadingUrl(true);
 
     try {
-      // Fetch the image from the URL
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error('Failed to load image from URL');
-      }
+      // Create a new image element
+      const img = new Image();
 
-      const blob = await response.blob();
+      // Set crossOrigin to anonymous to try to load with CORS
+      img.crossOrigin = 'anonymous';
 
-      // Convert blob to base64
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, imageData: reader.result });
-        setImageUrl(''); // Clear the URL input after successful load
+      // Set up the onload handler
+      img.onload = () => {
+        try {
+          // Create a canvas to convert the image to base64
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+
+          // Convert to base64
+          const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+
+          setFormData({ ...formData, imageData: dataURL });
+          setImageUrl(''); // Clear the URL input after successful load
+          setIsLoadingUrl(false);
+        } catch (error) {
+          console.error('Error converting image:', error);
+          alert('Failed to process the image. This may be due to CORS restrictions. Try downloading the image and uploading it directly.');
+          setIsLoadingUrl(false);
+        }
+      };
+
+      // Set up the onerror handler
+      img.onerror = () => {
+        alert('Failed to load image from URL. Please check the URL and try again, or download the image and upload it directly.');
         setIsLoadingUrl(false);
       };
-      reader.onerror = () => {
-        alert('Error reading image data');
-        setIsLoadingUrl(false);
-      };
-      reader.readAsDataURL(blob);
+
+      // Start loading the image
+      img.src = imageUrl;
     } catch (error) {
       console.error('Error loading image from URL:', error);
       alert('Failed to load image from URL. Please check the URL and try again.');
