@@ -604,184 +604,16 @@ const AircraftView = ({ openModal }) => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {sortedAircraft.map(ac => (
-          <div key={ac.id} className="rounded-lg shadow-lg overflow-hidden" style={{ backgroundColor: colors.cardBg }}>
-            {ac.imageData && (
-              <div className="w-full h-48 overflow-hidden" style={{ backgroundColor: colors.secondary }}>
-                <img
-                  src={ac.imageData}
-                  alt={`${ac.manufacturer} ${ac.model}`}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-xl font-semibold" style={{ color: colors.primary }}>
-                    {ac.manufacturer} {ac.model}
-                  </h3>
-                  <p style={{ color: colors.textSecondary }}>{ac.yom}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
-                    className="p-2 rounded"
-                    style={{ color: colors.textPrimary }}
-                    disabled={aircraftLoading.has(ac.id)}
-                  >
-                    <Edit2 size={18} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(ac)}
-                    className="p-2 rounded"
-                    style={{ color: colors.error }}
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
-
-              {ac.summary && (
-                <div className="mb-4 pb-4" style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <p className="text-sm italic leading-relaxed" style={{ color: colors.textSecondary }}>
-                    {ac.summary}
-                  </p>
-                </div>
-              )}
-{ac.seller && ( <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: colors.textSecondary }}>Seller:</span>
-                    <span className="font-medium" style={{ color: colors.textPrimary }}>{ac.seller}</span>
-                  </div></div>
-                )}
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: colors.textSecondary }}>Category:</span>
-                  <span className="font-medium" style={{ color: colors.textPrimary }}>{ac.category}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: colors.textSecondary }}>Serial Number:</span>
-                  <span className="font-medium" style={{ color: colors.textPrimary }}>{ac.serialNumber}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: colors.textSecondary }}>Registration:</span>
-                  <span className="font-medium" style={{ color: colors.textPrimary }}>{ac.registration}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: colors.textSecondary }}>Location:</span>
-                  <span className="font-medium" style={{ color: colors.textPrimary }}>{ac.location}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: colors.textSecondary }}>Access Type:</span>
-                  <span className="font-medium" style={{ color: colors.textPrimary }}>{ac.accessType}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: colors.textSecondary }}>Created:</span>
-                  <span className="font-medium" style={{ color: colors.textPrimary }}>
-                    {ac.createdAt ? new Date(ac.createdAt).toLocaleDateString() : 'N/A'}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: colors.textSecondary }}>Status:</span>
-                  <span
-                    className="font-semibold px-3 py-1 rounded text-sm"
-                    style={{
-                      backgroundColor: getStatusColors(ac.status || 'For Sale').bg,
-                      color: getStatusColors(ac.status || 'For Sale').text
-                    }}
-                  >
-                    {ac.status || 'For Sale'}
-                  </span>
-                </div>
-                <div className="flex justify-between text-lg font-bold pt-2" style={{ borderTop: `1px solid ${colors.border}` }}>
-                  <span style={{ color: colors.primary }}>Price:</span>
-                  <span style={{ color: colors.primary }}>${(ac.price / 1000000).toFixed(1)}M</span>
-                </div>
-              </div>
-
-              {ac.specSheet && (
-                <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText size={18} style={{ color: colors.primary }} />
-                      <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>{ac.specSheet}</span>
-                    </div>
-                    <button
-                      onClick={() => handleActionWithFullData(ac.id, (updatedAc) => handleViewSpec(updatedAc))}
-                      className="flex items-center gap-1 px-3 py-1 text-sm rounded font-semibold hover:opacity-90"
-                      style={{ backgroundColor: colors.primary, color: colors.secondary }}
-                      disabled={aircraftLoading.has(ac.id)}
-                    >
-                      <Download size={14} />
-                      View
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {ac.presentations.length > 0 && (
-                <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
-                  <h4 className="font-semibold mb-2" style={{ color: colors.primary }}>
-                    Presented to ({ac.presentations.length})
-                  </h4>
-                  <div className="space-y-2">
-                    {ac.presentations.map((pres, idx) => {
-                      const lead = leads.find(l => l.id === pres.leadId);
-                      return (
-                        <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
-                          <button
-                            onClick={() => openModal('lead', lead)}
-                            className="font-medium hover:underline cursor-pointer text-left"
-                            style={{ color: colors.primary }}
-                          >
-                            {lead?.name}
-                          </button>
-                          <p className="text-xs" style={{ color: colors.textSecondary }}>{new Date(pres.date).toLocaleDateString()}</p>
-                          {pres.notes && (
-                            <p className="text-xs mt-2 italic" style={{ color: colors.textSecondary }}>
-                              Note: {pres.notes}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <NotesSection
-                notes={ac.timestampedNotes || []}
-                onAddNote={(noteText) => addNoteToAircraft(ac.id, noteText)}
-              />
-
-              <div className="mt-4 space-y-2">
-                <button
-                  onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('presentationFromAircraft', updatedAc))}
-                  className="w-full px-4 py-2 rounded-lg font-semibold"
-                  style={{ backgroundColor: colors.primary, color: colors.secondary }}
-                  disabled={aircraftLoading.has(ac.id)}
-                >
-                  Present to Lead
-                </button>
-
-                {ac.presentations && ac.presentations.length > 0 && (
-                  <button
-                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => generateMarketingReport(updatedAc))}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold hover:opacity-90"
-                    style={{
-                      backgroundColor: colors.secondary,
-                      color: colors.primary,
-                      border: `2px solid ${colors.primary}`
-                    }}
-                    disabled={aircraftLoading.has(ac.id)}
-                  >
-                    <FileBarChart size={18} />
-                    Generate Marketing Report
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          <AircraftSummaryCard
+            key={ac.id}
+            aircraft={ac}
+            colors={colors}
+            onViewDetails={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraftDetail', updatedAc))}
+            onEdit={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
+            onDelete={() => handleDeleteClick(ac)}
+            isLoading={aircraftLoading.has(ac.id)}
+            getStatusColors={getStatusColors}
+          />
         ))}
         </div>
       )}
@@ -797,6 +629,114 @@ const AircraftView = ({ openModal }) => {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
       />
+    </div>
+  );
+};
+
+const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete, isLoading, getStatusColors }) => {
+  return (
+    <div className="rounded-lg shadow-lg overflow-hidden relative" style={{ backgroundColor: colors.cardBg }}>
+      {/* Aircraft Image with Title Overlay */}
+      <div className="relative w-full h-80 overflow-hidden" style={{ backgroundColor: colors.secondary }}>
+        {aircraft.imageData ? (
+          <img
+            src={aircraft.imageData}
+            alt={`${aircraft.manufacturer} ${aircraft.model}`}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: colors.secondary }}>
+            <span style={{ color: colors.textSecondary }}>No Image</span>
+          </div>
+        )}
+
+        {/* Status Badge */}
+        {aircraft.status && aircraft.status !== 'For Sale' && (
+          <div className="absolute top-4 right-4 px-4 py-2 rounded-lg font-bold text-sm" style={{
+            backgroundColor: 'rgba(100, 100, 100, 0.8)',
+            color: '#fff'
+          }}>
+            {aircraft.status === 'Under Contract' ? 'UNDER CONTRACT' : aircraft.status === 'Not for Sale' ? 'SOLD' : aircraft.status.toUpperCase()}
+          </div>
+        )}
+
+        {/* Aircraft Title Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-6" style={{
+          background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent)'
+        }}>
+          <h3 className="text-2xl font-bold text-white">
+            {aircraft.yom} {aircraft.manufacturer} {aircraft.model}
+          </h3>
+        </div>
+
+        {/* Edit and Delete Buttons */}
+        <div className="absolute top-4 left-4 flex gap-2">
+          <button
+            onClick={onEdit}
+            className="p-2 rounded-full hover:opacity-80"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+            disabled={isLoading}
+            title="Edit"
+          >
+            <Edit2 size={18} style={{ color: colors.primary }} />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-2 rounded-full hover:opacity-80"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+            title="Delete"
+          >
+            <Trash2 size={18} style={{ color: colors.error }} />
+          </button>
+        </div>
+      </div>
+
+      {/* Info Boxes - MSN, Registration, Location */}
+      <div className="p-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {/* MSN (Serial Number) */}
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(26, 43, 69, 0.3)' }}>
+            <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>MSN</div>
+            <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+              {aircraft.serialNumber || 'N/A'}
+            </div>
+          </div>
+
+          {/* Registration */}
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(26, 43, 69, 0.3)' }}>
+            <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Registration</div>
+            <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+              {aircraft.registration || 'N/A'}
+            </div>
+          </div>
+
+          {/* Location */}
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: 'rgba(26, 43, 69, 0.3)' }}>
+            <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Location</div>
+            <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+              {aircraft.location || 'N/A'}
+            </div>
+          </div>
+        </div>
+
+        {/* Asking Price */}
+        <div className="mb-4">
+          <div className="text-sm" style={{ color: colors.textSecondary }}>Asking Price</div>
+          <div className="text-4xl font-bold" style={{ color: colors.secondary }}>
+            ${(aircraft.price / 1000000).toFixed(2)}M
+          </div>
+        </div>
+
+        {/* View Details Button */}
+        <button
+          onClick={onViewDetails}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90"
+          style={{ color: colors.textSecondary }}
+          disabled={isLoading}
+        >
+          View Details →
+        </button>
+      </div>
     </div>
   );
 };

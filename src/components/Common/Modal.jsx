@@ -76,6 +76,7 @@ const Modal = ({ modalType, editingItem, closeModal }) => {
     const action = editingItem ? 'Edit' : 'Add';
     if (modalType === 'dealFromLead') return 'Add Deal';
     if (modalType === 'presentationFromAircraft' || modalType === 'presentation') return 'Present Aircraft';
+    if (modalType === 'aircraftDetail') return 'Aircraft Details';
     return `${action} ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`;
   };
 
@@ -92,6 +93,7 @@ const Modal = ({ modalType, editingItem, closeModal }) => {
         <div className="p-6">
           {modalType === 'lead' && <LeadForm formData={formData} setFormData={setFormData} />}
           {modalType === 'aircraft' && <AircraftForm formData={formData} setFormData={setFormData} />}
+          {modalType === 'aircraftDetail' && <AircraftDetailView aircraft={editingItem} closeModal={closeModal} />}
           {(modalType === 'deal' || modalType === 'dealFromLead') && (
             <DealForm formData={formData} setFormData={setFormData} editingItem={editingItem} modalType={modalType} />
           )}
@@ -100,22 +102,24 @@ const Modal = ({ modalType, editingItem, closeModal }) => {
             <PresentationForm formData={formData} setFormData={setFormData} modalType={modalType} editingItem={editingItem} />
           )}
 
-          <div className="flex gap-4 mt-6">
-            <button
-              onClick={handleSubmit}
-              className="flex-1 px-6 py-3 rounded-lg font-semibold"
-              style={{ backgroundColor: colors.primary, color: colors.secondary }}
-            >
-              {editingItem ? 'Update' : 'Create'}
-            </button>
-            <button
-              onClick={closeModal}
-              className="flex-1 px-6 py-3 rounded-lg border-2 font-semibold"
-              style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
-            >
-              Cancel
-            </button>
-          </div>
+          {modalType !== 'aircraftDetail' && (
+            <div className="flex gap-4 mt-6">
+              <button
+                onClick={handleSubmit}
+                className="flex-1 px-6 py-3 rounded-lg font-semibold"
+                style={{ backgroundColor: colors.primary, color: colors.secondary }}
+              >
+                {editingItem ? 'Update' : 'Create'}
+              </button>
+              <button
+                onClick={closeModal}
+                className="flex-1 px-6 py-3 rounded-lg border-2 font-semibold"
+                style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -511,6 +515,32 @@ const AircraftForm = ({ formData, setFormData }) => {
         className="w-full px-4 py-2 border rounded-lg"
         style={inputStyle}
       />
+      <div className="grid grid-cols-3 gap-4">
+        <input
+          type="number"
+          placeholder="Total Hours"
+          value={formData.totalTime || ''}
+          onChange={(e) => setFormData({ ...formData, totalTime: e.target.value ? Number(e.target.value) : '' })}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={inputStyle}
+        />
+        <input
+          type="number"
+          placeholder="Range (nm)"
+          value={formData.range || ''}
+          onChange={(e) => setFormData({ ...formData, range: e.target.value ? Number(e.target.value) : '' })}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={inputStyle}
+        />
+        <input
+          type="number"
+          placeholder="Pax"
+          value={formData.pax || ''}
+          onChange={(e) => setFormData({ ...formData, pax: e.target.value ? Number(e.target.value) : '' })}
+          className="w-full px-4 py-2 border rounded-lg"
+          style={inputStyle}
+        />
+      </div>
 
       <div className="border-2 border-dashed rounded-lg p-6 text-center" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
         <Upload className="mx-auto mb-2" size={32} style={{ color: colors.primary }} />
@@ -1015,6 +1045,253 @@ const PresentationForm = ({ formData, setFormData, modalType, editingItem }) => 
         className="w-full px-4 py-2 border rounded-lg h-32"
         style={inputStyle}
       />
+    </div>
+  );
+};
+
+const AircraftDetailView = ({ aircraft, closeModal }) => {
+  const { colors } = useTheme();
+  const { leads, addNoteToAircraft, deleteAircraft, presentAircraftToLead } = useStore();
+  const [noteText, setNoteText] = useState('');
+  const { MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart } = require('lucide-react');
+
+  if (!aircraft) return null;
+
+  const handleAddNote = () => {
+    if (noteText.trim()) {
+      addNoteToAircraft(aircraft.id, noteText.trim());
+      setNoteText('');
+    }
+  };
+
+  const handleViewSpec = () => {
+    if (aircraft.specSheetData) {
+      if (aircraft.specSheetType && aircraft.specSheetType.includes('pdf')) {
+        try {
+          const base64Data = aircraft.specSheetData.split(',')[1];
+          const binaryData = atob(base64Data);
+          const bytes = new Uint8Array(binaryData.length);
+          for (let i = 0; i < binaryData.length; i++) {
+            bytes[i] = binaryData.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(blob);
+          window.open(blobUrl, '_blank');
+        } catch (error) {
+          console.error('Error viewing PDF:', error);
+          alert('Error opening PDF. Please try downloading it instead.');
+        }
+      } else {
+        const link = document.createElement('a');
+        link.href = aircraft.specSheetData;
+        link.download = aircraft.specSheet;
+        link.click();
+      }
+    }
+  };
+
+  const inputStyle = {
+    backgroundColor: colors.cardBg,
+    color: colors.textPrimary,
+    borderColor: colors.border,
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Aircraft Image */}
+      {aircraft.imageData && (
+        <div className="w-full h-64 overflow-hidden rounded-lg">
+          <img
+            src={aircraft.imageData}
+            alt={`${aircraft.manufacturer} ${aircraft.model}`}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
+      {/* Summary */}
+      {aircraft.summary && (
+        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+          <p className="italic leading-relaxed" style={{ color: colors.textPrimary }}>
+            {aircraft.summary}
+          </p>
+        </div>
+      )}
+
+      {/* Aircraft Specifications */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Manufacturer</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.manufacturer}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Model</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.model}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Year of Manufacture</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.yom}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Category</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.category}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Serial Number (MSN)</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.serialNumber || 'N/A'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Registration</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.registration || 'N/A'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Location</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.location}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Access Type</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.accessType}</p>
+        </div>
+        {aircraft.seller && (
+          <div>
+            <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Seller</label>
+            <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.seller}</p>
+          </div>
+        )}
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Status</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.status || 'For Sale'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Total Hours</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.totalTime || 'N/A'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Range</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.range ? `${aircraft.range}nm` : 'N/A'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Passenger Capacity</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{aircraft.pax || 'N/A'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Created</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
+            {aircraft.createdAt ? new Date(aircraft.createdAt).toLocaleDateString() : 'N/A'}
+          </p>
+        </div>
+      </div>
+
+      {/* Price */}
+      <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+        <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Asking Price</label>
+        <p className="text-3xl font-bold" style={{ color: colors.primary }}>
+          ${(aircraft.price / 1000000).toFixed(2)}M
+        </p>
+      </div>
+
+      {/* Spec Sheet */}
+      {aircraft.specSheet && (
+        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText size={18} style={{ color: colors.primary }} />
+              <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>{aircraft.specSheet}</span>
+            </div>
+            <button
+              onClick={handleViewSpec}
+              className="flex items-center gap-1 px-3 py-1 text-sm rounded font-semibold hover:opacity-90"
+              style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            >
+              <Download size={14} />
+              View
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Presentations */}
+      {aircraft.presentations && aircraft.presentations.length > 0 && (
+        <div>
+          <h4 className="font-semibold mb-3" style={{ color: colors.primary }}>
+            Presented to ({aircraft.presentations.length})
+          </h4>
+          <div className="space-y-2">
+            {aircraft.presentations.map((pres, idx) => {
+              const lead = leads.find(l => l.id === pres.leadId);
+              return (
+                <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                  <p className="font-medium" style={{ color: colors.primary }}>
+                    {lead?.name || 'Unknown Lead'}
+                  </p>
+                  <p className="text-xs" style={{ color: colors.textSecondary }}>
+                    {new Date(pres.date).toLocaleDateString()}
+                  </p>
+                  {pres.notes && (
+                    <p className="text-xs mt-2 italic" style={{ color: colors.textSecondary }}>
+                      Note: {pres.notes}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      <div>
+        <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+          <MessageSquare size={18} />
+          Notes ({aircraft.timestampedNotes?.length || 0})
+        </h4>
+        <div className="space-y-3">
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {(!aircraft.timestampedNotes || aircraft.timestampedNotes.length === 0) ? (
+              <p className="text-sm italic" style={{ color: colors.textSecondary }}>No notes yet</p>
+            ) : (
+              aircraft.timestampedNotes.slice().reverse().map((note) => (
+                <div key={note.id} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                  <p style={{ color: colors.textPrimary }}>{note.text}</p>
+                  <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                    {new Date(note.timestamp).toLocaleString()}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddNote()}
+              placeholder="Add a note..."
+              className="flex-1 px-3 py-2 text-sm rounded-lg border"
+              style={inputStyle}
+            />
+            <button
+              onClick={handleAddNote}
+              className="px-4 py-2 rounded-lg font-semibold"
+              style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 pt-4 border-t" style={{ borderColor: colors.border }}>
+        <button
+          onClick={closeModal}
+          className="flex-1 px-6 py-3 rounded-lg font-semibold border-2"
+          style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 };

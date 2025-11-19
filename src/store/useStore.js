@@ -348,6 +348,9 @@ export const useStore = create((set, get) => ({
         specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
         summary: aircraft.summary || '', // AI-generated summary for display
         presentations: aircraft.presentations || [], // Which leads this was presented to
+        totalTime: aircraft.total_time,
+        range: aircraft.range,
+        pax: aircraft.pax,
         createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         // Placeholders for full data (will be loaded on demand)
         serialNumber: null,
@@ -373,6 +376,9 @@ export const useStore = create((set, get) => ({
         summary: aircraft.summary || '',
         status: aircraft.status || 'For Sale',
         seller: aircraft.seller || '',
+        totalTime: aircraft.total_time,
+        range: aircraft.range,
+        pax: aircraft.pax,
         specSheet: aircraft.spec_sheet,
         specSheetData: aircraft.spec_sheet_data,
         specSheetType: aircraft.spec_sheet_type,
@@ -1668,6 +1674,9 @@ export const useStore = create((set, get) => ({
           summary: aircraftData.summary || null,
           status: aircraftData.status || 'For Sale',
           seller: aircraftData.seller || null,
+          total_time: aircraftData.totalTime || null,
+          range: aircraftData.range || null,
+          pax: aircraftData.pax || null,
           spec_sheet: aircraftData.specSheet,
           spec_sheet_data: aircraftData.specSheetData,
           spec_sheet_type: aircraftData.specSheetType,
@@ -1701,6 +1710,9 @@ export const useStore = create((set, get) => ({
         summary: data.summary || '',
         status: data.status || 'For Sale',
         seller: data.seller || '',
+        totalTime: data.total_time,
+        range: data.range,
+        pax: data.pax,
         specSheet: data.spec_sheet,
         specSheetData: data.spec_sheet_data,
         specSheetType: data.spec_sheet_type,
