@@ -6,7 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import logo from '../../assets/MyAeroDeal_dark.png';
 
 const AircraftView = ({ openModal }) => {
-  const { aircraft, leads, deleteAircraft, addNoteToAircraft, currentUserProfile } = useStore();
+  const { aircraft, leads, deleteAircraft, addNoteToAircraft, currentUserProfile, loadFullAircraftData, aircraftLoading } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -37,6 +37,16 @@ const AircraftView = ({ openModal }) => {
       console.log('🛩️ First aircraft full data:', aircraft[0]);
     }
   }, [aircraft]);
+
+  // Helper to ensure full data is loaded before action
+  const handleActionWithFullData = async (aircraftId, action) => {
+    await loadFullAircraftData(aircraftId);
+    // Get the updated aircraft directly from the store (not from the stale closure)
+    const updatedAircraft = useStore.getState().aircraft.find(ac => ac.id === aircraftId);
+    if (updatedAircraft) {
+      action(updatedAircraft);
+    }
+  };
 
   const handleViewSpec = (ac) => {
     if (ac.specSheetData) {
@@ -502,7 +512,7 @@ const AircraftView = ({ openModal }) => {
                     key={ac.id}
                     className="hover:opacity-80 cursor-pointer"
                     style={{ borderBottom: `1px solid ${colors.border}` }}
-                    onClick={() => openModal('aircraft', ac)}
+                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
                   >
                     <td className="px-4 py-3">
                       <div>
@@ -542,10 +552,11 @@ const AircraftView = ({ openModal }) => {
                     <td className="px-4 py-3">
                       <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => openModal('aircraft', ac)}
+                          onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
                           className="p-2 rounded hover:opacity-70"
                           style={{ color: colors.textPrimary }}
                           title="Edit"
+                          disabled={aircraftLoading.has(ac.id)}
                         >
                           <Edit2 size={18} />
                         </button>
@@ -591,9 +602,10 @@ const AircraftView = ({ openModal }) => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => openModal('aircraft', ac)}
+                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
                     className="p-2 rounded"
                     style={{ color: colors.textPrimary }}
+                    disabled={aircraftLoading.has(ac.id)}
                   >
                     <Edit2 size={18} />
                   </button>
@@ -665,7 +677,7 @@ const AircraftView = ({ openModal }) => {
                 </div>
               </div>
 
-              {ac.specSheet && ac.specSheetData && (
+              {ac.specSheet && (
                 <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -673,9 +685,10 @@ const AircraftView = ({ openModal }) => {
                       <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>{ac.specSheet}</span>
                     </div>
                     <button
-                      onClick={() => handleViewSpec(ac)}
+                      onClick={() => handleActionWithFullData(ac.id, (updatedAc) => handleViewSpec(updatedAc))}
                       className="flex items-center gap-1 px-3 py-1 text-sm rounded font-semibold hover:opacity-90"
                       style={{ backgroundColor: colors.primary, color: colors.secondary }}
+                      disabled={aircraftLoading.has(ac.id)}
                     >
                       <Download size={14} />
                       View
@@ -721,22 +734,24 @@ const AircraftView = ({ openModal }) => {
 
               <div className="mt-4 space-y-2">
                 <button
-                  onClick={() => openModal('presentationFromAircraft', ac)}
+                  onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('presentationFromAircraft', updatedAc))}
                   className="w-full px-4 py-2 rounded-lg font-semibold"
                   style={{ backgroundColor: colors.primary, color: colors.secondary }}
+                  disabled={aircraftLoading.has(ac.id)}
                 >
                   Present to Lead
                 </button>
 
                 {ac.presentations && ac.presentations.length > 0 && (
                   <button
-                    onClick={() => generateMarketingReport(ac)}
+                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => generateMarketingReport(updatedAc))}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold hover:opacity-90"
                     style={{
                       backgroundColor: colors.secondary,
                       color: colors.primary,
                       border: `2px solid ${colors.primary}`
                     }}
+                    disabled={aircraftLoading.has(ac.id)}
                   >
                     <FileBarChart size={18} />
                     Generate Marketing Report

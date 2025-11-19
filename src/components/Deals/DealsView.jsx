@@ -7,7 +7,7 @@ import autoTable from 'jspdf-autotable';
 import logo from '../../assets/MyAeroDeal_dark.png';
 
 const DealsView = ({ openModal }) => {
-  const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask, currentUserProfile } = useStore();
+  const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask, currentUserProfile, loadFullDealData, dealsLoading } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -17,6 +17,16 @@ const DealsView = ({ openModal }) => {
   const [showTimeline, setShowTimeline] = useState({});
   const [editingTimelineItem, setEditingTimelineItem] = useState(null); // { dealId, itemIndex }
   const [editingTimelineDueDate, setEditingTimelineDueDate] = useState('');
+
+  // Helper to ensure full deal data is loaded before action
+  const handleActionWithFullDealData = async (dealId, action) => {
+    await loadFullDealData(dealId);
+    // Get the updated deal directly from the store (not from the stale closure)
+    const updatedDeal = useStore.getState().deals.find(d => d.id === dealId);
+    if (updatedDeal) {
+      action(updatedDeal);
+    }
+  };
 
   const handleViewDocument = (deal) => {
     if (deal.documentData) {
@@ -272,7 +282,7 @@ const DealsView = ({ openModal }) => {
                       key={deal.id}
                       className="hover:opacity-80 cursor-pointer"
                       style={{ borderBottom: `1px solid ${colors.border}` }}
-                      onClick={() => openModal('deal', deal)}
+                      onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
                     >
                       <td className="px-4 py-3">
                         <div>
@@ -315,10 +325,11 @@ const DealsView = ({ openModal }) => {
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
                           <button
-                            onClick={() => openModal('deal', deal)}
+                            onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
                             className="p-2 rounded hover:opacity-70"
                             style={{ color: colors.textPrimary }}
                             title="Edit"
+                            disabled={dealsLoading.has(deal.id)}
                           >
                             <Edit2 size={18} />
                           </button>
@@ -357,9 +368,10 @@ const DealsView = ({ openModal }) => {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => openModal('deal', deal)}
+                    onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
                     className="p-2 rounded"
                     style={{ color: colors.textPrimary }}
+                    disabled={dealsLoading.has(deal.id)}
                   >
                     <Edit2 size={18} />
                   </button>

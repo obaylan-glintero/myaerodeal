@@ -4,13 +4,33 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const LeadsView = ({ openModal }) => {
-  const { leads, aircraft, deleteLead, addNoteToLead } = useStore();
+  const { leads, aircraft, deleteLead, addNoteToLead, loadFullAircraftData, loadFullLeadData, leadsLoading } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('active');
   const [filterAircraftType, setFilterAircraftType] = useState('all');
   const [sortBy, setSortBy] = useState('statusAsc');
   const [viewMode, setViewMode] = useState('card');
+
+  // Helper to ensure full aircraft data is loaded before action
+  const handleActionWithFullAircraftData = async (aircraftId, action) => {
+    await loadFullAircraftData(aircraftId);
+    // Get the updated aircraft directly from the store (not from the stale closure)
+    const updatedAircraft = useStore.getState().aircraft.find(ac => ac.id === aircraftId);
+    if (updatedAircraft) {
+      action(updatedAircraft);
+    }
+  };
+
+  // Helper to ensure full lead data is loaded before action
+  const handleActionWithFullLeadData = async (leadId, action) => {
+    await loadFullLeadData(leadId);
+    // Get the updated lead directly from the store (not from the stale closure)
+    const updatedLead = useStore.getState().leads.find(l => l.id === leadId);
+    if (updatedLead) {
+      action(updatedLead);
+    }
+  };
 
   // Filter leads
   const filteredLeads = leads.filter(lead => {
@@ -192,7 +212,7 @@ const LeadsView = ({ openModal }) => {
                     key={lead.id}
                     className="hover:opacity-80 cursor-pointer"
                     style={{ borderBottom: `1px solid ${colors.border}` }}
-                    onClick={() => openModal('lead', lead)}
+                    onClick={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('lead', updatedLead))}
                   >
                     <td className="px-4 py-3">
                       <div>
@@ -237,10 +257,11 @@ const LeadsView = ({ openModal }) => {
                     <td className="px-4 py-3">
                       <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => openModal('lead', lead)}
+                          onClick={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('lead', updatedLead))}
                           className="p-2 rounded hover:opacity-70"
                           style={{ color: colors.textPrimary }}
                           title="Edit"
+                          disabled={leadsLoading.has(lead.id)}
                         >
                           <Edit2 size={18} />
                         </button>
@@ -274,9 +295,10 @@ const LeadsView = ({ openModal }) => {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => openModal('lead', lead)}
+                  onClick={() => handleActionWithFullLeadData(lead.id, () => openModal('lead', lead))}
                   className="p-2 rounded"
                   style={{ color: colors.textPrimary }}
+                  disabled={leadsLoading.has(lead.id)}
                 >
                   <Edit2 size={18} />
                 </button>
@@ -344,7 +366,7 @@ const LeadsView = ({ openModal }) => {
                       <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
                         <p className="font-medium">
                           <button
-                            onClick={() => openModal('aircraft', ac)}
+                            onClick={() => handleActionWithFullAircraftData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
                             className="hover:underline cursor-pointer text-left"
                             style={{ color: colors.primary }}
                           >
