@@ -4,7 +4,7 @@ import StatCard from '../Common/StatCard';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const Dashboard = ({ openModal }) => {
+const Dashboard = ({ openModal, setActiveTab }) => {
   const { leads, aircraft, deals, tasks, updateTask } = useStore();
   const { colors } = useTheme();
   
@@ -22,6 +22,7 @@ const Dashboard = ({ openModal }) => {
           value={hotLeads}
           total={leads.length}
           color={colors.primary}
+          onClick={() => setActiveTab('leads')}
         />
         <StatCard
           icon={<FileText size={32} />}
@@ -29,12 +30,14 @@ const Dashboard = ({ openModal }) => {
           value={activeDeals}
           total={deals.length}
           color={colors.primary}
+          onClick={() => setActiveTab('deals')}
         />
         <StatCard
           icon={<Plane size={32} />}
           title="Aircraft Inventory"
           value={totalInventory}
           color={colors.primary}
+          onClick={() => setActiveTab('aircraft')}
         />
         <StatCard
           icon={<ListTodo size={32} />}
@@ -42,6 +45,7 @@ const Dashboard = ({ openModal }) => {
           value={pendingTasks}
           total={tasks.length}
           color={colors.primary}
+          onClick={() => setActiveTab('tasks')}
         />
       </div>
 
@@ -86,21 +90,42 @@ const Dashboard = ({ openModal }) => {
         <div className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
           <h3 className="text-xl font-semibold mb-4" style={{ color: colors.primary }}>Upcoming Tasks</h3>
           <div className="space-y-3">
-            {tasks.filter(t => t.status === 'pending').slice(0, 5).map(task => (
-              <div key={task.id} className="flex justify-between items-center p-3 rounded" style={{ backgroundColor: colors.secondary }}>
-                <div className="flex-1">
-                  <p className="font-medium" style={{ color: colors.textPrimary }}>{task.title}</p>
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>{task.dueDate}</p>
+            {tasks.filter(t => t.status === 'pending').slice(0, 5).map(task => {
+              // Get related lead or deal info
+              let relatedInfo = null;
+              if (task.relatedTo) {
+                if (task.relatedTo.type === 'lead') {
+                  const lead = leads.find(l => l.id === task.relatedTo.id);
+                  if (lead) relatedInfo = { type: 'Lead', name: lead.name };
+                } else if (task.relatedTo.type === 'deal') {
+                  const deal = deals.find(d => d.id === task.relatedTo.id);
+                  if (deal) relatedInfo = { type: 'Deal', name: deal.dealName };
+                }
+              }
+
+              return (
+                <div key={task.id} className="flex justify-between items-center p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                  <div className="flex-1">
+                    <p className="font-medium" style={{ color: colors.textPrimary }}>{task.title}</p>
+                    <div className="flex gap-2 items-center flex-wrap">
+                      <p className="text-sm" style={{ color: colors.textSecondary }}>{task.dueDate}</p>
+                      {relatedInfo && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-cyan-100 text-cyan-700">
+                          {relatedInfo.type}: {relatedInfo.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => updateTask(task.id, { status: 'completed' })}
+                    className="ml-2 p-1 rounded"
+                    style={{ color: colors.primary }}
+                  >
+                    <Check size={20} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => updateTask(task.id, { status: 'completed' })}
-                  className="ml-2 p-1 rounded"
-                  style={{ color: colors.primary }}
-                >
-                  <Check size={20} />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

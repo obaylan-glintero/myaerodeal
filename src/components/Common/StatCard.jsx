@@ -1,11 +1,17 @@
 import React from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const StatCard = ({ icon, title, value, total, color }) => {
+const StatCard = ({ icon, title, value, total, color, onClick }) => {
   const { colors } = useTheme();
 
   return (
-    <div className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
+    <div
+      className={`rounded-lg shadow-lg p-6 transition-all duration-200 ${
+        onClick ? 'cursor-pointer hover:scale-[1.02] hover:shadow-xl' : ''
+      }`}
+      style={{ backgroundColor: colors.cardBg }}
+      onClick={onClick}
+    >
       <div className="flex items-center justify-between mb-4">
         <div style={{ color }}>{icon}</div>
         {total && (

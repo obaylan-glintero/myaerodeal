@@ -103,7 +103,7 @@ function AppContent() {
 
         {/* Main Content */}
         <div className="flex-1 p-4 lg:p-8 pt-20 lg:pt-8 overflow-y-auto">
-          {activeTab === 'dashboard' && <Dashboard openModal={openModal} />}
+          {activeTab === 'dashboard' && <Dashboard openModal={openModal} setActiveTab={setActiveTab} />}
           {activeTab === 'leads' && <LeadsView openModal={openModal} />}
           {activeTab === 'aircraft' && <AircraftView openModal={openModal} />}
           {activeTab === 'deals' && <DealsView openModal={openModal} />}
