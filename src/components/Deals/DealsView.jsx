@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Clock, MessageSquare, Send, FileText, Download, Search, ListChecks, CheckCircle2, ListTodo, BarChart3, LayoutGrid, List } from 'lucide-react';
+import { Plus, Edit2, Trash2, Clock, MessageSquare, Send, FileText, Download, Search, ListChecks, CheckCircle2, ListTodo, BarChart3, LayoutGrid, List, Loader2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { jsPDF } from 'jspdf';
@@ -1239,10 +1239,20 @@ const DealSummaryCard = ({ deal, aircraft, colors, onViewDetails, onEdit, onDele
             e.stopPropagation();
             onViewDetails();
           }}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90"
+          disabled={isLoading}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: colors.primary, color: colors.secondary }}
         >
-          View Details →
+          {isLoading ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              Loading...
+            </>
+          ) : (
+            <>
+              View Details →
+            </>
+          )}
         </button>
       </div>
     </div>
