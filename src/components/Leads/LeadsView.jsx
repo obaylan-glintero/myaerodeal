@@ -448,14 +448,6 @@ const LeadSummaryCard = ({ lead, colors, onViewDetails, onEdit, onDelete, isLoad
           </div>
         </div>
 
-        {/* Created Date */}
-        <div className="mb-4">
-          <div className="text-sm" style={{ color: colors.textSecondary }}>Created</div>
-          <div className="text-lg font-medium" style={{ color: colors.textPrimary }}>
-            {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
-          </div>
-        </div>
-
         {/* View Details Button */}
         <button
           onClick={(e) => {

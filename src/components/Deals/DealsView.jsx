@@ -1233,14 +1233,6 @@ const DealSummaryCard = ({ deal, aircraft, colors, onViewDetails, onEdit, onDele
           </div>
         </div>
 
-        {/* Created Date */}
-        <div className="mb-4">
-          <div className="text-sm" style={{ color: colors.textSecondary }}>Created</div>
-          <div className="text-lg font-medium" style={{ color: colors.textPrimary }}>
-            {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString() : 'N/A'}
-          </div>
-        </div>
-
         {/* View Details Button */}
         <button
           onClick={(e) => {
