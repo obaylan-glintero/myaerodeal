@@ -1094,6 +1094,8 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
     const loadData = async () => {
       if (aircraft.id) {
         console.log('🔄 Loading full aircraft data including specSheet...');
+        console.log('🆔 Aircraft ID from prop:', aircraft.id);
+        console.log('✈️ Aircraft from prop:', aircraft.manufacturer, aircraft.model);
         setIsLoading(true);
         // Force reload to bypass cache and see what's really in the database
         await loadFullAircraftData(aircraft.id, true);
@@ -1108,6 +1110,8 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
   const displayAircraft = aircraftList.find(ac => ac.id === aircraft.id) || aircraft;
 
   console.log('🛩️ Rendering with displayAircraft:', displayAircraft);
+  console.log('🆔 DisplayAircraft ID:', displayAircraft.id);
+  console.log('🆔 Original aircraft ID:', aircraft.id);
   console.log('📊 specSheetData exists:', !!displayAircraft.specSheetData);
   console.log('📄 specSheet filename:', displayAircraft.specSheet);
 
