@@ -178,10 +178,10 @@ const TaskCard = ({ task, onUpdate, onDelete, openModal, leads, deals }) => {
         className="p-2 rounded border-2"
         style={{
           backgroundColor: task.status === 'completed' ? '#5BC0DE' : 'transparent',
-          borderColor: task.status === 'completed' ? '#5BC0DE' : colors.border
+          borderColor: task.status === 'completed' ? '#5BC0DE' : (isDark ? colors.textSecondary : colors.border)
         }}
       >
-        {task.status === 'completed' && <Check size={16} style={{ color: colors.secondary }} />}
+        {task.status === 'completed' && <Check size={16} style={{ color: '#FFFFFF' }} />}
       </button>
 
       <div className="flex-1">
