@@ -120,6 +120,7 @@ function AppContent() {
             modalType={modalType}
             editingItem={editingItem}
             closeModal={closeModal}
+            openModal={openModal}
           />
         )}
       </div>

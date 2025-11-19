@@ -689,7 +689,10 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
         {/* Edit and Delete Buttons */}
         <div className="absolute top-4 left-4 flex gap-2">
           <button
-            onClick={onEdit}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
             className="p-2 rounded-full hover:opacity-80"
             style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
             disabled={isLoading}
@@ -698,7 +701,10 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
             <Edit2 size={18} style={{ color: colors.primary }} />
           </button>
           <button
-            onClick={onDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
             className="p-2 rounded-full hover:opacity-80"
             style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
             title="Delete"
@@ -746,7 +752,10 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
 
         {/* View Details Button */}
         <button
-          onClick={onViewDetails}
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetails();
+          }}
           className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90"
           style={{ backgroundColor: colors.secondary, color: colors.textPrimary }}
           disabled={isLoading}
