@@ -1083,26 +1083,13 @@ const PresentationForm = ({ formData, setFormData, modalType, editingItem }) => 
 
 const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { leads, aircraft: aircraftList, addNoteToAircraft, deleteAircraft, presentAircraftToLead, currentUserProfile, loadFullAircraftData } = useStore();
+  const { leads, addNoteToAircraft, deleteAircraft, presentAircraftToLead, currentUserProfile } = useStore();
   const [noteText, setNoteText] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
   if (!aircraft) return null;
 
-  // Load full aircraft data including specSheetData on mount
-  useEffect(() => {
-    const loadData = async () => {
-      if (aircraft.id) {
-        setIsLoading(true);
-        await loadFullAircraftData(aircraft.id, true);
-        setIsLoading(false);
-      }
-    };
-    loadData();
-  }, [aircraft.id, loadFullAircraftData]);
-
-  // Get the latest aircraft data from the store (this will include loaded specSheetData)
-  const displayAircraft = aircraftList.find(ac => ac.id === aircraft.id) || aircraft;
+  // Aircraft prop already contains full data (loaded before modal opens)
+  const displayAircraft = aircraft;
 
   const handleAddNote = () => {
     if (noteText.trim()) {
