@@ -695,7 +695,6 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
             }}
             className="p-2 rounded-full hover:opacity-80"
             style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
-            disabled={isLoading}
             title="Edit"
           >
             <Edit2 size={18} style={{ color: colors.primary }} />
@@ -758,7 +757,6 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
           }}
           className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90"
           style={{ backgroundColor: colors.secondary, color: colors.textPrimary }}
-          disabled={isLoading}
         >
           View Details →
         </button>
