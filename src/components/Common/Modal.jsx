@@ -1629,6 +1629,10 @@ const LeadDetailView = ({ lead, closeModal, openModal }) => {
           <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
             {lead.yearPreference?.oldest && lead.yearPreference?.newest
               ? `${lead.yearPreference.oldest} - ${lead.yearPreference.newest}`
+              : lead.yearPreference?.oldest
+              ? `${lead.yearPreference.oldest} or newer`
+              : lead.yearPreference?.newest
+              ? `${lead.yearPreference.newest} or older`
               : 'Not specified'}
           </p>
         </div>

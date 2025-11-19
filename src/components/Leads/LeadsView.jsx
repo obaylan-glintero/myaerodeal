@@ -274,6 +274,10 @@ const LeadsView = ({ openModal }) => {
                     <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
                       {lead.yearPreference?.oldest && lead.yearPreference?.newest
                         ? `${lead.yearPreference.oldest}-${lead.yearPreference.newest}`
+                        : lead.yearPreference?.oldest
+                        ? `${lead.yearPreference.oldest}+`
+                        : lead.yearPreference?.newest
+                        ? `-${lead.yearPreference.newest}`
                         : 'N/A'}
                     </td>
                     <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
@@ -435,6 +439,10 @@ const LeadSummaryCard = ({ lead, colors, onViewDetails, onEdit, onDelete, isLoad
             <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
               {lead.yearPreference?.oldest && lead.yearPreference?.newest
                 ? `${lead.yearPreference.oldest}-${lead.yearPreference.newest}`
+                : lead.yearPreference?.oldest
+                ? `${lead.yearPreference.oldest}+`
+                : lead.yearPreference?.newest
+                ? `-${lead.yearPreference.newest}`
                 : 'N/A'}
             </div>
           </div>
