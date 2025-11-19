@@ -877,13 +877,17 @@ export const useStore = create((set, get) => ({
   },
 
   // Load full aircraft data on demand (lazy loading)
-  loadFullAircraftData: async (aircraftId) => {
+  loadFullAircraftData: async (aircraftId, forceReload = false) => {
     const { aircraft, aircraftFullDataLoaded, aircraftLoading, isAuthenticated } = get();
 
-    // If not authenticated or already loaded, skip
+    // If not authenticated, skip
     if (!isAuthenticated) return;
-    if (aircraftFullDataLoaded.has(aircraftId)) {
-      console.log(`✅ Aircraft ${aircraftId} full data already loaded`);
+
+    // If already loaded and not forcing reload, skip
+    if (aircraftFullDataLoaded.has(aircraftId) && !forceReload) {
+      console.log(`✅ Aircraft ${aircraftId} full data already loaded (cached)`);
+      const cachedAircraft = aircraft.find(a => a.id === aircraftId);
+      console.log(`📦 Cached aircraft specSheetData exists: ${!!cachedAircraft?.specSheetData}`);
       return;
     }
 
@@ -911,6 +915,15 @@ export const useStore = create((set, get) => ({
       if (error) throw error;
 
       if (data) {
+        // Debug: Log what we got from the database
+        console.log('📦 Raw data from database:', {
+          id: data.id,
+          spec_sheet: data.spec_sheet,
+          spec_sheet_data_exists: !!data.spec_sheet_data,
+          spec_sheet_data_length: data.spec_sheet_data?.length,
+          spec_sheet_type: data.spec_sheet_type
+        });
+
         // Convert to full aircraft object
         const fullAircraft = {
           id: data.id,
@@ -935,6 +948,13 @@ export const useStore = create((set, get) => ({
           timestampedNotes: data.timestamped_notes || [],
           createdAt: data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
         };
+
+        console.log('✅ Converted fullAircraft object:', {
+          id: fullAircraft.id,
+          specSheet: fullAircraft.specSheet,
+          specSheetData_exists: !!fullAircraft.specSheetData,
+          specSheetType: fullAircraft.specSheetType
+        });
 
         // Update aircraft in state
         const updatedAircraft = aircraft.map(a => a.id === aircraftId ? fullAircraft : a);

@@ -1095,7 +1095,8 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
       if (aircraft.id) {
         console.log('🔄 Loading full aircraft data including specSheet...');
         setIsLoading(true);
-        await loadFullAircraftData(aircraft.id);
+        // Force reload to bypass cache and see what's really in the database
+        await loadFullAircraftData(aircraft.id, true);
         setIsLoading(false);
         console.log('✅ Full aircraft data load complete');
       }
