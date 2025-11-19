@@ -5,6 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import logo from '../../assets/MyAeroDeal_dark.png';
+import ConfirmDialog from '../Common/ConfirmDialog';
 
 const DealsView = ({ openModal }) => {
   const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask, currentUserProfile, loadFullDealData, dealsLoading } = useStore();
@@ -17,6 +18,7 @@ const DealsView = ({ openModal }) => {
   const [showTimeline, setShowTimeline] = useState({});
   const [editingTimelineItem, setEditingTimelineItem] = useState(null); // { dealId, itemIndex }
   const [editingTimelineDueDate, setEditingTimelineDueDate] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, dealId: null, dealName: '' });
 
   // Helper to ensure full deal data is loaded before action
   const handleActionWithFullDealData = async (dealId, action) => {
@@ -26,6 +28,26 @@ const DealsView = ({ openModal }) => {
     if (updatedDeal) {
       action(updatedDeal);
     }
+  };
+
+  // Delete confirmation handlers
+  const handleDeleteClick = (deal) => {
+    const dealName = deal.clientName || deal.dealName || 'this deal';
+    setDeleteConfirm({
+      isOpen: true,
+      dealId: deal.id,
+      dealName: dealName
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirm.dealId) {
+      deleteDeal(deleteConfirm.dealId);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirm({ isOpen: false, dealId: null, dealName: '' });
   };
 
   const handleViewDocument = (deal) => {
@@ -336,7 +358,7 @@ const DealsView = ({ openModal }) => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteDeal(deal.id);
+                              handleDeleteClick(deal);
                             }}
                             className="p-2 rounded hover:opacity-70"
                             style={{ color: colors.error }}
@@ -376,7 +398,7 @@ const DealsView = ({ openModal }) => {
                     <Edit2 size={18} />
                   </button>
                   <button
-                    onClick={() => deleteDeal(deal.id)}
+                    onClick={() => handleDeleteClick(deal)}
                     className="p-2 rounded"
                     style={{ color: colors.error }}
                   >
@@ -650,6 +672,18 @@ const DealsView = ({ openModal }) => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title="Delete Deal"
+        message={`Are you sure you want to delete the deal with "${deleteConfirm.dealName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonStyle="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 };

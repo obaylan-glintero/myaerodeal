@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Search, Edit2, Trash2, MessageSquare, Send, ArrowUpDown, LayoutGrid, List } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
+import ConfirmDialog from '../Common/ConfirmDialog';
 
 const LeadsView = ({ openModal }) => {
   const { leads, aircraft, deleteLead, addNoteToLead, loadFullAircraftData, loadFullLeadData, leadsLoading } = useStore();
@@ -11,6 +12,7 @@ const LeadsView = ({ openModal }) => {
   const [filterAircraftType, setFilterAircraftType] = useState('all');
   const [sortBy, setSortBy] = useState('statusAsc');
   const [viewMode, setViewMode] = useState('card');
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, leadId: null, leadName: '' });
 
   // Helper to ensure full aircraft data is loaded before action
   const handleActionWithFullAircraftData = async (aircraftId, action) => {
@@ -30,6 +32,25 @@ const LeadsView = ({ openModal }) => {
     if (updatedLead) {
       action(updatedLead);
     }
+  };
+
+  // Delete confirmation handlers
+  const handleDeleteClick = (lead) => {
+    setDeleteConfirm({
+      isOpen: true,
+      leadId: lead.id,
+      leadName: lead.name || 'this lead'
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirm.leadId) {
+      deleteLead(deleteConfirm.leadId);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirm({ isOpen: false, leadId: null, leadName: '' });
   };
 
   // Filter leads
@@ -268,7 +289,7 @@ const LeadsView = ({ openModal }) => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteLead(lead.id);
+                            handleDeleteClick(lead);
                           }}
                           className="p-2 rounded hover:opacity-70"
                           style={{ color: colors.error }}
@@ -303,7 +324,7 @@ const LeadsView = ({ openModal }) => {
                   <Edit2 size={18} />
                 </button>
                 <button
-                  onClick={() => deleteLead(lead.id)}
+                  onClick={() => handleDeleteClick(lead)}
                   className="p-2 rounded"
                   style={{ color: colors.error }}
                 >
@@ -415,6 +436,18 @@ const LeadsView = ({ openModal }) => {
         ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title="Delete Lead"
+        message={`Are you sure you want to delete "${deleteConfirm.leadName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonStyle="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 };
