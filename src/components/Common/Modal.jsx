@@ -1093,14 +1093,9 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
   useEffect(() => {
     const loadData = async () => {
       if (aircraft.id) {
-        console.log('🔄 Loading full aircraft data including specSheet...');
-        console.log('🆔 Aircraft ID from prop:', aircraft.id);
-        console.log('✈️ Aircraft from prop:', aircraft.manufacturer, aircraft.model);
         setIsLoading(true);
-        // Force reload to bypass cache and see what's really in the database
         await loadFullAircraftData(aircraft.id, true);
         setIsLoading(false);
-        console.log('✅ Full aircraft data load complete');
       }
     };
     loadData();
@@ -1108,12 +1103,6 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
 
   // Get the latest aircraft data from the store (this will include loaded specSheetData)
   const displayAircraft = aircraftList.find(ac => ac.id === aircraft.id) || aircraft;
-
-  console.log('🛩️ Rendering with displayAircraft:', displayAircraft);
-  console.log('🆔 DisplayAircraft ID:', displayAircraft.id);
-  console.log('🆔 Original aircraft ID:', aircraft.id);
-  console.log('📊 specSheetData exists:', !!displayAircraft.specSheetData);
-  console.log('📄 specSheet filename:', displayAircraft.specSheet);
 
   const handleAddNote = () => {
     if (noteText.trim()) {
@@ -1123,15 +1112,9 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
   };
 
   const handleViewSpec = () => {
-    console.log('🔍 handleViewSpec called');
-    console.log('📄 displayAircraft.specSheet:', displayAircraft.specSheet);
-    console.log('📊 displayAircraft.specSheetData exists:', !!displayAircraft.specSheetData);
-    console.log('📋 displayAircraft.specSheetType:', displayAircraft.specSheetType);
-
     if (displayAircraft.specSheetData) {
       if (displayAircraft.specSheetType && displayAircraft.specSheetType.includes('pdf')) {
         try {
-          console.log('✅ Processing PDF...');
           // Convert data URL to Blob for better browser compatibility
           const base64Data = displayAircraft.specSheetData.split(',')[1];
           const binaryData = atob(base64Data);
@@ -1141,19 +1124,15 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
           }
           const blob = new Blob([bytes], { type: 'application/pdf' });
           const blobUrl = URL.createObjectURL(blob);
-          console.log('✅ Blob URL created:', blobUrl);
 
           // Detect mobile devices
           const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-          console.log('📱 Is mobile:', isMobile);
 
           if (isMobile) {
             // Mobile: Open blob URL directly (triggers native viewer)
-            console.log('📱 Opening in mobile viewer...');
             window.open(blobUrl, '_blank');
           } else {
             // Desktop: Create viewer window with iframe
-            console.log('🖥️ Opening in desktop viewer...');
             const newWindow = window.open('', '_blank');
             if (newWindow) {
               newWindow.document.write(`
@@ -1214,18 +1193,15 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
                 </html>
               `);
               newWindow.document.close();
-              console.log('✅ Desktop viewer window created');
             } else {
-              console.error('❌ Failed to open new window (popup blocked?)');
               alert('Popup was blocked. Please allow popups for this site and try again.');
             }
           }
         } catch (error) {
-          console.error('❌ Error viewing PDF:', error);
+          console.error('Error viewing PDF:', error);
           alert('Error opening PDF. Please try downloading it instead.');
         }
       } else {
-        console.log('📎 Non-PDF file, triggering download...');
         // For other file types, trigger download
         const link = document.createElement('a');
         link.href = displayAircraft.specSheetData;
@@ -1233,7 +1209,6 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
         link.click();
       }
     } else {
-      console.warn('⚠️ No specSheetData found on aircraft object');
       alert('No spec sheet data available. The spec sheet may not have been uploaded with this aircraft.');
     }
   };

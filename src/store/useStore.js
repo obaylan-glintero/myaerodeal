@@ -816,8 +816,6 @@ export const useStore = create((set, get) => ({
   refreshAircraft: async () => {
     if (!get().isAuthenticated) return;
 
-    console.log('🔄 refreshAircraft called');
-
     // Only fetch minimal fields for refresh
     const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, created_at';
     const { data } = await supabase.from('aircraft').select(aircraftMinimalFields);
@@ -835,9 +833,9 @@ export const useStore = create((set, get) => ({
         seller: aircraft.seller || '',
         imageUrl: aircraft.image_url,
         accessType: aircraft.access_type || 'Direct',
-        specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
-        summary: aircraft.summary || '', // AI-generated summary for display
-        presentations: aircraft.presentations || [], // Which leads this was presented to
+        specSheet: aircraft.spec_sheet,
+        summary: aircraft.summary || '',
+        presentations: aircraft.presentations || [],
         createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
         // Placeholders for full data
         serialNumber: null,
@@ -850,14 +848,12 @@ export const useStore = create((set, get) => ({
 
       // Preserve full data for aircraft that have been loaded
       const { aircraft: currentAircraft, aircraftFullDataLoaded } = get();
-      console.log('🔍 aircraftFullDataLoaded Set:', Array.from(aircraftFullDataLoaded));
 
       const newAircraft = data.map(dbAircraft => {
         const existingAircraft = currentAircraft.find(a => a.id === dbAircraft.id);
         const isFullyLoaded = aircraftFullDataLoaded.has(dbAircraft.id);
 
         if (existingAircraft && isFullyLoaded) {
-          console.log(`✅ Preserving full data for aircraft ${dbAircraft.id}, specSheetData exists: ${!!existingAircraft.specSheetData}`);
           // Keep full data for already loaded aircraft, but update minimal fields
           return {
             ...existingAircraft,
@@ -877,8 +873,8 @@ export const useStore = create((set, get) => ({
           };
         }
 
+        // Safety net: preserve specSheetData if it exists, even if not in tracking Set
         if (existingAircraft && existingAircraft.specSheetData) {
-          console.log(`⚠️ Aircraft ${dbAircraft.id} has specSheetData but is NOT in aircraftFullDataLoaded Set! Preserving anyway.`);
           return {
             ...existingAircraft,
             manufacturer: dbAircraft.manufacturer || '',
@@ -913,15 +909,11 @@ export const useStore = create((set, get) => ({
 
     // If already loaded and not forcing reload, skip
     if (aircraftFullDataLoaded.has(aircraftId) && !forceReload) {
-      console.log(`✅ Aircraft ${aircraftId} full data already loaded (cached)`);
-      const cachedAircraft = aircraft.find(a => a.id === aircraftId);
-      console.log(`📦 Cached aircraft specSheetData exists: ${!!cachedAircraft?.specSheetData}`);
       return;
     }
 
     // If already loading, skip
     if (aircraftLoading.has(aircraftId)) {
-      console.log(`⏳ Aircraft ${aircraftId} is already being loaded`);
       return;
     }
 
@@ -930,8 +922,6 @@ export const useStore = create((set, get) => ({
       const newLoading = new Set(aircraftLoading);
       newLoading.add(aircraftId);
       set({ aircraftLoading: newLoading });
-
-      console.log(`🔄 Loading full data for aircraft ${aircraftId}...`);
 
       // Fetch all fields for this specific aircraft
       const { data, error } = await supabase
@@ -943,15 +933,6 @@ export const useStore = create((set, get) => ({
       if (error) throw error;
 
       if (data) {
-        // Debug: Log what we got from the database
-        console.log('📦 Raw data from database:', {
-          id: data.id,
-          spec_sheet: data.spec_sheet,
-          spec_sheet_data_exists: !!data.spec_sheet_data,
-          spec_sheet_data_length: data.spec_sheet_data?.length,
-          spec_sheet_type: data.spec_sheet_type
-        });
-
         // Convert to full aircraft object
         const fullAircraft = {
           id: data.id,
@@ -977,24 +958,12 @@ export const useStore = create((set, get) => ({
           createdAt: data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
         };
 
-        console.log('✅ Converted fullAircraft object:', {
-          id: fullAircraft.id,
-          specSheet: fullAircraft.specSheet,
-          specSheetData_exists: !!fullAircraft.specSheetData,
-          specSheetType: fullAircraft.specSheetType
-        });
-
         // Update aircraft in state - get fresh aircraft array to avoid stale closures
         const { aircraft: currentAircraft, aircraftFullDataLoaded: currentFullDataLoaded, aircraftLoading: currentLoading } = get();
 
         const updatedAircraft = currentAircraft.map(a => {
           if (a.id === aircraftId) {
-            console.log(`🔄 Replacing aircraft ${aircraftId} with full data, specSheetData exists: ${!!fullAircraft.specSheetData}`);
             return fullAircraft;
-          }
-          // Preserve existing aircraft - check if it has specSheetData and keep it
-          if (a.specSheetData) {
-            console.log(`✅ Preserving specSheetData for aircraft ${a.id} during update`);
           }
           return a;
         });
@@ -1012,8 +981,6 @@ export const useStore = create((set, get) => ({
           aircraftFullDataLoaded: newFullDataLoaded,
           aircraftLoading: updatedLoading
         });
-
-        console.log(`✅ Full data loaded for aircraft ${aircraftId}`);
       }
     } catch (error) {
       console.error(`❌ Error loading full aircraft data for ${aircraftId}:`, error);
