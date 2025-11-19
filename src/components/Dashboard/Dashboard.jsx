@@ -5,13 +5,22 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const Dashboard = ({ openModal, setActiveTab }) => {
-  const { leads, aircraft, deals, tasks, updateTask } = useStore();
+  const { leads, aircraft, deals, tasks, updateTask, loadFullLeadData } = useStore();
   const { colors } = useTheme();
-  
+
   const hotLeads = leads.filter(l => l.status === 'Presented').length;
   const activeDeals = deals.filter(d => !['Closed Won', 'Closed Lost'].includes(d.status)).length;
   const pendingTasks = tasks.filter(t => t.status === 'pending').length;
   const totalInventory = aircraft.length;
+
+  // Helper to ensure full lead data is loaded before opening detail view
+  const handleActionWithFullLeadData = async (leadId, action) => {
+    await loadFullLeadData(leadId);
+    const updatedLead = useStore.getState().leads.find(l => l.id === leadId);
+    if (updatedLead) {
+      action(updatedLead);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -60,7 +69,7 @@ const Dashboard = ({ openModal, setActiveTab }) => {
               .map(lead => (
               <button
                 key={lead.id}
-                onClick={() => openModal('lead', lead)}
+                onClick={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('leadDetail', updatedLead))}
                 className="w-full flex justify-between items-center p-3 rounded hover:opacity-80 transition-opacity cursor-pointer"
                 style={{ backgroundColor: colors.secondary }}
               >

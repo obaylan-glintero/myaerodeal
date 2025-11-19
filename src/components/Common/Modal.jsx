@@ -1083,7 +1083,7 @@ const PresentationForm = ({ formData, setFormData, modalType, editingItem }) => 
 
 const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { leads, addNoteToAircraft, deleteAircraft, presentAircraftToLead, currentUserProfile } = useStore();
+  const { leads, addNoteToAircraft, deleteAircraft, presentAircraftToLead, currentUserProfile, loadFullAircraftData } = useStore();
   const [noteText, setNoteText] = useState('');
 
   if (!aircraft) return null;
@@ -1095,6 +1095,22 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
     if (noteText.trim()) {
       addNoteToAircraft(aircraft.id, noteText.trim());
       setNoteText('');
+    }
+  };
+
+  const handleEdit = async () => {
+    await loadFullAircraftData(aircraft.id);
+    const updatedAircraft = useStore.getState().aircraft.find(ac => ac.id === aircraft.id);
+    if (updatedAircraft) {
+      closeModal();
+      openModal('aircraft', updatedAircraft);
+    }
+  };
+
+  const handleDelete = () => {
+    if (window.confirm(`Are you sure you want to delete "${displayAircraft.manufacturer} ${displayAircraft.model}"? This action cannot be undone.`)) {
+      deleteAircraft(aircraft.id);
+      closeModal();
     }
   };
 
@@ -1539,6 +1555,25 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
 
       {/* Action Buttons */}
       <div className="space-y-3 pt-4 border-t" style={{ borderColor: colors.border }}>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={handleEdit}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.primary, color: colors.secondary }}
+          >
+            <Edit2 size={18} />
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.error, color: '#FFFFFF' }}
+          >
+            <Trash2 size={18} />
+            Delete
+          </button>
+        </div>
+
         <button
           onClick={() => {
             closeModal();
@@ -1575,8 +1610,9 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
 
 const LeadDetailView = ({ lead, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { aircraft, addNoteToLead, loadFullAircraftData } = useStore();
+  const { aircraft, addNoteToLead, loadFullAircraftData, deleteLead, loadFullLeadData } = useStore();
   const [noteText, setNoteText] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!lead) return null;
 
@@ -1584,6 +1620,22 @@ const LeadDetailView = ({ lead, closeModal, openModal }) => {
     if (noteText.trim()) {
       addNoteToLead(lead.id, noteText.trim());
       setNoteText('');
+    }
+  };
+
+  const handleEdit = async () => {
+    await loadFullLeadData(lead.id);
+    const updatedLead = useStore.getState().leads.find(l => l.id === lead.id);
+    if (updatedLead) {
+      closeModal();
+      openModal('lead', updatedLead);
+    }
+  };
+
+  const handleDelete = () => {
+    if (window.confirm(`Are you sure you want to delete "${lead.name}"? This action cannot be undone.`)) {
+      deleteLead(lead.id);
+      closeModal();
     }
   };
 
@@ -1733,6 +1785,25 @@ const LeadDetailView = ({ lead, closeModal, openModal }) => {
 
       {/* Action Buttons */}
       <div className="space-y-3 pt-4 border-t" style={{ borderColor: colors.border }}>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={handleEdit}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.primary, color: colors.secondary }}
+          >
+            <Edit2 size={18} />
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.error, color: '#FFFFFF' }}
+          >
+            <Trash2 size={18} />
+            Delete
+          </button>
+        </div>
+
         <button
           onClick={() => {
             closeModal();
@@ -1769,7 +1840,7 @@ const LeadDetailView = ({ lead, closeModal, openModal }) => {
 
 const DealDetailView = ({ deal, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { aircraft, leads, addNoteToDeal, updateDealStatus } = useStore();
+  const { aircraft, leads, addNoteToDeal, updateDealStatus, deleteDeal, loadFullDealData } = useStore();
   const [noteText, setNoteText] = useState('');
 
   if (!deal) return null;
@@ -1778,6 +1849,22 @@ const DealDetailView = ({ deal, closeModal, openModal }) => {
     if (noteText.trim()) {
       addNoteToDeal(deal.id, noteText.trim());
       setNoteText('');
+    }
+  };
+
+  const handleEdit = async () => {
+    await loadFullDealData(deal.id);
+    const updatedDeal = useStore.getState().deals.find(d => d.id === deal.id);
+    if (updatedDeal) {
+      closeModal();
+      openModal('deal', updatedDeal);
+    }
+  };
+
+  const handleDelete = () => {
+    if (window.confirm(`Are you sure you want to delete "${deal.dealName}"? This action cannot be undone.`)) {
+      deleteDeal(deal.id);
+      closeModal();
     }
   };
 
@@ -2025,6 +2112,25 @@ const DealDetailView = ({ deal, closeModal, openModal }) => {
 
       {/* Action Buttons */}
       <div className="space-y-3 pt-4 border-t" style={{ borderColor: colors.border }}>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={handleEdit}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.primary, color: colors.secondary }}
+          >
+            <Edit2 size={18} />
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold"
+            style={{ backgroundColor: colors.error, color: '#FFFFFF' }}
+          >
+            <Trash2 size={18} />
+            Delete
+          </button>
+        </div>
+
         <button
           onClick={closeModal}
           className="w-full px-6 py-3 rounded-lg font-semibold border-2"
