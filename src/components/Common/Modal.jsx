@@ -1740,6 +1740,18 @@ const LeadDetailView = ({ lead, closeModal, openModal }) => {
         </div>
       )}
 
+      {/* Initial Notes (from form) */}
+      {lead.notes && lead.notes.trim() && (
+        <div>
+          <h4 className="font-semibold mb-3" style={{ color: colors.primary }}>
+            Initial Notes
+          </h4>
+          <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+            <p style={{ color: colors.textPrimary, whiteSpace: 'pre-wrap' }}>{lead.notes}</p>
+          </div>
+        </div>
+      )}
+
       {/* Notes */}
       <div>
         <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>

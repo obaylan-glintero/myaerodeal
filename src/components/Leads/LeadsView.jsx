@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, MessageSquare, Send, ArrowUpDown, LayoutGrid, List } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, MessageSquare, Send, ArrowUpDown, LayoutGrid, List, Loader2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import ConfirmDialog from '../Common/ConfirmDialog';
@@ -448,24 +448,26 @@ const LeadSummaryCard = ({ lead, colors, onViewDetails, onEdit, onDelete, isLoad
           </div>
         </div>
 
-        {/* Created Date */}
-        <div className="mb-4">
-          <div className="text-sm" style={{ color: colors.textSecondary }}>Created</div>
-          <div className="text-lg font-medium" style={{ color: colors.textPrimary }}>
-            {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
-          </div>
-        </div>
-
         {/* View Details Button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             onViewDetails();
           }}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90"
+          disabled={isLoading}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{ backgroundColor: colors.primary, color: colors.secondary }}
         >
-          View Details →
+          {isLoading ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              Loading...
+            </>
+          ) : (
+            <>
+              View Details →
+            </>
+          )}
         </button>
       </div>
     </div>
