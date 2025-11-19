@@ -1083,9 +1083,9 @@ const PresentationForm = ({ formData, setFormData, modalType, editingItem }) => 
 
 const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { leads, addNoteToAircraft, deleteAircraft, presentAircraftToLead, currentUserProfile, loadFullAircraftData } = useStore();
+  const { leads, aircraft: aircraftList, addNoteToAircraft, deleteAircraft, presentAircraftToLead, currentUserProfile, loadFullAircraftData } = useStore();
   const [noteText, setNoteText] = useState('');
-  const [fullAircraftData, setFullAircraftData] = useState(aircraft);
+  const [isLoading, setIsLoading] = useState(true);
 
   if (!aircraft) return null;
 
@@ -1094,21 +1094,21 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
     const loadData = async () => {
       if (aircraft.id) {
         console.log('🔄 Loading full aircraft data including specSheet...');
+        setIsLoading(true);
         await loadFullAircraftData(aircraft.id);
-        // Get the updated aircraft from store
-        const updatedAircraft = useStore.getState().aircraft.find(ac => ac.id === aircraft.id);
-        if (updatedAircraft) {
-          console.log('✅ Full aircraft data loaded:', updatedAircraft);
-          console.log('📊 specSheetData exists:', !!updatedAircraft.specSheetData);
-          setFullAircraftData(updatedAircraft);
-        }
+        setIsLoading(false);
+        console.log('✅ Full aircraft data load complete');
       }
     };
     loadData();
   }, [aircraft.id, loadFullAircraftData]);
 
-  // Use fullAircraftData for the component (falls back to aircraft if not loaded yet)
-  const displayAircraft = fullAircraftData || aircraft;
+  // Get the latest aircraft data from the store (this will include loaded specSheetData)
+  const displayAircraft = aircraftList.find(ac => ac.id === aircraft.id) || aircraft;
+
+  console.log('🛩️ Rendering with displayAircraft:', displayAircraft);
+  console.log('📊 specSheetData exists:', !!displayAircraft.specSheetData);
+  console.log('📄 specSheet filename:', displayAircraft.specSheet);
 
   const handleAddNote = () => {
     if (noteText.trim()) {
