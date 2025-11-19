@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import logo from '../../assets/MyAeroDeal_dark.png';
+import ConfirmDialog from '../Common/ConfirmDialog';
 
 const AircraftView = ({ openModal }) => {
   const { aircraft, leads, deleteAircraft, addNoteToAircraft, currentUserProfile, loadFullAircraftData, aircraftLoading } = useStore();
@@ -14,6 +15,7 @@ const AircraftView = ({ openModal }) => {
   const [filterStatus, setFilterStatus] = useState('For Sale');
   const [sortBy, setSortBy] = useState('dateNewest');
   const [viewMode, setViewMode] = useState('card');
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, aircraftId: null, aircraftName: '' });
 
   // Helper function to get status colors
   const getStatusColors = (status) => {
@@ -46,6 +48,26 @@ const AircraftView = ({ openModal }) => {
     if (updatedAircraft) {
       action(updatedAircraft);
     }
+  };
+
+  // Delete confirmation handlers
+  const handleDeleteClick = (ac) => {
+    const aircraftName = ac.model || ac.category || 'this aircraft';
+    setDeleteConfirm({
+      isOpen: true,
+      aircraftId: ac.id,
+      aircraftName: aircraftName
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirm.aircraftId) {
+      deleteAircraft(deleteConfirm.aircraftId);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirm({ isOpen: false, aircraftId: null, aircraftName: '' });
   };
 
   const handleViewSpec = (ac) => {
@@ -563,7 +585,7 @@ const AircraftView = ({ openModal }) => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteAircraft(ac.id);
+                            handleDeleteClick(ac);
                           }}
                           className="p-2 rounded hover:opacity-70"
                           style={{ color: colors.error }}
@@ -610,7 +632,7 @@ const AircraftView = ({ openModal }) => {
                     <Edit2 size={18} />
                   </button>
                   <button
-                    onClick={() => deleteAircraft(ac.id)}
+                    onClick={() => handleDeleteClick(ac)}
                     className="p-2 rounded"
                     style={{ color: colors.error }}
                   >
@@ -763,6 +785,18 @@ const AircraftView = ({ openModal }) => {
         ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title="Delete Aircraft"
+        message={`Are you sure you want to delete "${deleteConfirm.aircraftName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonStyle="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 };

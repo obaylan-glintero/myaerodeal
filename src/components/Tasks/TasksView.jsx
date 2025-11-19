@@ -2,15 +2,36 @@ import React, { useState } from 'react';
 import { Plus, Calendar, Trash2, Check, Edit2, Download } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
+import ConfirmDialog from '../Common/ConfirmDialog';
 
 const TasksView = ({ openModal }) => {
   const { tasks, updateTask, deleteTask } = useStore();
   const { colors } = useTheme();
   const [calendarView, setCalendarView] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, taskId: null, taskTitle: '' });
 
   const sortedTasks = [...tasks].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   const pendingTasks = sortedTasks.filter(t => t.status === 'pending');
   const completedTasks = sortedTasks.filter(t => t.status === 'completed');
+
+  // Delete confirmation handlers
+  const handleDeleteClick = (task) => {
+    setDeleteConfirm({
+      isOpen: true,
+      taskId: task.id,
+      taskTitle: task.title || 'this task'
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirm.taskId) {
+      deleteTask(deleteConfirm.taskId);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirm({ isOpen: false, taskId: null, taskTitle: '' });
+  };
 
   const exportTasks = () => {
     // Create CSV content
@@ -81,7 +102,7 @@ const TasksView = ({ openModal }) => {
         </h3>
         <div className="space-y-3">
           {pendingTasks.map(task => (
-            <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={deleteTask} openModal={openModal} />
+            <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={handleDeleteClick} openModal={openModal} />
           ))}
           {pendingTasks.length === 0 && (
             <p className="text-center py-8" style={{ color: colors.textSecondary }}>No pending tasks</p>
@@ -96,11 +117,23 @@ const TasksView = ({ openModal }) => {
           </h3>
           <div className="space-y-3">
             {completedTasks.slice(0, 10).map(task => (
-              <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={deleteTask} openModal={openModal} />
+              <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={handleDeleteClick} openModal={openModal} />
             ))}
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title="Delete Task"
+        message={`Are you sure you want to delete "${deleteConfirm.taskTitle}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        confirmButtonStyle="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 };
@@ -154,7 +187,7 @@ const TaskCard = ({ task, onUpdate, onDelete, openModal }) => {
               <Edit2 size={16} />
             </button>
             <button
-              onClick={() => onDelete(task.id)}
+              onClick={() => onDelete(task)}
               className="p-2 rounded"
               style={{ color: colors.error }}
             >
