@@ -4,7 +4,7 @@ import StatCard from '../Common/StatCard';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const Dashboard = ({ openModal }) => {
+const Dashboard = ({ openModal, setActiveTab }) => {
   const { leads, aircraft, deals, tasks, updateTask } = useStore();
   const { colors } = useTheme();
   
@@ -22,6 +22,7 @@ const Dashboard = ({ openModal }) => {
           value={hotLeads}
           total={leads.length}
           color={colors.primary}
+          onClick={() => setActiveTab('leads')}
         />
         <StatCard
           icon={<FileText size={32} />}
@@ -29,12 +30,14 @@ const Dashboard = ({ openModal }) => {
           value={activeDeals}
           total={deals.length}
           color={colors.primary}
+          onClick={() => setActiveTab('deals')}
         />
         <StatCard
           icon={<Plane size={32} />}
           title="Aircraft Inventory"
           value={totalInventory}
           color={colors.primary}
+          onClick={() => setActiveTab('aircraft')}
         />
         <StatCard
           icon={<ListTodo size={32} />}
@@ -42,6 +45,7 @@ const Dashboard = ({ openModal }) => {
           value={pendingTasks}
           total={tasks.length}
           color={colors.primary}
+          onClick={() => setActiveTab('tasks')}
         />
       </div>
 
