@@ -676,6 +676,9 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
           <h3 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>
             {aircraft.yom} {aircraft.manufacturer} {aircraft.model}
           </h3>
+          <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+            {aircraft.seller || 'N/A'} ({aircraft.accessType || 'Direct'})
+          </p>
         </div>
 
         {/* Edit and Delete Buttons */}
