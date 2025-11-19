@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart } from 'lucide-react';
+import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart, Clock, ListChecks, CheckCircle2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -79,6 +79,8 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
     if (modalType === 'dealFromLead') return 'Add Deal';
     if (modalType === 'presentationFromAircraft' || modalType === 'presentation') return 'Present Aircraft';
     if (modalType === 'aircraftDetail') return 'Aircraft Details';
+    if (modalType === 'leadDetail') return 'Lead Details';
+    if (modalType === 'dealDetail') return 'Deal Details';
     return `${action} ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`;
   };
 
@@ -94,17 +96,19 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
 
         <div className="p-6">
           {modalType === 'lead' && <LeadForm formData={formData} setFormData={setFormData} />}
+          {modalType === 'leadDetail' && <LeadDetailView lead={editingItem} closeModal={closeModal} openModal={openModal} />}
           {modalType === 'aircraft' && <AircraftForm formData={formData} setFormData={setFormData} />}
           {modalType === 'aircraftDetail' && <AircraftDetailView aircraft={editingItem} closeModal={closeModal} openModal={openModal} />}
           {(modalType === 'deal' || modalType === 'dealFromLead') && (
             <DealForm formData={formData} setFormData={setFormData} editingItem={editingItem} modalType={modalType} />
           )}
+          {modalType === 'dealDetail' && <DealDetailView deal={editingItem} closeModal={closeModal} openModal={openModal} />}
           {modalType === 'task' && <TaskForm formData={formData} setFormData={setFormData} />}
           {(modalType === 'presentation' || modalType === 'presentationFromAircraft') && (
             <PresentationForm formData={formData} setFormData={setFormData} modalType={modalType} editingItem={editingItem} />
           )}
 
-          {modalType !== 'aircraftDetail' && (
+          {modalType !== 'aircraftDetail' && modalType !== 'leadDetail' && modalType !== 'dealDetail' && (
             <div className="flex gap-4 mt-6">
               <button
                 onClick={handleSubmit}
@@ -1478,6 +1482,466 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
           </button>
         )}
 
+        <button
+          onClick={closeModal}
+          className="w-full px-6 py-3 rounded-lg font-semibold border-2"
+          style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const LeadDetailView = ({ lead, closeModal, openModal }) => {
+  const { colors } = useTheme();
+  const { aircraft, addNoteToLead, loadFullAircraftData } = useStore();
+  const [noteText, setNoteText] = useState('');
+
+  if (!lead) return null;
+
+  const handleAddNote = () => {
+    if (noteText.trim()) {
+      addNoteToLead(lead.id, noteText.trim());
+      setNoteText('');
+    }
+  };
+
+  // Helper to ensure full aircraft data is loaded before opening modal
+  const handleActionWithFullAircraftData = async (aircraftId, action) => {
+    await loadFullAircraftData(aircraftId);
+    const updatedAircraft = useStore.getState().aircraft.find(ac => ac.id === aircraftId);
+    if (updatedAircraft) {
+      action(updatedAircraft);
+    }
+  };
+
+  const inputStyle = {
+    backgroundColor: colors.cardBg,
+    color: colors.textPrimary,
+    borderColor: colors.border,
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Lead Header */}
+      <div className="p-6 rounded-lg" style={{
+        background: `linear-gradient(135deg, ${lead.status === 'Inquiry' ? '#5BC0DE' : lead.status === 'Presented' ? '#7C3AED' : lead.status === 'Interested' ? '#F0AD4E' : lead.status === 'Deal Created' ? '#D9534F' : '#6B7280'}dd, ${lead.status === 'Inquiry' ? '#5BC0DE' : lead.status === 'Presented' ? '#7C3AED' : lead.status === 'Interested' ? '#F0AD4E' : lead.status === 'Deal Created' ? '#D9534F' : '#6B7280'}99)`
+      }}>
+        <h2 className="text-3xl font-bold text-white drop-shadow-md">{lead.name}</h2>
+        <p className="text-white text-lg opacity-90">{lead.company}</p>
+      </div>
+
+      {/* Lead Specifications */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Aircraft Type</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{lead.aircraftType || 'Not specified'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Budget</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
+            {lead.budgetKnown && lead.budget ? `$${(lead.budget / 1000000).toFixed(1)}M` : 'Unknown'}
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Year Preference</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
+            {lead.yearPreference?.oldest && lead.yearPreference?.newest
+              ? `${lead.yearPreference.oldest} - ${lead.yearPreference.newest}`
+              : 'Not specified'}
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Status</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{lead.status}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Created</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
+            {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
+          </p>
+        </div>
+      </div>
+
+      {/* Presentations */}
+      {lead.presentations && lead.presentations.length > 0 && (
+        <div>
+          <h4 className="font-semibold mb-3" style={{ color: colors.primary }}>
+            Aircraft Presentations ({lead.presentations.length})
+          </h4>
+          <div className="space-y-2">
+            {lead.presentations.map((pres, idx) => {
+              const ac = aircraft.find(a => a.id === pres.aircraftId);
+              return (
+                <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                  <p className="font-medium">
+                    <button
+                      onClick={() => handleActionWithFullAircraftData(ac?.id, (updatedAc) => {
+                        closeModal();
+                        openModal('aircraftDetail', updatedAc);
+                      })}
+                      className="hover:underline cursor-pointer text-left"
+                      style={{ color: colors.primary }}
+                    >
+                      {ac?.manufacturer} {ac?.model}
+                    </button>
+                    {ac?.serialNumber && (
+                      <span className="font-normal" style={{ color: colors.textSecondary }}> (S/N: {ac.serialNumber})</span>
+                    )}
+                  </p>
+                  <p style={{ color: colors.textSecondary }}>Price: ${(pres.priceGiven / 1000000).toFixed(1)}M</p>
+                  <p className="text-xs" style={{ color: colors.textSecondary }}>{new Date(pres.date).toLocaleDateString()}</p>
+                  {pres.notes && (
+                    <p className="text-xs mt-2 italic" style={{ color: colors.textSecondary }}>
+                      Note: {pres.notes}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      <div>
+        <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+          <MessageSquare size={18} />
+          Notes ({lead.timestampedNotes?.length || 0})
+        </h4>
+        <div className="space-y-3">
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {(!lead.timestampedNotes || lead.timestampedNotes.length === 0) ? (
+              <p className="text-sm italic" style={{ color: colors.textSecondary }}>No notes yet</p>
+            ) : (
+              lead.timestampedNotes.slice().reverse().map((note) => (
+                <div key={note.id} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                  <p style={{ color: colors.textPrimary }}>{note.text}</p>
+                  <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                    {new Date(note.timestamp).toLocaleString()}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddNote()}
+              placeholder="Add a note..."
+              className="flex-1 px-3 py-2 text-sm rounded-lg border"
+              style={inputStyle}
+            />
+            <button
+              onClick={handleAddNote}
+              className="px-4 py-2 rounded-lg font-semibold"
+              style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="space-y-3 pt-4 border-t" style={{ borderColor: colors.border }}>
+        <button
+          onClick={() => {
+            closeModal();
+            openModal('presentation', lead);
+          }}
+          className="w-full px-6 py-3 rounded-lg font-semibold"
+          style={{ backgroundColor: colors.primary, color: colors.secondary }}
+        >
+          Present Aircraft
+        </button>
+
+        <button
+          onClick={() => {
+            closeModal();
+            openModal('dealFromLead', lead);
+          }}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold"
+          style={{ backgroundColor: colors.secondary, color: colors.primary, border: `2px solid ${colors.primary}` }}
+        >
+          Create Deal
+        </button>
+
+        <button
+          onClick={closeModal}
+          className="w-full px-6 py-3 rounded-lg font-semibold border-2"
+          style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const DealDetailView = ({ deal, closeModal, openModal }) => {
+  const { colors } = useTheme();
+  const { aircraft, leads, addNoteToDeal, updateDealStatus } = useStore();
+  const [noteText, setNoteText] = useState('');
+
+  if (!deal) return null;
+
+  const handleAddNote = () => {
+    if (noteText.trim()) {
+      addNoteToDeal(deal.id, noteText.trim());
+      setNoteText('');
+    }
+  };
+
+  const handleViewDocument = () => {
+    if (deal.documentData) {
+      if (deal.documentType && deal.documentType.includes('pdf')) {
+        try {
+          const base64Data = deal.documentData.split(',')[1];
+          const binaryData = atob(base64Data);
+          const bytes = new Uint8Array(binaryData.length);
+          for (let i = 0; i < binaryData.length; i++) {
+            bytes[i] = binaryData.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(blob);
+          window.open(blobUrl, '_blank');
+        } catch (error) {
+          console.error('Error viewing PDF:', error);
+          alert('Error opening PDF. Please try downloading it instead.');
+        }
+      } else {
+        const link = document.createElement('a');
+        link.href = deal.documentData;
+        link.download = deal.document;
+        link.click();
+      }
+    }
+  };
+
+  const ac = aircraft.find(a => a.id === deal.relatedAircraft);
+  const lead = leads.find(l => l.id === deal.relatedLead);
+
+  const getDealStatusColor = (status) => {
+    switch (status) {
+      case 'LOI Signed': return '#5BC0DE';
+      case 'Deposit Paid': return '#7C3AED';
+      case 'APA Drafted': return '#3B82F6';
+      case 'APA Signed': return '#10B981';
+      case 'PPI Started': return '#F59E0B';
+      case 'Defect Rectifications': return '#EF4444';
+      case 'Closing': return '#8B5CF6';
+      case 'Closed Won': return '#059669';
+      case 'Closed Lost': return '#6B7280';
+      default: return '#5BC0DE';
+    }
+  };
+
+  const inputStyle = {
+    backgroundColor: colors.cardBg,
+    color: colors.textPrimary,
+    borderColor: colors.border,
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Deal Header */}
+      <div className="p-6 rounded-lg" style={{
+        background: `linear-gradient(135deg, ${getDealStatusColor(deal.status)}dd, ${getDealStatusColor(deal.status)}99)`
+      }}>
+        <h2 className="text-3xl font-bold text-white drop-shadow-md">{deal.dealName}</h2>
+        <p className="text-white text-lg opacity-90">{deal.clientName}</p>
+      </div>
+
+      {/* Deal Specifications */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Aircraft</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
+            {ac ? `${ac.manufacturer} ${ac.model}` : 'Not specified'}
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Deal Value</label>
+          <p className="text-lg font-medium" style={{ color: colors.primary }}>
+            {deal.dealValue ? `$${(deal.dealValue / 1000000).toFixed(1)}M` : 'Not specified'}
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Estimated Closing</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>{deal.estimatedClosing || 'Not set'}</p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Status</label>
+          <select
+            value={deal.status}
+            onChange={(e) => updateDealStatus(deal.id, e.target.value)}
+            className="w-full px-3 py-2 rounded-lg font-medium text-lg"
+            style={{
+              backgroundColor: colors.cardBg,
+              color: colors.primary,
+              border: `1px solid ${colors.border}`
+            }}
+          >
+            <option value="LOI Signed">LOI Signed</option>
+            <option value="Deposit Paid">Deposit Paid</option>
+            <option value="APA Drafted">APA Drafted</option>
+            <option value="APA Signed">APA Signed</option>
+            <option value="PPI Started">PPI Started</option>
+            <option value="Defect Rectifications">Defect Rectifications</option>
+            <option value="Closing">Closing</option>
+            <option value="Closed Won">Closed Won</option>
+            <option value="Closed Lost">Closed Lost</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Related Lead</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
+            {lead ? `${lead.name} (${lead.company})` : 'Not specified'}
+          </p>
+        </div>
+        <div>
+          <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Created</label>
+          <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
+            {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString() : 'N/A'}
+          </p>
+        </div>
+      </div>
+
+      {/* Next Step */}
+      <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+        <div className="flex items-start gap-3">
+          <Clock size={20} style={{ color: colors.primary }} className="mt-1" />
+          <div className="flex-1">
+            <p className="font-semibold" style={{ color: colors.primary }}>Next Step</p>
+            <p style={{ color: colors.textPrimary }}>{deal.nextStep || 'No next step defined'}</p>
+            <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+              Follow-up: {deal.followUpDate || 'Not scheduled'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Document */}
+      {deal.document && deal.documentData && (
+        <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText size={18} style={{ color: colors.primary }} />
+              <span className="text-sm font-medium" style={{ color: colors.textPrimary }}>{deal.document}</span>
+            </div>
+            <button
+              onClick={handleViewDocument}
+              className="flex items-center gap-1 px-3 py-1 text-sm rounded font-semibold hover:opacity-90"
+              style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            >
+              <Download size={14} />
+              View
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Timeline */}
+      {deal.timeline && deal.timeline.length > 0 && (
+        <div>
+          <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+            <ListChecks size={18} />
+            Deal Timeline ({deal.timeline.length})
+            <span className="text-xs ml-auto" style={{ color: colors.textSecondary }}>
+              Generated {new Date(deal.timelineGenerated).toLocaleDateString()}
+            </span>
+          </h4>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {deal.timeline.map((item, idx) => (
+              <div key={idx} className="flex items-start gap-2 text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" style={{ color: colors.textSecondary }} />
+                <div className="flex-1">
+                  <p className="font-medium" style={{ color: colors.textPrimary }}>{item.title}</p>
+                  <p className="text-xs" style={{ color: colors.textSecondary }}>
+                    Due: {item.dueDate ? new Date(item.dueDate).toLocaleDateString() : 'No date set'}
+                  </p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded ${
+                  item.priority === 'high' ? 'bg-red-100 text-red-700' :
+                  item.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {item.priority}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* History */}
+      {deal.history && deal.history.length > 1 && (
+        <div>
+          <h4 className="font-semibold mb-3" style={{ color: colors.primary }}>History</h4>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {deal.history.slice().reverse().map((h, idx) => (
+              <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                <p className="font-medium" style={{ color: colors.textPrimary }}>
+                  {new Date(h.date).toLocaleDateString()}
+                </p>
+                <p style={{ color: colors.textSecondary }}>{h.action}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      <div>
+        <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+          <MessageSquare size={18} />
+          Notes ({deal.timestampedNotes?.length || 0})
+        </h4>
+        <div className="space-y-3">
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {(!deal.timestampedNotes || deal.timestampedNotes.length === 0) ? (
+              <p className="text-sm italic" style={{ color: colors.textSecondary }}>No notes yet</p>
+            ) : (
+              deal.timestampedNotes.slice().reverse().map((note) => (
+                <div key={note.id} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                  <p style={{ color: colors.textPrimary }}>{note.text}</p>
+                  <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                    {new Date(note.timestamp).toLocaleString()}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleAddNote()}
+              placeholder="Add a note..."
+              className="flex-1 px-3 py-2 text-sm rounded-lg border"
+              style={inputStyle}
+            />
+            <button
+              onClick={handleAddNote}
+              className="px-4 py-2 rounded-lg font-semibold"
+              style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="space-y-3 pt-4 border-t" style={{ borderColor: colors.border }}>
         <button
           onClick={closeModal}
           className="w-full px-6 py-3 rounded-lg font-semibold border-2"

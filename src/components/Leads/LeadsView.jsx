@@ -4,6 +4,24 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import ConfirmDialog from '../Common/ConfirmDialog';
 
+// Helper to get status colors
+const getLeadStatusColors = (status) => {
+  switch (status) {
+    case 'Inquiry':
+      return { bg: '#5BC0DE', text: '#FFFFFF' };
+    case 'Presented':
+      return { bg: '#7C3AED', text: '#FFFFFF' };
+    case 'Interested':
+      return { bg: '#F0AD4E', text: '#FFFFFF' };
+    case 'Deal Created':
+      return { bg: '#D9534F', text: '#FFFFFF' };
+    case 'Lost':
+      return { bg: '#6B7280', text: '#FFFFFF' };
+    default:
+      return { bg: '#5BC0DE', text: '#FFFFFF' };
+  }
+};
+
 const LeadsView = ({ openModal }) => {
   const { leads, aircraft, deleteLead, addNoteToLead, loadFullAircraftData, loadFullLeadData, leadsLoading } = useStore();
   const { colors } = useTheme();
@@ -308,132 +326,17 @@ const LeadsView = ({ openModal }) => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {sortedLeads.map(lead => (
-          <div key={lead.id} className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-xl font-semibold" style={{ color: colors.primary }}>{lead.name}</h3>
-                <p style={{ color: colors.textSecondary }}>{lead.company}</p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleActionWithFullLeadData(lead.id, () => openModal('lead', lead))}
-                  className="p-2 rounded"
-                  style={{ color: colors.textPrimary }}
-                  disabled={leadsLoading.has(lead.id)}
-                >
-                  <Edit2 size={18} />
-                </button>
-                <button
-                  onClick={() => handleDeleteClick(lead)}
-                  className="p-2 rounded"
-                  style={{ color: colors.error }}
-                >
-                  <Trash2 size={18} />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between">
-                <span style={{ color: colors.textSecondary }}>Aircraft Type:</span>
-                <span className="font-medium" style={{ color: colors.textPrimary }}>{lead.aircraftType || 'Not specified'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span style={{ color: colors.textSecondary }}>Budget:</span>
-                <span className="font-medium" style={{ color: colors.textPrimary }}>
-                  {lead.budgetKnown && lead.budget ? `$${(lead.budget / 1000000).toFixed(1)}M` : 'Unknown'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span style={{ color: colors.textSecondary }}>Year Preference:</span>
-                <span className="font-medium" style={{ color: colors.textPrimary }}>
-                  {lead.yearPreference?.oldest && lead.yearPreference?.newest
-                    ? `${lead.yearPreference.oldest} - ${lead.yearPreference.newest}`
-                    : 'Not specified'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span style={{ color: colors.textSecondary }}>Status:</span>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold`}
-                  style={{
-                    backgroundColor:
-                      lead.status === 'Inquiry' ? '#5BC0DE' :
-                      lead.status === 'Presented' ? '#7C3AED' :
-                      lead.status === 'Interested' ? '#F0AD4E' :
-                      lead.status === 'Deal Created' ? '#D9534F' :
-                      lead.status === 'Lost' ? '#6B7280' : '#5BC0DE',
-                    color: '#FFFFFF'
-                  }}>
-                  {lead.status}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span style={{ color: colors.textSecondary }}>Created:</span>
-                <span className="font-medium" style={{ color: colors.textPrimary }}>
-                  {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
-                </span>
-              </div>
-            </div>
-
-            {lead.presentations.length > 0 && (
-              <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
-                <h4 className="font-semibold mb-2" style={{ color: colors.primary }}>
-                  Presentations ({lead.presentations.length})
-                </h4>
-                <div className="space-y-2">
-                  {lead.presentations.map((pres, idx) => {
-                    const ac = aircraft.find(a => a.id === pres.aircraftId);
-                    return (
-                      <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
-                        <p className="font-medium">
-                          <button
-                            onClick={() => handleActionWithFullAircraftData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
-                            className="hover:underline cursor-pointer text-left"
-                            style={{ color: colors.primary }}
-                          >
-                            {ac?.manufacturer} {ac?.model}
-                          </button>
-                          {ac?.serialNumber && (
-                            <span className="font-normal" style={{ color: colors.textSecondary }}> (S/N: {ac.serialNumber})</span>
-                          )}
-                        </p>
-                        <p style={{ color: colors.textSecondary }}>Price: ${(pres.priceGiven / 1000000).toFixed(1)}M</p>
-                        <p className="text-xs" style={{ color: colors.textSecondary }}>{new Date(pres.date).toLocaleDateString()}</p>
-                        {pres.notes && (
-                          <p className="text-xs mt-2 italic" style={{ color: colors.textSecondary }}>
-                            Note: {pres.notes}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <NotesSection
-              notes={lead.timestampedNotes || []}
-              onAddNote={(noteText) => addNoteToLead(lead.id, noteText)}
+            <LeadSummaryCard
+              key={lead.id}
+              lead={lead}
+              colors={colors}
+              onViewDetails={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('leadDetail', updatedLead))}
+              onEdit={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('lead', updatedLead))}
+              onDelete={() => handleDeleteClick(lead)}
+              isLoading={leadsLoading.has(lead.id)}
+              getStatusColors={getLeadStatusColors}
             />
-
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={() => openModal('presentation', lead)}
-                className="flex-1 px-4 py-2 rounded-lg font-semibold"
-                style={{ backgroundColor: colors.primary, color: colors.secondary }}
-              >
-                Present Aircraft
-              </button>
-              <button
-                onClick={() => openModal('dealFromLead', lead)}
-                className="flex-1 px-4 py-2 rounded-lg font-semibold"
-                style={{ backgroundColor: colors.secondary, color: colors.primary, border: `1px solid ${colors.primary}` }}
-              >
-                Create Deal
-              </button>
-            </div>
-          </div>
-        ))}
+          ))}
         </div>
       )}
 
@@ -448,6 +351,115 @@ const LeadsView = ({ openModal }) => {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
       />
+    </div>
+  );
+};
+
+const LeadSummaryCard = ({ lead, colors, onViewDetails, onEdit, onDelete, isLoading, getStatusColors }) => {
+  return (
+    <div className="rounded-lg shadow-lg overflow-hidden relative" style={{ backgroundColor: colors.cardBg }}>
+      {/* Header with gradient background */}
+      <div
+        className="relative w-full h-32 overflow-hidden"
+        style={{
+          background: `linear-gradient(135deg, ${getStatusColors(lead.status).bg}dd, ${getStatusColors(lead.status).bg}99)`
+        }}
+      >
+        {/* Status Badge */}
+        <div className="absolute top-4 right-4 px-4 py-2 rounded-lg font-bold text-sm" style={{
+          backgroundColor: getStatusColors(lead.status).bg,
+          color: getStatusColors(lead.status).text,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }}>
+          {lead.status}
+        </div>
+
+        {/* Lead Name and Company */}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <h3 className="text-2xl font-bold text-white drop-shadow-md">
+            {lead.name}
+          </h3>
+          <p className="text-white text-sm opacity-90">{lead.company}</p>
+        </div>
+
+        {/* Edit and Delete Buttons */}
+        <div className="absolute top-4 left-4 flex gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="p-2 rounded-full hover:opacity-80"
+            style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
+            title="Edit"
+            disabled={isLoading}
+          >
+            <Edit2 size={18} style={{ color: colors.primary }} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-2 rounded-full hover:opacity-80"
+            style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
+            title="Delete"
+          >
+            <Trash2 size={18} style={{ color: colors.error }} />
+          </button>
+        </div>
+      </div>
+
+      {/* Info Boxes - Aircraft Type, Budget, Year Preference */}
+      <div className="p-6">
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {/* Aircraft Type */}
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+            <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Aircraft Type</div>
+            <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+              {lead.aircraftType || 'Not specified'}
+            </div>
+          </div>
+
+          {/* Budget */}
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+            <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Budget</div>
+            <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+              {lead.budgetKnown && lead.budget ? `$${(lead.budget / 1000000).toFixed(1)}M` : 'Unknown'}
+            </div>
+          </div>
+
+          {/* Year Preference */}
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+            <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Year Pref.</div>
+            <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+              {lead.yearPreference?.oldest && lead.yearPreference?.newest
+                ? `${lead.yearPreference.oldest}-${lead.yearPreference.newest}`
+                : 'N/A'}
+            </div>
+          </div>
+        </div>
+
+        {/* Created Date */}
+        <div className="mb-4">
+          <div className="text-sm" style={{ color: colors.textSecondary }}>Created</div>
+          <div className="text-lg font-medium" style={{ color: colors.textPrimary }}>
+            {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : 'N/A'}
+          </div>
+        </div>
+
+        {/* View Details Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetails();
+          }}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90"
+          style={{ backgroundColor: colors.primary, color: colors.secondary }}
+        >
+          View Details →
+        </button>
+      </div>
     </div>
   );
 };

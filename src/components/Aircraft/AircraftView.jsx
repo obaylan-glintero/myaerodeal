@@ -756,7 +756,7 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
             onViewDetails();
           }}
           className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold hover:opacity-90"
-          style={{ backgroundColor: colors.secondary, color: colors.textPrimary }}
+          style={{ backgroundColor: colors.primary, color: colors.secondary }}
         >
           View Details →
         </button>
