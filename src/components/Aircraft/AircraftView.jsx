@@ -223,8 +223,7 @@ const AircraftView = ({ openModal }) => {
       `Registration: ${ac.registration || 'N/A'}`,
       `Category: ${ac.category || 'N/A'}`,
       `Location: ${ac.location || 'N/A'}`,
-      `Price: $${ac.price ? (ac.price / 1000000).toFixed(2) + 'M' : 'N/A'}`,
-      `Total Time: ${ac.totalTime ? ac.totalTime + ' hours' : 'N/A'}`
+      `Price: $${ac.price ? (ac.price / 1000000).toFixed(2) + 'M' : 'N/A'}`
     ];
 
     aircraftInfo.forEach(info => {
