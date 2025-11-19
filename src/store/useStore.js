@@ -816,6 +816,8 @@ export const useStore = create((set, get) => ({
   refreshAircraft: async () => {
     if (!get().isAuthenticated) return;
 
+    console.log('🔄 refreshAircraft called');
+
     // Only fetch minimal fields for refresh
     const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, created_at';
     const { data } = await supabase.from('aircraft').select(aircraftMinimalFields);
@@ -848,9 +850,14 @@ export const useStore = create((set, get) => ({
 
       // Preserve full data for aircraft that have been loaded
       const { aircraft: currentAircraft, aircraftFullDataLoaded } = get();
+      console.log('🔍 aircraftFullDataLoaded Set:', Array.from(aircraftFullDataLoaded));
+
       const newAircraft = data.map(dbAircraft => {
         const existingAircraft = currentAircraft.find(a => a.id === dbAircraft.id);
-        if (existingAircraft && aircraftFullDataLoaded.has(dbAircraft.id)) {
+        const isFullyLoaded = aircraftFullDataLoaded.has(dbAircraft.id);
+
+        if (existingAircraft && isFullyLoaded) {
+          console.log(`✅ Preserving full data for aircraft ${dbAircraft.id}, specSheetData exists: ${!!existingAircraft.specSheetData}`);
           // Keep full data for already loaded aircraft, but update minimal fields
           return {
             ...existingAircraft,
@@ -869,6 +876,27 @@ export const useStore = create((set, get) => ({
             presentations: dbAircraft.presentations || []
           };
         }
+
+        if (existingAircraft && existingAircraft.specSheetData) {
+          console.log(`⚠️ Aircraft ${dbAircraft.id} has specSheetData but is NOT in aircraftFullDataLoaded Set! Preserving anyway.`);
+          return {
+            ...existingAircraft,
+            manufacturer: dbAircraft.manufacturer || '',
+            model: dbAircraft.model || '',
+            yom: dbAircraft.yom,
+            category: dbAircraft.category || '',
+            location: dbAircraft.location || '',
+            price: dbAircraft.price || 0,
+            status: dbAircraft.status || 'For Sale',
+            seller: dbAircraft.seller || '',
+            imageUrl: dbAircraft.image_url,
+            accessType: dbAircraft.access_type || 'Direct',
+            specSheet: dbAircraft.spec_sheet,
+            summary: dbAircraft.summary || '',
+            presentations: dbAircraft.presentations || []
+          };
+        }
+
         return convertAircraftMinimalFromDB(dbAircraft);
       });
 
