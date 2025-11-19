@@ -248,7 +248,7 @@ export const useStore = create((set, get) => ({
 
       // Only fetch minimal fields for faster initial load
       const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, presentations, timestamped_notes, created_at';
-      const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, serial_number, registration, total_time, range, pax, created_at';
+      const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, serial_number, registration, created_at';
       const dealsMinimalFields = 'id, deal_name, client_name, related_lead, related_aircraft, deal_value, estimated_closing, status, next_step, follow_up_date, created_at';
 
       const [leadsResult, aircraftResult, dealsResult, tasksResult] = await Promise.all([
@@ -349,9 +349,9 @@ export const useStore = create((set, get) => ({
         specSheet: aircraft.spec_sheet, // Include filename so UI knows if spec sheet exists
         summary: aircraft.summary || '', // AI-generated summary for display
         presentations: aircraft.presentations || [], // Which leads this was presented to
-        totalTime: aircraft.total_time,
-        range: aircraft.range,
-        pax: aircraft.pax,
+        totalTime: null, // Will be loaded on demand
+        range: null, // Will be loaded on demand
+        pax: null, // Will be loaded on demand
         serialNumber: aircraft.serial_number || '', // Include for summary card display
         registration: aircraft.registration || '', // Include for summary card display
         createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
