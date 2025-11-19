@@ -137,6 +137,8 @@ export const useStore = create((set, get) => ({
   currentUser: null,
   companyUsers: [],
   currentUserProfile: null,
+  aircraftFullDataLoaded: new Set(), // Track which aircraft have full data loaded
+  aircraftLoading: new Set(), // Track which aircraft are currently loading
 
   // Initialize store - fetch from Supabase or use demo data
   initialize: async () => {
@@ -239,9 +241,13 @@ export const useStore = create((set, get) => ({
 
       // Now fetch all data from Supabase (RLS automatically filters by company_id)
       console.log('Fetching data from Supabase...');
+
+      // For aircraft, only fetch minimal fields for faster initial load
+      const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, created_at';
+
       const [leadsResult, aircraftResult, dealsResult, tasksResult] = await Promise.all([
         supabase.from('leads').select('*').order('created_at', { ascending: false }),
-        supabase.from('aircraft').select('*').order('created_at', { ascending: false }),
+        supabase.from('aircraft').select(aircraftMinimalFields).order('created_at', { ascending: false }),
         supabase.from('deals').select('*').order('created_at', { ascending: false }),
         supabase.from('tasks').select('*').order('created_at', { ascending: false })
       ]);
@@ -298,7 +304,34 @@ export const useStore = create((set, get) => ({
         return converted;
       };
 
-      const convertAircraftFromDB = (aircraft) => ({
+      // Minimal converter - only essential fields for list/card view
+      const convertAircraftMinimalFromDB = (aircraft) => ({
+        id: aircraft.id,
+        manufacturer: aircraft.manufacturer || '',
+        model: aircraft.model || '',
+        yom: aircraft.yom,
+        category: aircraft.category || '',
+        location: aircraft.location || '',
+        price: aircraft.price || 0,
+        status: aircraft.status || 'For Sale',
+        seller: aircraft.seller || '',
+        imageUrl: aircraft.image_url,
+        createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+        // Placeholders for full data (will be loaded on demand)
+        serialNumber: null,
+        registration: null,
+        summary: null,
+        accessType: aircraft.access_type || 'Direct',
+        specSheet: null,
+        specSheetData: null,
+        specSheetType: null,
+        imageData: null,
+        presentations: [],
+        timestampedNotes: []
+      });
+
+      // Full converter - all fields including heavy data
+      const convertAircraftFullFromDB = (aircraft) => ({
         id: aircraft.id,
         manufacturer: aircraft.manufacturer || '',
         model: aircraft.model || '',
@@ -395,17 +428,18 @@ export const useStore = create((set, get) => ({
           console.log('📊 Re-fetching data after sample creation...');
           const [newLeadsResult, newAircraftResult, newDealsResult, newTasksResult] = await Promise.all([
             supabase.from('leads').select('*').order('created_at', { ascending: false }),
-            supabase.from('aircraft').select('*').order('created_at', { ascending: false }),
+            supabase.from('aircraft').select(aircraftMinimalFields).order('created_at', { ascending: false }),
             supabase.from('deals').select('*').order('created_at', { ascending: false }),
             supabase.from('tasks').select('*').order('created_at', { ascending: false })
           ]);
 
           set({
             leads: newLeadsResult.data?.map(convertLeadFromDB) || [],
-            aircraft: newAircraftResult.data?.map(convertAircraftFromDB) || [],
+            aircraft: newAircraftResult.data?.map(convertAircraftMinimalFromDB) || [],
             deals: newDealsResult.data?.map(convertDealFromDB) || [],
             tasks: newTasksResult.data?.map(convertTaskFromDB) || [],
-            loading: false
+            loading: false,
+            aircraftFullDataLoaded: new Set() // Reset tracking
           });
 
           console.log('✅ Sample data created and loaded! This will only happen once.');
@@ -424,10 +458,11 @@ export const useStore = create((set, get) => ({
         // Company has existing data
         set({
           leads: leadsResult.data?.map(convertLeadFromDB) || [],
-          aircraft: aircraftResult.data?.map(convertAircraftFromDB) || [],
+          aircraft: aircraftResult.data?.map(convertAircraftMinimalFromDB) || [],
           deals: dealsResult.data?.map(convertDealFromDB) || [],
           tasks: tasksResult.data?.map(convertTaskFromDB) || [],
-          loading: false
+          loading: false,
+          aircraftFullDataLoaded: new Set() // Reset tracking
         });
       }
 
@@ -693,32 +728,150 @@ export const useStore = create((set, get) => ({
 
   refreshAircraft: async () => {
     if (!get().isAuthenticated) return;
-    const { data } = await supabase.from('aircraft').select('*');
+
+    // Only fetch minimal fields for refresh
+    const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, created_at';
+    const { data } = await supabase.from('aircraft').select(aircraftMinimalFields);
+
     if (data) {
-      const convertAircraftFromDB = (aircraft) => ({
+      const convertAircraftMinimalFromDB = (aircraft) => ({
         id: aircraft.id,
         manufacturer: aircraft.manufacturer || '',
         model: aircraft.model || '',
         yom: aircraft.yom,
-        serialNumber: aircraft.serial_number || '',
-        registration: aircraft.registration || '',
         category: aircraft.category || '',
         location: aircraft.location || '',
         price: aircraft.price || 0,
-        accessType: aircraft.access_type || 'Direct',
-        summary: aircraft.summary || '',
         status: aircraft.status || 'For Sale',
         seller: aircraft.seller || '',
-        specSheet: aircraft.spec_sheet,
-        specSheetData: aircraft.spec_sheet_data,
-        specSheetType: aircraft.spec_sheet_type,
         imageUrl: aircraft.image_url,
-        imageData: aircraft.image_data,
-        presentations: aircraft.presentations || [],
-        timestampedNotes: aircraft.timestamped_notes || [],
-        createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+        createdAt: aircraft.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+        // Placeholders for full data
+        serialNumber: null,
+        registration: null,
+        summary: null,
+        accessType: aircraft.access_type || 'Direct',
+        specSheet: null,
+        specSheetData: null,
+        specSheetType: null,
+        imageData: null,
+        presentations: [],
+        timestampedNotes: []
       });
-      set({ aircraft: data.map(convertAircraftFromDB) });
+
+      // Preserve full data for aircraft that have been loaded
+      const { aircraft: currentAircraft, aircraftFullDataLoaded } = get();
+      const newAircraft = data.map(dbAircraft => {
+        const existingAircraft = currentAircraft.find(a => a.id === dbAircraft.id);
+        if (existingAircraft && aircraftFullDataLoaded.has(dbAircraft.id)) {
+          // Keep full data for already loaded aircraft, but update minimal fields
+          return {
+            ...existingAircraft,
+            manufacturer: dbAircraft.manufacturer || '',
+            model: dbAircraft.model || '',
+            yom: dbAircraft.yom,
+            category: dbAircraft.category || '',
+            location: dbAircraft.location || '',
+            price: dbAircraft.price || 0,
+            status: dbAircraft.status || 'For Sale',
+            seller: dbAircraft.seller || '',
+            imageUrl: dbAircraft.image_url,
+            accessType: dbAircraft.access_type || 'Direct'
+          };
+        }
+        return convertAircraftMinimalFromDB(dbAircraft);
+      });
+
+      set({ aircraft: newAircraft });
+    }
+  },
+
+  // Load full aircraft data on demand (lazy loading)
+  loadFullAircraftData: async (aircraftId) => {
+    const { aircraft, aircraftFullDataLoaded, aircraftLoading, isAuthenticated } = get();
+
+    // If not authenticated or already loaded, skip
+    if (!isAuthenticated) return;
+    if (aircraftFullDataLoaded.has(aircraftId)) {
+      console.log(`✅ Aircraft ${aircraftId} full data already loaded`);
+      return;
+    }
+
+    // If already loading, skip
+    if (aircraftLoading.has(aircraftId)) {
+      console.log(`⏳ Aircraft ${aircraftId} is already being loaded`);
+      return;
+    }
+
+    try {
+      // Mark as loading
+      const newLoading = new Set(aircraftLoading);
+      newLoading.add(aircraftId);
+      set({ aircraftLoading: newLoading });
+
+      console.log(`🔄 Loading full data for aircraft ${aircraftId}...`);
+
+      // Fetch all fields for this specific aircraft
+      const { data, error } = await supabase
+        .from('aircraft')
+        .select('*')
+        .eq('id', aircraftId)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        // Convert to full aircraft object
+        const fullAircraft = {
+          id: data.id,
+          manufacturer: data.manufacturer || '',
+          model: data.model || '',
+          yom: data.yom,
+          serialNumber: data.serial_number || '',
+          registration: data.registration || '',
+          category: data.category || '',
+          location: data.location || '',
+          price: data.price || 0,
+          accessType: data.access_type || 'Direct',
+          summary: data.summary || '',
+          status: data.status || 'For Sale',
+          seller: data.seller || '',
+          specSheet: data.spec_sheet,
+          specSheetData: data.spec_sheet_data,
+          specSheetType: data.spec_sheet_type,
+          imageUrl: data.image_url,
+          imageData: data.image_data,
+          presentations: data.presentations || [],
+          timestampedNotes: data.timestamped_notes || [],
+          createdAt: data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+        };
+
+        // Update aircraft in state
+        const updatedAircraft = aircraft.map(a => a.id === aircraftId ? fullAircraft : a);
+
+        // Mark as loaded
+        const newFullDataLoaded = new Set(aircraftFullDataLoaded);
+        newFullDataLoaded.add(aircraftId);
+
+        // Remove from loading
+        const updatedLoading = new Set(aircraftLoading);
+        updatedLoading.delete(aircraftId);
+
+        set({
+          aircraft: updatedAircraft,
+          aircraftFullDataLoaded: newFullDataLoaded,
+          aircraftLoading: updatedLoading
+        });
+
+        console.log(`✅ Full data loaded for aircraft ${aircraftId}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error loading full aircraft data for ${aircraftId}:`, error);
+
+      // Remove from loading on error
+      const updatedLoading = new Set(aircraftLoading);
+      updatedLoading.delete(aircraftId);
+      set({ aircraftLoading: updatedLoading });
     }
   },
 

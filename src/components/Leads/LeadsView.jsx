@@ -4,13 +4,19 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const LeadsView = ({ openModal }) => {
-  const { leads, aircraft, deleteLead, addNoteToLead } = useStore();
+  const { leads, aircraft, deleteLead, addNoteToLead, loadFullAircraftData } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('active');
   const [filterAircraftType, setFilterAircraftType] = useState('all');
   const [sortBy, setSortBy] = useState('statusAsc');
   const [viewMode, setViewMode] = useState('card');
+
+  // Helper to ensure full data is loaded before action
+  const handleActionWithFullData = async (aircraftId, action) => {
+    await loadFullAircraftData(aircraftId);
+    action();
+  };
 
   // Filter leads
   const filteredLeads = leads.filter(lead => {
@@ -344,7 +350,7 @@ const LeadsView = ({ openModal }) => {
                       <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
                         <p className="font-medium">
                           <button
-                            onClick={() => openModal('aircraft', ac)}
+                            onClick={() => handleActionWithFullData(ac.id, () => openModal('aircraft', ac))}
                             className="hover:underline cursor-pointer text-left"
                             style={{ color: colors.primary }}
                           >
