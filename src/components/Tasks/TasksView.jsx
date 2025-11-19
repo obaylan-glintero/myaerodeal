@@ -139,7 +139,7 @@ const TasksView = ({ openModal }) => {
 };
 
 const TaskCard = ({ task, onUpdate, onDelete, openModal, leads, deals }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const isOverdue = new Date(task.dueDate) < new Date() && task.status === 'pending';
 
   // Get related lead or deal info
@@ -158,9 +158,20 @@ const TaskCard = ({ task, onUpdate, onDelete, openModal, leads, deals }) => {
 
   const relatedInfo = getRelatedInfo();
 
+  // Theme-aware background colors
+  const getBackgroundColor = () => {
+    if (task.status === 'completed') {
+      return isDark ? '#2d4a2e' : '#d1fae5'; // Dark green for dark mode, light green for light mode
+    }
+    if (isOverdue) {
+      return isDark ? '#4a2d2d' : '#fee2e2'; // Dark red for dark mode, light red for light mode
+    }
+    return colors.secondary;
+  };
+
   return (
     <div className="flex items-center gap-4 p-4 rounded-lg" style={{
-      backgroundColor: task.status === 'completed' ? '#2d4a2e' : isOverdue ? '#4a2d2d' : colors.secondary
+      backgroundColor: getBackgroundColor()
     }}>
       <button
         onClick={() => onUpdate(task.id, { status: task.status === 'pending' ? 'completed' : 'pending' })}
