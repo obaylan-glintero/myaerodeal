@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart } from 'lucide-react';
+import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart, Clock, ListChecks, CheckCircle2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
