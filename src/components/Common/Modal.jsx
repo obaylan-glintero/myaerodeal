@@ -283,7 +283,8 @@ const LeadForm = ({ formData, setFormData }) => {
 const AircraftForm = ({ formData, setFormData }) => {
   const fileInputRef = React.useRef(null);
   const imageInputRef = React.useRef(null);
-  const [isSearching, setIsSearching] = React.useState(false);
+  const [imageUrl, setImageUrl] = React.useState('');
+  const [isLoadingUrl, setIsLoadingUrl] = React.useState(false);
   const [isExtracting, setIsExtracting] = React.useState(false);
   const [priceError, setPriceError] = React.useState('');
   const { extractAircraftDataFromPDF } = useStore();
@@ -368,24 +369,40 @@ const AircraftForm = ({ formData, setFormData }) => {
     }
   };
 
-  const searchAircraftImage = async () => {
-    if (!formData.serialNumber && !formData.registration) {
-      alert('Please enter a Serial Number or Registration to search for images');
+  const loadImageFromURL = async () => {
+    if (!imageUrl.trim()) {
+      alert('Please enter an image URL');
       return;
     }
 
-    setIsSearching(true);
+    setIsLoadingUrl(true);
 
-    // Simulate API search - In production, you would integrate with:
-    // - Aviation Stack API
-    // - PlaneSpotter API
-    // - Custom Google Image Search
-    // - JetPhotos API
+    try {
+      // Fetch the image from the URL
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error('Failed to load image from URL');
+      }
 
-    setTimeout(() => {
-      setIsSearching(false);
-      alert('Image search feature requires API integration.\n\nTo enable automatic image search:\n1. Sign up for an aviation API (e.g., Aviation Stack)\n2. Add API key to your environment\n3. Implement the search logic\n\nFor now, please upload an image manually.');
-    }, 1500);
+      const blob = await response.blob();
+
+      // Convert blob to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, imageData: reader.result });
+        setImageUrl(''); // Clear the URL input after successful load
+        setIsLoadingUrl(false);
+      };
+      reader.onerror = () => {
+        alert('Error reading image data');
+        setIsLoadingUrl(false);
+      };
+      reader.readAsDataURL(blob);
+    } catch (error) {
+      console.error('Error loading image from URL:', error);
+      alert('Failed to load image from URL. Please check the URL and try again.');
+      setIsLoadingUrl(false);
+    }
   };
 
   return (
@@ -534,35 +551,52 @@ const AircraftForm = ({ formData, setFormData }) => {
           </div>
         )}
 
-        <div className="flex gap-2 justify-center">
-          <input
-            ref={imageInputRef}
-            type="file"
-            className="hidden"
-            accept="image/*"
-            onChange={handleImageChange}
-          />
-          <button
-            type="button"
-            onClick={() => imageInputRef.current?.click()}
-            className="px-4 py-2 text-sm border rounded-lg"
-            style={{
-              backgroundColor: colors.primary,
-              color: colors.secondary,
-              borderColor: colors.border,
-            }}
-          >
-            Upload Image
-          </button>
-          <button
-            type="button"
-            onClick={searchAircraftImage}
-            disabled={isSearching}
-            className="px-4 py-2 text-sm rounded-lg disabled:opacity-50"
-            style={{ backgroundColor: colors.primary, color: colors.secondary }}
-          >
-            {isSearching ? 'Searching...' : 'Auto Search'}
-          </button>
+        <div className="space-y-3">
+          <div className="flex gap-2 justify-center">
+            <input
+              ref={imageInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              className="px-4 py-2 text-sm border rounded-lg"
+              style={{
+                backgroundColor: colors.primary,
+                color: colors.secondary,
+                borderColor: colors.border,
+              }}
+            >
+              Upload Image
+            </button>
+          </div>
+
+          <div className="flex gap-2 items-center">
+            <input
+              type="text"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="Or paste image URL here..."
+              className="flex-1 px-3 py-2 text-sm rounded-lg border"
+              style={{
+                backgroundColor: colors.cardBg,
+                color: colors.textPrimary,
+                borderColor: colors.border,
+              }}
+            />
+            <button
+              type="button"
+              onClick={loadImageFromURL}
+              disabled={isLoadingUrl}
+              className="px-4 py-2 text-sm rounded-lg disabled:opacity-50 whitespace-nowrap"
+              style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            >
+              {isLoadingUrl ? 'Loading...' : 'Get From URL'}
+            </button>
+          </div>
         </div>
       </div>
 

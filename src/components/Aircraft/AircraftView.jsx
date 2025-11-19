@@ -668,12 +668,12 @@ const AircraftSummaryCard = ({ aircraft, colors, onViewDetails, onEdit, onDelete
         )}
 
         {/* Status Badge */}
-        {aircraft.status && aircraft.status !== 'For Sale' && (
+        {aircraft.status && (
           <div className="absolute top-4 right-4 px-4 py-2 rounded-lg font-bold text-sm" style={{
             backgroundColor: getStatusColors(aircraft.status).bg,
             color: getStatusColors(aircraft.status).text
           }}>
-            {aircraft.status === 'Under Contract' ? 'UNDER CONTRACT' : aircraft.status === 'Not for Sale' ? 'SOLD' : aircraft.status.toUpperCase()}
+            {aircraft.status === 'Under Contract' ? 'UNDER CONTRACT' : aircraft.status === 'Not for Sale' ? 'NOT FOR SALE' : aircraft.status === 'For Sale' ? 'FOR SALE' : aircraft.status.toUpperCase()}
           </div>
         )}
 
