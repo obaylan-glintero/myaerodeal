@@ -4,7 +4,7 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 
 const LeadsView = ({ openModal }) => {
-  const { leads, aircraft, deleteLead, addNoteToLead, loadFullAircraftData } = useStore();
+  const { leads, aircraft, deleteLead, addNoteToLead, loadFullAircraftData, loadFullLeadData, leadsLoading } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('active');
@@ -12,9 +12,15 @@ const LeadsView = ({ openModal }) => {
   const [sortBy, setSortBy] = useState('statusAsc');
   const [viewMode, setViewMode] = useState('card');
 
-  // Helper to ensure full data is loaded before action
-  const handleActionWithFullData = async (aircraftId, action) => {
+  // Helper to ensure full aircraft data is loaded before action
+  const handleActionWithFullAircraftData = async (aircraftId, action) => {
     await loadFullAircraftData(aircraftId);
+    action();
+  };
+
+  // Helper to ensure full lead data is loaded before action
+  const handleActionWithFullLeadData = async (leadId, action) => {
+    await loadFullLeadData(leadId);
     action();
   };
 
@@ -198,7 +204,7 @@ const LeadsView = ({ openModal }) => {
                     key={lead.id}
                     className="hover:opacity-80 cursor-pointer"
                     style={{ borderBottom: `1px solid ${colors.border}` }}
-                    onClick={() => openModal('lead', lead)}
+                    onClick={() => handleActionWithFullLeadData(lead.id, () => openModal('lead', lead))}
                   >
                     <td className="px-4 py-3">
                       <div>
@@ -243,10 +249,11 @@ const LeadsView = ({ openModal }) => {
                     <td className="px-4 py-3">
                       <div className="flex gap-2 justify-end" onClick={(e) => e.stopPropagation()}>
                         <button
-                          onClick={() => openModal('lead', lead)}
+                          onClick={() => handleActionWithFullLeadData(lead.id, () => openModal('lead', lead))}
                           className="p-2 rounded hover:opacity-70"
                           style={{ color: colors.textPrimary }}
                           title="Edit"
+                          disabled={leadsLoading.has(lead.id)}
                         >
                           <Edit2 size={18} />
                         </button>
@@ -280,9 +287,10 @@ const LeadsView = ({ openModal }) => {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => openModal('lead', lead)}
+                  onClick={() => handleActionWithFullLeadData(lead.id, () => openModal('lead', lead))}
                   className="p-2 rounded"
                   style={{ color: colors.textPrimary }}
+                  disabled={leadsLoading.has(lead.id)}
                 >
                   <Edit2 size={18} />
                 </button>
@@ -350,7 +358,7 @@ const LeadsView = ({ openModal }) => {
                       <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
                         <p className="font-medium">
                           <button
-                            onClick={() => handleActionWithFullData(ac.id, () => openModal('aircraft', ac))}
+                            onClick={() => handleActionWithFullAircraftData(ac.id, () => openModal('aircraft', ac))}
                             className="hover:underline cursor-pointer text-left"
                             style={{ color: colors.primary }}
                           >
