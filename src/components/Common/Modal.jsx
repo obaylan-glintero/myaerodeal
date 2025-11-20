@@ -22,6 +22,22 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
   });
   const { colors } = useTheme();
 
+  // Update formData when editingItem changes (e.g., when reopening modal with different data)
+  useEffect(() => {
+    if (modalType === 'dealFromLead' && editingItem) {
+      const initialData = {
+        clientName: editingItem.name || '',
+        relatedLead: editingItem.id,
+        status: 'LOI Signed'
+      };
+      setFormData(initialData);
+    } else if (editingItem) {
+      setFormData(editingItem);
+    } else {
+      setFormData({});
+    }
+  }, [editingItem, modalType]);
+
   const {
     addLead, updateLead,
     addAircraft, updateAircraft,
