@@ -44,8 +44,8 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
         }
       } else if (modalType === 'aircraft') {
         if (editingItem) {
-          // Filter out presentations array for aircraft too
-          const { presentations, ...updateData } = formData;
+          // Filter out fields that shouldn't be updated through the basic form
+          const { presentations, timestampedNotes, createdAt, id, ...updateData } = formData;
           await updateAircraft(editingItem.id, updateData);
         } else {
           await addAircraft(formData);
