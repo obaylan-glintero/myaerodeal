@@ -165,10 +165,10 @@ const TaskCard = ({ task, onUpdate, onDelete, openModal, setActiveTab, leads, de
 
     if (relatedInfo.type === 'Lead') {
       setActiveTab('leads');
-      setTimeout(() => openModal('lead', relatedInfo.item), 100);
+      setTimeout(() => openModal('leadDetail', relatedInfo.item), 100);
     } else if (relatedInfo.type === 'Deal') {
       setActiveTab('deals');
-      setTimeout(() => openModal('deal', relatedInfo.item), 100);
+      setTimeout(() => openModal('dealDetail', relatedInfo.item), 100);
     }
   };
 
