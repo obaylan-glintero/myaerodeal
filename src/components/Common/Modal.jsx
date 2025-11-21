@@ -1626,11 +1626,16 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
 
 const LeadDetailView = ({ lead, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { aircraft, addNoteToLead, loadFullAircraftData, deleteLead, loadFullLeadData } = useStore();
+  const { aircraft, tasks, addNoteToLead, loadFullAircraftData, deleteLead, loadFullLeadData, updateTask } = useStore();
   const [noteText, setNoteText] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!lead) return null;
+
+  // Filter tasks related to this lead
+  const relatedTasks = tasks.filter(task => task.relatedTo?.type === 'lead' && task.relatedTo?.id === lead.id);
+  const pendingTasks = relatedTasks.filter(task => task.status === 'pending');
+  const completedTasks = relatedTasks.filter(task => task.status === 'completed');
 
   const handleAddNote = () => {
     if (noteText.trim()) {
@@ -1768,6 +1773,71 @@ const LeadDetailView = ({ lead, closeModal, openModal }) => {
         </div>
       )}
 
+      {/* Tasks */}
+      {relatedTasks.length > 0 && (
+        <div>
+          <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+            <ListChecks size={18} />
+            Tasks ({relatedTasks.length})
+          </h4>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {pendingTasks.map((task) => (
+              <div key={task.id} className="flex items-start gap-2 text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                <button
+                  onClick={() => updateTask(task.id, { status: 'completed' })}
+                  className="p-1 rounded border-2 mt-0.5 flex-shrink-0"
+                  style={{ borderColor: colors.border }}
+                  title="Mark as complete"
+                >
+                  <CheckCircle2 size={14} style={{ color: 'transparent' }} />
+                </button>
+                <div className="flex-1">
+                  <p className="font-medium" style={{ color: colors.textPrimary }}>{task.title}</p>
+                  {task.description && (
+                    <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>{task.description}</p>
+                  )}
+                  <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                    Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No date set'}
+                  </p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded flex-shrink-0 ${
+                  task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                  task.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {task.priority}
+                </span>
+              </div>
+            ))}
+            {completedTasks.length > 0 && (
+              <>
+                <div className="text-xs font-semibold pt-2" style={{ color: colors.textSecondary }}>
+                  Completed ({completedTasks.length})
+                </div>
+                {completedTasks.slice(0, 3).map((task) => (
+                  <div key={task.id} className="flex items-start gap-2 text-sm p-3 rounded opacity-60" style={{ backgroundColor: colors.secondary }}>
+                    <button
+                      onClick={() => updateTask(task.id, { status: 'pending' })}
+                      className="p-1 rounded border-2 mt-0.5 flex-shrink-0"
+                      style={{ backgroundColor: '#5BC0DE', borderColor: '#5BC0DE' }}
+                      title="Mark as pending"
+                    >
+                      <CheckCircle2 size={14} style={{ color: '#FFFFFF' }} />
+                    </button>
+                    <div className="flex-1">
+                      <p className="font-medium line-through" style={{ color: colors.textPrimary }}>{task.title}</p>
+                      <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                        Completed
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Notes */}
       <div>
         <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
@@ -1868,10 +1938,15 @@ const LeadDetailView = ({ lead, closeModal, openModal }) => {
 
 const DealDetailView = ({ deal, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { aircraft, leads, addNoteToDeal, updateDealStatus, deleteDeal, loadFullDealData } = useStore();
+  const { aircraft, leads, tasks, addNoteToDeal, updateDealStatus, deleteDeal, loadFullDealData, updateTask } = useStore();
   const [noteText, setNoteText] = useState('');
 
   if (!deal) return null;
+
+  // Filter tasks related to this deal
+  const relatedTasks = tasks.filter(task => task.relatedTo?.type === 'deal' && task.relatedTo?.id === deal.id);
+  const pendingTasks = relatedTasks.filter(task => task.status === 'pending');
+  const completedTasks = relatedTasks.filter(task => task.status === 'completed');
 
   const handleAddNote = () => {
     if (noteText.trim()) {
@@ -2091,6 +2166,71 @@ const DealDetailView = ({ deal, closeModal, openModal }) => {
                 <p style={{ color: colors.textSecondary }}>{h.action}</p>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tasks */}
+      {relatedTasks.length > 0 && (
+        <div>
+          <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+            <ListChecks size={18} />
+            Tasks ({relatedTasks.length})
+          </h4>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {pendingTasks.map((task) => (
+              <div key={task.id} className="flex items-start gap-2 text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
+                <button
+                  onClick={() => updateTask(task.id, { status: 'completed' })}
+                  className="p-1 rounded border-2 mt-0.5 flex-shrink-0"
+                  style={{ borderColor: colors.border }}
+                  title="Mark as complete"
+                >
+                  <CheckCircle2 size={14} style={{ color: 'transparent' }} />
+                </button>
+                <div className="flex-1">
+                  <p className="font-medium" style={{ color: colors.textPrimary }}>{task.title}</p>
+                  {task.description && (
+                    <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>{task.description}</p>
+                  )}
+                  <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                    Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No date set'}
+                  </p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded flex-shrink-0 ${
+                  task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                  task.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {task.priority}
+                </span>
+              </div>
+            ))}
+            {completedTasks.length > 0 && (
+              <>
+                <div className="text-xs font-semibold pt-2" style={{ color: colors.textSecondary }}>
+                  Completed ({completedTasks.length})
+                </div>
+                {completedTasks.slice(0, 3).map((task) => (
+                  <div key={task.id} className="flex items-start gap-2 text-sm p-3 rounded opacity-60" style={{ backgroundColor: colors.secondary }}>
+                    <button
+                      onClick={() => updateTask(task.id, { status: 'pending' })}
+                      className="p-1 rounded border-2 mt-0.5 flex-shrink-0"
+                      style={{ backgroundColor: '#5BC0DE', borderColor: '#5BC0DE' }}
+                      title="Mark as pending"
+                    >
+                      <CheckCircle2 size={14} style={{ color: '#FFFFFF' }} />
+                    </button>
+                    <div className="flex-1">
+                      <p className="font-medium line-through" style={{ color: colors.textPrimary }}>{task.title}</p>
+                      <p className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                        Completed
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
       )}

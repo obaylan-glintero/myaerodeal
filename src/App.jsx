@@ -107,7 +107,7 @@ function AppContent() {
           {activeTab === 'leads' && <LeadsView openModal={openModal} />}
           {activeTab === 'aircraft' && <AircraftView openModal={openModal} />}
           {activeTab === 'deals' && <DealsView openModal={openModal} />}
-          {activeTab === 'tasks' && <TasksView openModal={openModal} />}
+          {activeTab === 'tasks' && <TasksView openModal={openModal} setActiveTab={setActiveTab} />}
           {activeTab === 'users' && <UserManagement />}
           {activeTab === 'registrations' && <RegistrationApproval />}
           {activeTab === 'settings' && <UserSettings />}

@@ -4,7 +4,7 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import ConfirmDialog from '../Common/ConfirmDialog';
 
-const TasksView = ({ openModal }) => {
+const TasksView = ({ openModal, setActiveTab }) => {
   const { tasks, updateTask, deleteTask, leads, deals } = useStore();
   const { colors } = useTheme();
   const [calendarView, setCalendarView] = useState(false);
@@ -102,7 +102,7 @@ const TasksView = ({ openModal }) => {
         </h3>
         <div className="space-y-3">
           {pendingTasks.map(task => (
-            <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={handleDeleteClick} openModal={openModal} leads={leads} deals={deals} />
+            <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={handleDeleteClick} openModal={openModal} setActiveTab={setActiveTab} leads={leads} deals={deals} />
           ))}
           {pendingTasks.length === 0 && (
             <p className="text-center py-8" style={{ color: colors.textSecondary }}>No pending tasks</p>
@@ -117,7 +117,7 @@ const TasksView = ({ openModal }) => {
           </h3>
           <div className="space-y-3">
             {completedTasks.slice(0, 10).map(task => (
-              <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={handleDeleteClick} openModal={openModal} leads={leads} deals={deals} />
+              <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={handleDeleteClick} openModal={openModal} setActiveTab={setActiveTab} leads={leads} deals={deals} />
             ))}
           </div>
         </div>
@@ -138,7 +138,7 @@ const TasksView = ({ openModal }) => {
   );
 };
 
-const TaskCard = ({ task, onUpdate, onDelete, openModal, leads, deals }) => {
+const TaskCard = ({ task, onUpdate, onDelete, openModal, setActiveTab, leads, deals }) => {
   const { colors, isDark } = useTheme();
   const isOverdue = new Date(task.dueDate) < new Date() && task.status === 'pending';
 
@@ -148,15 +148,29 @@ const TaskCard = ({ task, onUpdate, onDelete, openModal, leads, deals }) => {
 
     if (task.relatedTo.type === 'lead') {
       const lead = leads.find(l => l.id === task.relatedTo.id);
-      return lead ? { type: 'Lead', name: lead.name, company: lead.company } : null;
+      return lead ? { type: 'Lead', name: lead.name, company: lead.company, item: lead } : null;
     } else if (task.relatedTo.type === 'deal') {
       const deal = deals.find(d => d.id === task.relatedTo.id);
-      return deal ? { type: 'Deal', name: deal.dealName } : null;
+      return deal ? { type: 'Deal', name: deal.dealName, item: deal } : null;
     }
     return null;
   };
 
   const relatedInfo = getRelatedInfo();
+
+  // Handle clicking on related item to navigate
+  const handleRelatedClick = (e) => {
+    e.stopPropagation();
+    if (!relatedInfo || !setActiveTab) return;
+
+    if (relatedInfo.type === 'Lead') {
+      setActiveTab('leads');
+      setTimeout(() => openModal('leadDetail', relatedInfo.item), 100);
+    } else if (relatedInfo.type === 'Deal') {
+      setActiveTab('deals');
+      setTimeout(() => openModal('dealDetail', relatedInfo.item), 100);
+    }
+  };
 
   // Theme-aware background colors
   const getBackgroundColor = () => {
@@ -204,7 +218,11 @@ const TaskCard = ({ task, onUpdate, onDelete, openModal, leads, deals }) => {
                 <span className="px-2 py-1 rounded bg-purple-100 text-purple-700">Auto</span>
               )}
               {relatedInfo && (
-                <span className="px-2 py-1 rounded bg-cyan-100 text-cyan-700" title={relatedInfo.company ? `${relatedInfo.name} (${relatedInfo.company})` : relatedInfo.name}>
+                <span
+                  onClick={handleRelatedClick}
+                  className="px-2 py-1 rounded bg-cyan-100 text-cyan-700 cursor-pointer hover:bg-cyan-200 transition-colors"
+                  title={relatedInfo.company ? `Click to view: ${relatedInfo.name} (${relatedInfo.company})` : `Click to view: ${relatedInfo.name}`}
+                >
                   {relatedInfo.type}: {relatedInfo.name}
                 </span>
               )}

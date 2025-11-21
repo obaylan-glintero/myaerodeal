@@ -1501,9 +1501,6 @@ export const useStore = create((set, get) => ({
       };
       set({ leads: [...leads, newLead] });
       saveToLocalStorage();
-      if (newLead.name) {
-        createAutoTask('lead', newLead.id, `Follow up with ${newLead.name}`);
-      }
       return newLead;
     }
 
@@ -1547,10 +1544,6 @@ export const useStore = create((set, get) => ({
 
       set({ leads: [...leads, newLead] });
 
-      if (newLead.name) {
-        createAutoTask('lead', newLead.id, `Follow up with ${newLead.name}`);
-      }
-
       return newLead;
     } catch (error) {
       console.error('Error adding lead:', error);
@@ -1560,12 +1553,24 @@ export const useStore = create((set, get) => ({
 
   updateLead: async (id, updatedData) => {
     console.log('🔄 updateLead called:', { id, updatedData });
-    const { leads, isAuthenticated, saveToLocalStorage } = get();
+    const { leads, isAuthenticated, saveToLocalStorage, createAutoTask } = get();
+
+    // Find the existing lead to check for status changes
+    const existingLead = leads.find(lead => lead.id === id);
+    const statusChanged = updatedData.status !== undefined && existingLead && updatedData.status !== existingLead.status;
+    const shouldCreateTask = statusChanged && updatedData.status !== 'Deal Created';
 
     // Demo mode - use localStorage
     if (!isAuthenticated) {
       set({ leads: leads.map(lead => lead.id === id ? { ...lead, ...updatedData } : lead) });
       saveToLocalStorage();
+
+      // Create task if status changed (except for "Deal Created")
+      if (shouldCreateTask) {
+        const leadName = updatedData.name || existingLead.name;
+        createAutoTask('lead', id, `Follow up: ${leadName} - ${updatedData.status}`);
+      }
+
       return;
     }
 
@@ -1612,6 +1617,12 @@ export const useStore = create((set, get) => ({
       }
 
       set({ leads: leads.map(lead => lead.id === id ? { ...lead, ...updatedData } : lead) });
+
+      // Create task if status changed (except for "Deal Created")
+      if (shouldCreateTask) {
+        const leadName = updatedData.name || existingLead.name;
+        createAutoTask('lead', id, `Follow up: ${leadName} - ${updatedData.status}`);
+      }
     } catch (error) {
       console.error('❌ Error updating lead:', error);
       throw error;
@@ -2353,7 +2364,8 @@ export const useStore = create((set, get) => ({
       get().saveToLocalStorage();
     }
 
-    createAutoTask('presentation', leadId, `Follow up on aircraft presentation to ${lead?.name}`);
+    const aircraftName = ac ? `${ac.manufacturer} ${ac.model}` : 'aircraft';
+    createAutoTask('presentation', leadId, `Follow up: ${lead?.name} - Presented ${aircraftName}`);
   },
 
   // Notes Actions
