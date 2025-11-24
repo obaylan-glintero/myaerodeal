@@ -2365,7 +2365,7 @@ export const useStore = create((set, get) => ({
     }
 
     const aircraftName = ac ? `${ac.manufacturer} ${ac.model}` : 'aircraft';
-    createAutoTask('presentation', leadId, `Follow up: ${lead?.name} - Presented ${aircraftName}`);
+    createAutoTask('lead', leadId, `Follow up: ${lead?.name} - Presented ${aircraftName}`);
   },
 
   // Notes Actions
