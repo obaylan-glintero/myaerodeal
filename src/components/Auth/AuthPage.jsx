@@ -364,7 +364,7 @@ const AuthPage = () => {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} name="authForm" className="space-y-4">
           {/* Company Name (Sign Up Only - NOT for invitations) */}
           {!isLogin && !invitationToken && (
             <div>
@@ -378,6 +378,7 @@ const AuthPage = () => {
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   required
+                  autoComplete="organization"
                   className="w-full pl-10 pr-4 py-3 rounded-lg"
                   style={{
                     backgroundColor: colors.secondary,
@@ -403,6 +404,7 @@ const AuthPage = () => {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   required
+                  autoComplete="given-name"
                   className="w-full pl-10 pr-4 py-3 rounded-lg"
                   style={{
                     backgroundColor: colors.secondary,
@@ -428,6 +430,7 @@ const AuthPage = () => {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   required
+                  autoComplete="family-name"
                   className="w-full pl-10 pr-4 py-3 rounded-lg"
                   style={{
                     backgroundColor: colors.secondary,
@@ -453,6 +456,7 @@ const AuthPage = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={!!invitationToken}
                 required
+                autoComplete="email"
                 className="w-full pl-10 pr-4 py-3 rounded-lg"
                 style={{
                   backgroundColor: colors.secondary,
@@ -483,6 +487,7 @@ const AuthPage = () => {
                 value={password}
                 onChange={handlePasswordChange}
                 required
+                autoComplete={isLogin ? "current-password" : "new-password"}
                 className="w-full pl-10 pr-4 py-3 rounded-lg"
                 style={{
                   backgroundColor: colors.secondary,
@@ -558,6 +563,7 @@ const AuthPage = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
+                  autoComplete="new-password"
                   className="w-full pl-10 pr-4 py-3 rounded-lg"
                   style={{
                     backgroundColor: colors.secondary,
