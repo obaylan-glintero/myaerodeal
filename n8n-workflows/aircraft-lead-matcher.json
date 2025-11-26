@@ -1,0 +1,429 @@
+{
+  "name": "Aircraft Lead Matcher",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Every Morning at 8 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": {
+          "search": "is:unread subject:(aircraft for sale OR aircraft available OR jet for sale OR plane for sale)",
+          "labelIds": [],
+          "maxResults": 50
+        }
+      },
+      "id": "gmail-fetch",
+      "name": "Fetch Aircraft Emails",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_OAUTH_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract aircraft details from email content\nconst items = [];\n\nfor (const item of $input.all()) {\n  const emailBody = item.json.snippet || item.json.textPlain || '';\n  const subject = item.json.subject || '';\n  const fullText = subject + ' ' + emailBody;\n  \n  // Common aircraft manufacturers\n  const manufacturers = ['Gulfstream', 'Bombardier', 'Cessna', 'Embraer', 'Dassault', 'Boeing', 'Airbus', 'Beechcraft', 'Cirrus', 'Pilatus', 'Honda', 'Learjet', 'Citation', 'Challenger', 'Falcon', 'Global', 'Legacy'];\n  \n  // Extract manufacturer\n  let manufacturer = '';\n  for (const mfr of manufacturers) {\n    if (fullText.includes(mfr)) {\n      manufacturer = mfr;\n      break;\n    }\n  }\n  \n  // Extract year (looking for 4-digit numbers between 1980-2025)\n  const yearMatch = fullText.match(/\\b(19[89]\\d|20[0-2]\\d)\\b/);\n  const year = yearMatch ? parseInt(yearMatch[0]) : null;\n  \n  // Extract price (looking for numbers with $ or million/M)\n  const pricePatterns = [\n    /\\$([\\d,]+(?:\\.\\d+)?)(M|million)?/gi,\n    /([\\d,]+(?:\\.\\d+)?)\\s*(million|M)\\s*(?:USD|dollars)?/gi\n  ];\n  \n  let price = null;\n  for (const pattern of pricePatterns) {\n    const priceMatch = fullText.match(pattern);\n    if (priceMatch) {\n      const numStr = priceMatch[0].replace(/[^\\d.]/g, '');\n      const num = parseFloat(numStr);\n      // If it says 'M' or 'million', multiply by 1,000,000\n      if (priceMatch[0].toLowerCase().includes('m') || priceMatch[0].toLowerCase().includes('million')) {\n        price = num * 1000000;\n      } else if (num > 100000) { // Likely already in dollars\n        price = num;\n      } else {\n        price = num * 1000000; // Assume millions if small number\n      }\n      break;\n    }\n  }\n  \n  // Determine category based on keywords and manufacturer\n  let category = '';\n  if (fullText.match(/heavy|G[456]50|Global|7[57]00|Falcon 7X|BBJ/i)) {\n    category = 'Heavy Jet';\n  } else if (fullText.match(/midsize|mid-size|Citation X|Challenger 3[0-9]{2}|G[12]80|Legacy 500/i)) {\n    category = 'Midsize Jet';\n  } else if (fullText.match(/light|Citation (M2|CJ|Mustang)|Learjet|Phenom/i)) {\n    category = 'Light Jet';\n  } else if (fullText.match(/turboprop|King Air|Pilatus|Caravan/i)) {\n    category = 'Turboprop';\n  } else if (fullText.match(/piston|Cirrus|SR22/i)) {\n    category = 'Piston';\n  }\n  \n  // Extract model (get text after manufacturer, up to year or newline)\n  let model = '';\n  if (manufacturer) {\n    const modelMatch = fullText.match(new RegExp(manufacturer + '\\\\s+([A-Z0-9\\\\s-]+)', 'i'));\n    if (modelMatch) {\n      model = modelMatch[1].split(/[,\\n(]/)[0].trim().substring(0, 30);\n    }\n  }\n  \n  items.push({\n    json: {\n      emailId: item.json.id,\n      emailSubject: subject,\n      emailSnippet: emailBody.substring(0, 200),\n      emailDate: item.json.internalDate,\n      manufacturer: manufacturer || 'Unknown',\n      model: model || 'Unknown',\n      year: year,\n      price: price,\n      category: category || 'Unknown',\n      rawEmailBody: emailBody\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "parse-aircraft",
+      "name": "Parse Aircraft Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/leads",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "select",
+              "value": "id,name,company,aircraft_type,budget,budget_known,year_preference,status,presentations,created_at"
+            },
+            {
+              "name": "status",
+              "value": "in.(Inquiry,Presented,Interested)"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-leads",
+      "name": "Fetch Active Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        480
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIALS_ID",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aircraft-data",
+              "name": "aircraft",
+              "value": "={{ $json }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-aircraft",
+      "name": "Set Aircraft Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "leads-data",
+              "name": "leads",
+              "value": "={{ $json }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-leads",
+      "name": "Set Leads Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        900,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll"
+      },
+      "id": "merge-data",
+      "name": "Merge Aircraft and Leads",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Match aircraft to leads based on criteria\nconst matches = [];\n\nfor (const item of $input.all()) {\n  const aircraft = item.json.aircraft;\n  const leads = item.json.leads;\n  \n  if (!leads || !Array.isArray(leads)) {\n    continue;\n  }\n  \n  for (const lead of leads) {\n    let matchScore = 0;\n    const matchReasons = [];\n    \n    // Category/Type match (most important)\n    if (aircraft.category && lead.aircraft_type) {\n      if (aircraft.category.toLowerCase() === lead.aircraft_type.toLowerCase()) {\n        matchScore += 50;\n        matchReasons.push(`✓ Aircraft type matches: ${aircraft.category}`);\n      }\n    }\n    \n    // Budget match\n    if (aircraft.price && lead.budget && lead.budget_known) {\n      const budgetDiff = Math.abs(aircraft.price - lead.budget);\n      const budgetDiffPercent = (budgetDiff / lead.budget) * 100;\n      \n      if (budgetDiffPercent <= 10) {\n        matchScore += 30;\n        matchReasons.push(`✓ Price within 10% of budget: $${(aircraft.price / 1000000).toFixed(2)}M vs $${(lead.budget / 1000000).toFixed(2)}M budget`);\n      } else if (budgetDiffPercent <= 20) {\n        matchScore += 20;\n        matchReasons.push(`✓ Price within 20% of budget: $${(aircraft.price / 1000000).toFixed(2)}M vs $${(lead.budget / 1000000).toFixed(2)}M budget`);\n      } else if (aircraft.price <= lead.budget) {\n        matchScore += 10;\n        matchReasons.push(`○ Price under budget: $${(aircraft.price / 1000000).toFixed(2)}M (budget: $${(lead.budget / 1000000).toFixed(2)}M)`);\n      }\n    } else if (aircraft.price && !lead.budget_known) {\n      matchScore += 5;\n      matchReasons.push(`○ Budget unknown for lead, aircraft price: $${(aircraft.price / 1000000).toFixed(2)}M`);\n    }\n    \n    // Year preference match\n    if (aircraft.year && lead.year_preference) {\n      const yearPref = lead.year_preference;\n      if (yearPref.oldest && yearPref.newest) {\n        if (aircraft.year >= yearPref.oldest && aircraft.year <= yearPref.newest) {\n          matchScore += 20;\n          matchReasons.push(`✓ Year matches preference: ${aircraft.year} (wants ${yearPref.oldest}-${yearPref.newest})`);\n        } else if (aircraft.year >= yearPref.oldest - 2 && aircraft.year <= yearPref.newest + 2) {\n          matchScore += 10;\n          matchReasons.push(`○ Year close to preference: ${aircraft.year} (wants ${yearPref.oldest}-${yearPref.newest})`);\n        }\n      }\n    }\n    \n    // Only include matches with score >= 50 (at minimum, type must match)\n    if (matchScore >= 50) {\n      matches.push({\n        json: {\n          matchScore: matchScore,\n          lead: {\n            id: lead.id,\n            name: lead.name,\n            company: lead.company,\n            aircraft_type: lead.aircraft_type,\n            budget: lead.budget,\n            budget_known: lead.budget_known,\n            year_preference: lead.year_preference,\n            status: lead.status\n          },\n          aircraft: {\n            manufacturer: aircraft.manufacturer,\n            model: aircraft.model,\n            year: aircraft.year,\n            price: aircraft.price,\n            category: aircraft.category,\n            emailSubject: aircraft.emailSubject,\n            emailSnippet: aircraft.emailSnippet,\n            emailId: aircraft.emailId\n          },\n          matchReasons: matchReasons,\n          timestamp: new Date().toISOString()\n        }\n      });\n    }\n  }\n}\n\n// Sort by match score descending\nmatches.sort((a, b) => b.json.matchScore - a.json.matchScore);\n\nreturn matches.length > 0 ? matches : [{ json: { noMatches: true } }];"
+      },
+      "id": "match-logic",
+      "name": "Match Aircraft to Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "has-matches",
+              "leftValue": "={{ $json.noMatches }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "notExists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-matches",
+      "name": "Has Matches?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format matches for email notification\nconst allMatches = $input.all();\n\nif (allMatches.length === 0 || allMatches[0].json.noMatches) {\n  return [{ json: { noMatches: true } }];\n}\n\nlet emailBody = `<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; }\n    h2 { color: #2563eb; }\n    .match { \n      background: #f0f9ff; \n      border-left: 4px solid #2563eb; \n      padding: 15px; \n      margin: 15px 0;\n      border-radius: 4px;\n    }\n    .score { \n      background: #2563eb; \n      color: white; \n      padding: 4px 12px; \n      border-radius: 12px; \n      font-weight: bold;\n      display: inline-block;\n      margin-bottom: 10px;\n    }\n    .lead-info { color: #1e40af; font-weight: bold; margin: 10px 0; }\n    .aircraft-info { color: #0f766e; font-weight: bold; margin: 10px 0; }\n    .reasons { margin: 10px 0; }\n    .reasons li { margin: 5px 0; }\n    .email-link { color: #7c3aed; }\n  </style>\n</head>\n<body>\n  <h2>🎯 Aircraft-Lead Matches Found (${allMatches.length})</h2>\n  <p>Generated: ${new Date().toLocaleString()}</p>\n`;\n\nlet telegramText = `🎯 *Aircraft-Lead Matches Found (${allMatches.length})*\\n\\n`;\n\nfor (let i = 0; i < allMatches.length; i++) {\n  const match = allMatches[i].json;\n  const lead = match.lead;\n  const aircraft = match.aircraft;\n  \n  // Email format\n  emailBody += `\n  <div class=\"match\">\n    <div class=\"score\">Match Score: ${match.matchScore}/100</div>\n    \n    <div class=\"lead-info\">\n      👤 Lead: ${lead.name} ${lead.company ? `(${lead.company})` : ''}\n      <br/>Type: ${lead.aircraft_type} | Budget: ${lead.budget ? '$' + (lead.budget / 1000000).toFixed(2) + 'M' : 'Not specified'} | Status: ${lead.status}\n    </div>\n    \n    <div class=\"aircraft-info\">\n      ✈️ Aircraft: ${aircraft.manufacturer} ${aircraft.model} (${aircraft.year || 'Year N/A'})\n      <br/>Category: ${aircraft.category} | Price: ${aircraft.price ? '$' + (aircraft.price / 1000000).toFixed(2) + 'M' : 'Price N/A'}\n    </div>\n    \n    <div class=\"reasons\">\n      <strong>Match Reasons:</strong>\n      <ul>\n        ${match.matchReasons.map(r => `<li>${r}</li>`).join('')}\n      </ul>\n    </div>\n    \n    <p><strong>Email:</strong> ${aircraft.emailSubject}</p>\n    <p class=\"email-link\"><em>${aircraft.emailSnippet}...</em></p>\n  </div>\n  `;\n  \n  // Telegram format (simplified)\n  telegramText += `*Match ${i + 1}* (Score: ${match.matchScore}/100)\\n`;\n  telegramText += `👤 *Lead:* ${lead.name}${lead.company ? ` (${lead.company})` : ''}\\n`;\n  telegramText += `   Type: ${lead.aircraft_type} | Budget: ${lead.budget ? '$' + (lead.budget / 1000000).toFixed(2) + 'M' : 'N/A'}\\n`;\n  telegramText += `✈️ *Aircraft:* ${aircraft.manufacturer} ${aircraft.model} (${aircraft.year || 'N/A'})\\n`;\n  telegramText += `   Price: ${aircraft.price ? '$' + (aircraft.price / 1000000).toFixed(2) + 'M' : 'N/A'}\\n`;\n  telegramText += `📧 ${aircraft.emailSubject}\\n\\n`;\n}\n\nemailBody += `\n</body>\n</html>`;\n\nreturn [{\n  json: {\n    emailSubject: `🎯 ${allMatches.length} Aircraft-Lead Match${allMatches.length > 1 ? 'es' : ''} Found!`,\n    emailBody: emailBody,\n    telegramText: telegramText,\n    matchCount: allMatches.length,\n    matches: allMatches.map(m => m.json)\n  }\n}];"
+      },
+      "id": "format-notification",
+      "name": "Format Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL@example.com",
+        "subject": "={{ $json.emailSubject }}",
+        "emailType": "html",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Email Notification",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2000,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_OAUTH_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.telegramText }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-telegram",
+      "name": "Send Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIALS_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Parse Aircraft Details').item.json.emailId }}",
+        "labelIds": [
+          "INBOX"
+        ],
+        "options": {}
+      },
+      "id": "mark-processed",
+      "name": "Mark Email as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2220,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_OAUTH_ID",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Morning at 8 AM": {
+      "main": [
+        [
+          {
+            "node": "Fetch Aircraft Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Aircraft Emails": {
+      "main": [
+        [
+          {
+            "node": "Parse Aircraft Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Aircraft Details": {
+      "main": [
+        [
+          {
+            "node": "Set Aircraft Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Active Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Active Leads": {
+      "main": [
+        [
+          {
+            "node": "Set Leads Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Aircraft Data": {
+      "main": [
+        [
+          {
+            "node": "Merge Aircraft and Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Leads Data": {
+      "main": [
+        [
+          {
+            "node": "Merge Aircraft and Leads",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Aircraft and Leads": {
+      "main": [
+        [
+          {
+            "node": "Match Aircraft to Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Aircraft to Leads": {
+      "main": [
+        [
+          {
+            "node": "Has Matches?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Matches?": {
+      "main": [
+        [
+          {
+            "node": "Format Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Notification": {
+      "main": [
+        [
+          {
+            "node": "Send Email Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mark Email as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "id": "aircraft-lead-matcher",
+  "meta": {
+    "instanceId": "your-n8n-instance-id"
+  },
+  "tags": []
+}
