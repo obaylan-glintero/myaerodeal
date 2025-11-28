@@ -1097,10 +1097,13 @@ const PresentationForm = ({ formData, setFormData, modalType, editingItem }) => 
   );
 };
 
-const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
+const AircraftDetailView = ({ aircraft: initialAircraft, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { leads, addNoteToAircraft, deleteAircraft, presentAircraftToLead, currentUserProfile, loadFullAircraftData } = useStore();
+  const { leads, aircraft: allAircraft, addNoteToAircraft, deleteAircraft, presentAircraftToLead, currentUserProfile, loadFullAircraftData } = useStore();
   const [noteText, setNoteText] = useState('');
+
+  // Subscribe to live aircraft data from the store instead of using the static prop
+  const aircraft = allAircraft.find(a => a.id === initialAircraft?.id) || initialAircraft;
 
   if (!aircraft) return null;
 
@@ -1624,11 +1627,14 @@ const AircraftDetailView = ({ aircraft, closeModal, openModal }) => {
   );
 };
 
-const LeadDetailView = ({ lead, closeModal, openModal }) => {
+const LeadDetailView = ({ lead: initialLead, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { aircraft, tasks, addNoteToLead, loadFullAircraftData, deleteLead, loadFullLeadData, updateTask } = useStore();
+  const { aircraft, tasks, leads, addNoteToLead, loadFullAircraftData, deleteLead, loadFullLeadData, updateTask } = useStore();
   const [noteText, setNoteText] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Subscribe to live lead data from the store instead of using the static prop
+  const lead = leads.find(l => l.id === initialLead?.id) || initialLead;
 
   if (!lead) return null;
 
@@ -1936,10 +1942,13 @@ const LeadDetailView = ({ lead, closeModal, openModal }) => {
   );
 };
 
-const DealDetailView = ({ deal, closeModal, openModal }) => {
+const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { aircraft, leads, tasks, addNoteToDeal, updateDealStatus, deleteDeal, loadFullDealData, updateTask } = useStore();
+  const { aircraft, leads, tasks, deals, addNoteToDeal, updateDealStatus, deleteDeal, loadFullDealData, updateTask } = useStore();
   const [noteText, setNoteText] = useState('');
+
+  // Subscribe to live deal data from the store instead of using the static prop
+  const deal = deals.find(d => d.id === initialDeal?.id) || initialDeal;
 
   if (!deal) return null;
 
