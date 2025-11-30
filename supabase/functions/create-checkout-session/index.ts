@@ -14,13 +14,15 @@ serve(async (req) => {
   }
 
   try {
-    // Get request body (for coupon code)
+    // Get request body (for coupon code and plan selection)
     let couponCode = null
+    let plan = 'monthly' // Default to monthly
     try {
       const body = await req.json()
       couponCode = body?.coupon_code
+      plan = body?.plan || 'monthly' // 'monthly' or 'annual'
     } catch (e) {
-      // No body or invalid JSON - that's okay, coupon is optional
+      // No body or invalid JSON - that's okay, defaults will be used
     }
 
     // Initialize Stripe
@@ -90,12 +92,24 @@ serve(async (req) => {
 
     console.log('Origin:', origin, 'Using baseUrl:', baseUrl)
     console.log('Coupon code received:', couponCode)
+    console.log('Plan selected:', plan)
+
+    // Select the appropriate price ID based on plan
+    const priceId = plan === 'annual'
+      ? Deno.env.get('STRIPE_ANNUAL_PRICE_ID')
+      : Deno.env.get('STRIPE_MONTHLY_PRICE_ID')
+
+    if (!priceId) {
+      throw new Error(`Price ID not configured for plan: ${plan}`)
+    }
+
+    console.log('Using price ID:', priceId)
 
     // Build checkout session options
     const sessionOptions: any = {
       line_items: [
         {
-          price: Deno.env.get('STRIPE_PRICE_ID'),
+          price: priceId,
           quantity: 1,
         },
       ],
@@ -110,6 +124,7 @@ serve(async (req) => {
         company_id: company.id,
         company_name: company.name,
         user_id: user.id,
+        plan: plan, // Track which plan was selected
       },
     }
 

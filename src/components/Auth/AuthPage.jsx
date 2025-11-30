@@ -23,6 +23,7 @@ const AuthPage = () => {
   const [checkingInvitation, setCheckingInvitation] = useState(true);
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, feedback: [] });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('monthly'); // 'monthly' or 'annual'
   const { colors, isDark } = useTheme();
   const logo = isDark ? logoDark : logoLight;
 
@@ -271,7 +272,8 @@ const AuthPage = () => {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                coupon_code: couponCode?.trim() || null
+                coupon_code: couponCode?.trim() || null,
+                plan: selectedPlan // Send the selected plan to the Edge Function
               })
             }
           );
@@ -387,6 +389,69 @@ const AuthPage = () => {
                   }}
                   placeholder="AeroJet Brokers Inc."
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Plan Selection (Sign Up Only - NOT for invitations) */}
+          {!isLogin && !invitationToken && (
+            <div>
+              <label className="block text-sm font-medium mb-3" style={{ color: colors.textSecondary }}>
+                Choose Your Plan *
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Monthly Plan */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlan('monthly')}
+                  className="relative p-4 rounded-lg border-2 transition-all"
+                  style={{
+                    backgroundColor: selectedPlan === 'monthly' ? colors.primary + '20' : colors.secondary,
+                    borderColor: selectedPlan === 'monthly' ? colors.primary : colors.border,
+                    color: colors.textPrimary
+                  }}
+                >
+                  {selectedPlan === 'monthly' && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.primary }}>
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <p className="font-bold text-lg" style={{ color: colors.primary }}>Monthly</p>
+                    <p className="text-2xl font-bold my-2" style={{ color: colors.textPrimary }}>$49</p>
+                    <p className="text-xs" style={{ color: colors.textSecondary }}>per month</p>
+                    <p className="text-xs mt-2" style={{ color: colors.textSecondary }}>Billed monthly</p>
+                  </div>
+                </button>
+
+                {/* Annual Plan */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlan('annual')}
+                  className="relative p-4 rounded-lg border-2 transition-all"
+                  style={{
+                    backgroundColor: selectedPlan === 'annual' ? colors.primary + '20' : colors.secondary,
+                    borderColor: selectedPlan === 'annual' ? colors.primary : colors.border,
+                    color: colors.textPrimary
+                  }}
+                >
+                  {selectedPlan === 'annual' && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.primary }}>
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <p className="font-bold text-lg" style={{ color: colors.primary }}>Annual</p>
+                      <span className="text-xs px-2 py-0.5 rounded font-semibold" style={{ backgroundColor: '#10B981', color: 'white' }}>
+                        Save 15%
+                      </span>
+                    </div>
+                    <p className="text-2xl font-bold my-2" style={{ color: colors.textPrimary }}>$499</p>
+                    <p className="text-xs" style={{ color: colors.textSecondary }}>per year</p>
+                    <p className="text-xs mt-2" style={{ color: colors.textSecondary }}>$41.58/month</p>
+                  </div>
+                </button>
               </div>
             </div>
           )}
