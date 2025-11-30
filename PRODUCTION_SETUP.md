@@ -29,11 +29,40 @@ npm install
 ```
 
 ### Step 2: Update Environment Variables
-Edit `.env` file with production Supabase credentials:
+Edit `.env` file with production credentials:
 ```env
+# Supabase Configuration
 VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 VITE_SUPABASE_ANON_KEY=your-production-anon-key
+
+# AI Configuration
 VITE_GEMINI_API_KEY=your-api-key
+
+# Stripe Configuration (PRODUCTION KEYS)
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_your_publishable_key_here
+VITE_STRIPE_MONTHLY_PRICE_ID=price_monthly_price_id_here
+VITE_STRIPE_ANNUAL_PRICE_ID=price_annual_price_id_here
+```
+
+**Important Stripe Setup:**
+1. Go to [Stripe Dashboard](https://dashboard.stripe.com)
+2. Switch to **Production Mode** (toggle in top-left)
+3. Create two subscription products:
+   - **Monthly Plan**: $49/month (with 14-day free trial)
+   - **Annual Plan**: $499/year (with 14-day free trial)
+4. Copy the Price IDs from each product
+5. Get your publishable key from API Keys section
+6. Update the `.env` file with these values
+
+**Note**: The 14-day free trial is configured in the code, not in Stripe. Users will have full access for 14 days before being charged.
+
+**Supabase Edge Function Environment Variables:**
+In your Supabase project settings, add these secrets:
+```bash
+STRIPE_SECRET_KEY=sk_live_your_secret_key_here
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+STRIPE_MONTHLY_PRICE_ID=price_monthly_price_id_here
+STRIPE_ANNUAL_PRICE_ID=price_annual_price_id_here
 ```
 
 ### Step 3: Build for Production
@@ -136,6 +165,15 @@ Before going live:
 - [ ] All screenshots added to landing page ✅
 - [ ] Production Supabase project created
 - [ ] Environment variables updated
+- [ ] **Stripe Production Setup:**
+  - [ ] Switch Stripe to Production mode
+  - [ ] Create Monthly subscription product ($49/month)
+  - [ ] Create Annual subscription product ($499/year)
+  - [ ] Copy Price IDs to environment variables
+  - [ ] Add Stripe publishable key to .env
+  - [ ] Add Stripe secret key to Supabase secrets
+  - [ ] Configure webhook endpoint
+  - [ ] Test checkout flow with real card
 - [ ] Build tested locally
 - [ ] Custom domain configured
 - [ ] SSL certificate active

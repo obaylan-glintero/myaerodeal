@@ -5,12 +5,20 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 export { stripePromise };
 
-// Get Price ID from environment
-export const getStripePriceId = () => {
-  return import.meta.env.VITE_STRIPE_PRICE_ID;
+// Get Price IDs from environment
+export const getStripeMonthlyPriceId = () => {
+  return import.meta.env.VITE_STRIPE_MONTHLY_PRICE_ID;
+};
+
+export const getStripeAnnualPriceId = () => {
+  return import.meta.env.VITE_STRIPE_ANNUAL_PRICE_ID;
 };
 
 // Check if Stripe is configured
 export const isStripeConfigured = () => {
-  return !!(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY && import.meta.env.VITE_STRIPE_PRICE_ID);
+  return !!(
+    import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY &&
+    import.meta.env.VITE_STRIPE_MONTHLY_PRICE_ID &&
+    import.meta.env.VITE_STRIPE_ANNUAL_PRICE_ID
+  );
 };
