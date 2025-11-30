@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, Mail, Save, Trash2, AlertTriangle, Lock, XCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Save, Trash2, AlertTriangle, Lock, XCircle, CreditCard, Calendar, RefreshCw } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -26,6 +26,58 @@ const UserSettings = () => {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelMessage, setCancelMessage] = useState('');
+
+  // Subscription details state
+  const [subscriptionDetails, setSubscriptionDetails] = useState(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [subscriptionError, setSubscriptionError] = useState(null);
+
+  // Fetch subscription details from Stripe
+  const fetchSubscriptionDetails = async () => {
+    if (!currentUserProfile?.company?.stripe_subscription_id) {
+      setSubscriptionLoading(false);
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setSubscriptionLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-subscription-details`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.hasSubscription) {
+          setSubscriptionDetails(data);
+        }
+      } else {
+        setSubscriptionError('Failed to load subscription details');
+      }
+    } catch (error) {
+      console.error('Error fetching subscription details:', error);
+      setSubscriptionError(error.message);
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  // Load subscription details on mount
+  useEffect(() => {
+    fetchSubscriptionDetails();
+  }, [currentUserProfile?.company?.stripe_subscription_id]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -386,6 +438,170 @@ const UserSettings = () => {
           </button>
         </div>
       </div>
+
+      {/* Subscription Management Section */}
+      {currentUserProfile?.company?.stripe_subscription_id && (
+        <div className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
+          <div className="flex items-start gap-3 mb-4">
+            <CreditCard size={24} style={{ color: colors.primary }} />
+            <div>
+              <h3 className="text-xl font-bold" style={{ color: colors.textPrimary }}>
+                Subscription & Billing
+              </h3>
+              <p style={{ color: colors.textSecondary }} className="mt-1">
+                Manage your subscription plan and payment method
+              </p>
+            </div>
+          </div>
+
+          {subscriptionLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="animate-spin" size={24} style={{ color: colors.primary }} />
+              <span className="ml-2" style={{ color: colors.textSecondary }}>Loading subscription details...</span>
+            </div>
+          ) : subscriptionError ? (
+            <div className="p-4 rounded-lg" style={{ backgroundColor: colors.error + '20', color: colors.error }}>
+              {subscriptionError}
+            </div>
+          ) : subscriptionDetails ? (
+            <div className="space-y-4">
+              {/* Current Plan */}
+              <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold" style={{ color: colors.textPrimary }}>Current Plan</h4>
+                  <span
+                    className="px-3 py-1 rounded-full text-xs font-semibold uppercase"
+                    style={{
+                      backgroundColor: subscriptionDetails.subscription.status === 'active'
+                        ? '#10B981'
+                        : subscriptionDetails.subscription.status === 'trialing'
+                        ? '#3B82F6'
+                        : '#6B7280',
+                      color: 'white'
+                    }}
+                  >
+                    {subscriptionDetails.subscription.status}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: colors.textSecondary }}>Plan Type</p>
+                    <p className="text-lg font-bold" style={{ color: colors.textPrimary }}>
+                      {subscriptionDetails.subscription.plan.interval === 'year' ? 'Annual' : 'Monthly'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: colors.textSecondary }}>Price</p>
+                    <p className="text-lg font-bold" style={{ color: colors.textPrimary }}>
+                      ${(subscriptionDetails.subscription.plan.amount / 100).toFixed(0)}/{subscriptionDetails.subscription.plan.interval}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Trial Information */}
+                {subscriptionDetails.subscription.status === 'trialing' && subscriptionDetails.subscription.trial_end && (
+                  <div className="mt-4 p-3 rounded" style={{ backgroundColor: colors.primary + '15' }}>
+                    <div className="flex items-start gap-2">
+                      <Calendar size={18} style={{ color: colors.primary, marginTop: '2px' }} />
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: colors.primary }}>
+                          Free Trial Active
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: colors.textPrimary }}>
+                          Your trial ends on {new Date(subscriptionDetails.subscription.trial_end * 1000).toLocaleDateString('en-US', {
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}. Your payment method will be charged after the trial.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Next Billing Date */}
+                {subscriptionDetails.upcomingInvoice && (
+                  <div className="mt-4 flex items-center justify-between p-3 rounded" style={{ backgroundColor: colors.background }}>
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: colors.textSecondary }}>Next Billing Date</p>
+                      <p className="text-sm font-semibold" style={{ color: colors.textPrimary }}>
+                        {new Date(subscriptionDetails.upcomingInvoice.period_end * 1000).toLocaleDateString('en-US', {
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium" style={{ color: colors.textSecondary }}>Amount</p>
+                      <p className="text-lg font-bold" style={{ color: colors.textPrimary }}>
+                        ${(subscriptionDetails.upcomingInvoice.amount_due / 100).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Method */}
+              {subscriptionDetails.subscription.paymentMethod?.card && (
+                <div className="p-4 rounded-lg" style={{ backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}>
+                  <h4 className="font-semibold mb-3" style={{ color: colors.textPrimary }}>Payment Method</h4>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-8 rounded flex items-center justify-center" style={{ backgroundColor: colors.background }}>
+                        <CreditCard size={20} style={{ color: colors.primary }} />
+                      </div>
+                      <div>
+                        <p className="font-semibold" style={{ color: colors.textPrimary }}>
+                          {subscriptionDetails.subscription.paymentMethod.card.brand.charAt(0).toUpperCase() +
+                           subscriptionDetails.subscription.paymentMethod.card.brand.slice(1)} •••• {subscriptionDetails.subscription.paymentMethod.card.last4}
+                        </p>
+                        <p className="text-xs" style={{ color: colors.textSecondary }}>
+                          Expires {subscriptionDetails.subscription.paymentMethod.card.exp_month}/{subscriptionDetails.subscription.paymentMethod.card.exp_year}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => window.open('https://billing.stripe.com/p/login/test_00000000000000', '_blank')}
+                      className="px-4 py-2 rounded-lg text-sm font-medium"
+                      style={{
+                        backgroundColor: colors.primary + '20',
+                        color: colors.primary,
+                        border: `1px solid ${colors.primary}`
+                      }}
+                    >
+                      Update Card
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={fetchSubscriptionDetails}
+                  disabled={subscriptionLoading}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium"
+                  style={{
+                    backgroundColor: colors.secondary,
+                    color: colors.textPrimary,
+                    border: `1px solid ${colors.border}`,
+                    opacity: subscriptionLoading ? 0.5 : 1
+                  }}
+                >
+                  <RefreshCw size={18} className={subscriptionLoading ? 'animate-spin' : ''} />
+                  Refresh
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-lg text-center" style={{ backgroundColor: colors.secondary }}>
+              <p style={{ color: colors.textSecondary }}>No subscription details available</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Data Management Section (Admin Only) */}
       {currentUserProfile.role === 'admin' && (
