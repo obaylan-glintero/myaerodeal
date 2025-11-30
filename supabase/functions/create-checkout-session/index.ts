@@ -120,6 +120,10 @@ serve(async (req) => {
       client_reference_id: company.id,
       // Only collect payment method if required (skip for 100% off coupons)
       payment_method_collection: 'if_required',
+      // Add 14-day free trial
+      subscription_data: {
+        trial_period_days: 14,
+      },
       metadata: {
         company_id: company.id,
         company_name: company.name,

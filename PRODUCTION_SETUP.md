@@ -48,11 +48,13 @@ VITE_STRIPE_ANNUAL_PRICE_ID=price_annual_price_id_here
 1. Go to [Stripe Dashboard](https://dashboard.stripe.com)
 2. Switch to **Production Mode** (toggle in top-left)
 3. Create two subscription products:
-   - **Monthly Plan**: $49/month
-   - **Annual Plan**: $499/year
+   - **Monthly Plan**: $49/month (with 14-day free trial)
+   - **Annual Plan**: $499/year (with 14-day free trial)
 4. Copy the Price IDs from each product
 5. Get your publishable key from API Keys section
 6. Update the `.env` file with these values
+
+**Note**: The 14-day free trial is configured in the code, not in Stripe. Users will have full access for 14 days before being charged.
 
 **Supabase Edge Function Environment Variables:**
 In your Supabase project settings, add these secrets:

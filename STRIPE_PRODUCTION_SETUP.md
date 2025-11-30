@@ -4,9 +4,11 @@ This guide will help you switch from Stripe sandbox/test mode to production mode
 
 ## Overview
 
-Your application now supports two subscription plans:
-- **Monthly Plan**: $49/month
-- **Annual Plan**: $499/year (15% savings)
+Your application now supports two subscription plans with a 14-day free trial:
+- **Monthly Plan**: $49/month (14-day free trial)
+- **Annual Plan**: $499/year (14-day free trial, 15% savings)
+
+All new users get a **14-day free trial** - they won't be charged until the trial period ends.
 
 ## Prerequisites
 
@@ -154,6 +156,7 @@ git push
 4. Select either Monthly or Annual plan
 5. Complete the Stripe checkout
 6. Use a real credit card (you can cancel the subscription immediately after testing)
+7. **Note**: The card won't be charged for 14 days (trial period)
 
 ### Verify in Stripe Dashboard
 
@@ -230,10 +233,16 @@ If you created a test subscription with a real card:
 
 ## Pricing Summary
 
-| Plan | Price | Billing | Monthly Equivalent | Savings |
-|------|-------|---------|-------------------|---------|
-| Monthly | $49 | Monthly | $49/month | - |
-| Annual | $499 | Yearly | $41.58/month | 15% |
+| Plan | Price | Trial Period | Billing | Monthly Equivalent | Savings |
+|------|-------|--------------|---------|-------------------|---------|
+| Monthly | $49 | 14 days free | Monthly | $49/month | - |
+| Annual | $499 | 14 days free | Yearly | $41.58/month | 15% |
+
+**Trial Period Details:**
+- All subscriptions include a 14-day free trial
+- Users provide payment details upfront but aren't charged until trial ends
+- Full access to all features during the trial
+- Users can cancel anytime during the trial without being charged
 
 ---
 

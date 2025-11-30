@@ -396,9 +396,12 @@ const AuthPage = () => {
           {/* Plan Selection (Sign Up Only - NOT for invitations) */}
           {!isLogin && !invitationToken && (
             <div>
-              <label className="block text-sm font-medium mb-3" style={{ color: colors.textSecondary }}>
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
                 Choose Your Plan *
               </label>
+              <p className="text-sm mb-3 px-3 py-2 rounded-lg" style={{ backgroundColor: colors.primary + '15', color: colors.textPrimary }}>
+                🎉 <strong>14-day free trial</strong> - No charge until your trial ends
+              </p>
               <div className="grid grid-cols-2 gap-4">
                 {/* Monthly Plan */}
                 <button
@@ -420,7 +423,7 @@ const AuthPage = () => {
                     <p className="font-bold text-lg" style={{ color: colors.primary }}>Monthly</p>
                     <p className="text-2xl font-bold my-2" style={{ color: colors.textPrimary }}>$49</p>
                     <p className="text-xs" style={{ color: colors.textSecondary }}>per month</p>
-                    <p className="text-xs mt-2" style={{ color: colors.textSecondary }}>Billed monthly</p>
+                    <p className="text-xs mt-2" style={{ color: colors.textSecondary }}>Billed monthly after trial</p>
                   </div>
                 </button>
 
@@ -449,7 +452,7 @@ const AuthPage = () => {
                     </div>
                     <p className="text-2xl font-bold my-2" style={{ color: colors.textPrimary }}>$499</p>
                     <p className="text-xs" style={{ color: colors.textSecondary }}>per year</p>
-                    <p className="text-xs mt-2" style={{ color: colors.textSecondary }}>$41.58/month</p>
+                    <p className="text-xs mt-2" style={{ color: colors.textSecondary }}>$41.58/month after trial</p>
                   </div>
                 </button>
               </div>
