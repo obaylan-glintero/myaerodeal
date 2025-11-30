@@ -118,8 +118,9 @@ serve(async (req) => {
       cancel_url: `${baseUrl}/payment-cancel`,
       customer_email: company.email || profile.email,
       client_reference_id: company.id,
-      // Only collect payment method if required (skip for 100% off coupons)
-      payment_method_collection: 'if_required',
+      // IMPORTANT: Always collect payment method, even during trial
+      // This ensures we can charge automatically when trial ends
+      payment_method_collection: 'always',
       // Add 14-day free trial
       subscription_data: {
         trial_period_days: 14,
