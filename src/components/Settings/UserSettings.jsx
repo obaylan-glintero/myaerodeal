@@ -593,7 +593,97 @@ const UserSettings = () => {
                   <RefreshCw size={18} className={subscriptionLoading ? 'animate-spin' : ''} />
                   Refresh
                 </button>
+
+                {/* Cancel Subscription Button */}
+                {!showCancelConfirm && (
+                  <button
+                    onClick={() => setShowCancelConfirm(true)}
+                    disabled={cancelLoading ||
+                              (subscriptionDetails.subscription.status !== 'active' &&
+                               subscriptionDetails.subscription.status !== 'trialing')}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium"
+                    style={{
+                      backgroundColor: colors.error,
+                      color: '#FFFFFF',
+                      opacity: (cancelLoading ||
+                                (subscriptionDetails.subscription.status !== 'active' &&
+                                 subscriptionDetails.subscription.status !== 'trialing')) ? 0.5 : 1,
+                      cursor: (cancelLoading ||
+                               (subscriptionDetails.subscription.status !== 'active' &&
+                                subscriptionDetails.subscription.status !== 'trialing')) ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <XCircle size={18} />
+                    Cancel Subscription
+                  </button>
+                )}
               </div>
+
+              {/* Cancel Confirmation */}
+              {showCancelConfirm && (
+                <div className="mt-4 space-y-3">
+                  <div className="p-4 rounded-lg" style={{ backgroundColor: colors.error + '20', border: `2px solid ${colors.error}` }}>
+                    <p className="font-bold mb-2" style={{ color: colors.error }}>
+                      ⚠️ CONFIRM CANCELLATION
+                    </p>
+                    <p className="text-sm mb-2" style={{ color: colors.textPrimary }}>
+                      {subscriptionDetails.subscription.status === 'trialing'
+                        ? 'Are you sure you want to cancel your trial? You will lose access immediately and will not be charged.'
+                        : 'Are you sure you want to cancel your subscription? You will retain access until the end of your current billing period, after which all users will lose access to the system.'}
+                    </p>
+                  </div>
+
+                  {/* Cancel Message */}
+                  {cancelMessage && (
+                    <div
+                      className="p-3 rounded-lg font-medium text-sm"
+                      style={{
+                        backgroundColor: cancelMessage.includes('Error') ? colors.error + '20' : colors.primary + '20',
+                        color: cancelMessage.includes('Error') ? colors.error : colors.primary
+                      }}
+                    >
+                      {cancelMessage}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleCancelSubscription}
+                      disabled={cancelLoading}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold"
+                      style={{
+                        backgroundColor: colors.error,
+                        color: '#FFFFFF',
+                        opacity: cancelLoading ? 0.5 : 1
+                      }}
+                    >
+                      {cancelLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Canceling...
+                        </>
+                      ) : (
+                        <>
+                          <XCircle size={18} />
+                          Yes, Cancel {subscriptionDetails.subscription.status === 'trialing' ? 'Trial' : 'Subscription'}
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowCancelConfirm(false)}
+                      disabled={cancelLoading}
+                      className="flex-1 px-4 py-3 rounded-lg font-semibold"
+                      style={{
+                        backgroundColor: colors.secondary,
+                        color: colors.textPrimary,
+                        border: `1px solid ${colors.border}`
+                      }}
+                    >
+                      Keep {subscriptionDetails.subscription.status === 'trialing' ? 'Trial' : 'Subscription'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-4 rounded-lg text-center" style={{ backgroundColor: colors.secondary }}>
@@ -663,13 +753,13 @@ const UserSettings = () => {
               {!showCancelConfirm ? (
                 <button
                   onClick={() => setShowCancelConfirm(true)}
-                  disabled={currentUserProfile?.company?.subscription_status !== 'active'}
+                  disabled={!['active', 'trialing'].includes(currentUserProfile?.company?.subscription_status)}
                   className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold"
                   style={{
                     backgroundColor: colors.error,
                     color: '#FFFFFF',
-                    opacity: currentUserProfile?.company?.subscription_status !== 'active' ? 0.5 : 1,
-                    cursor: currentUserProfile?.company?.subscription_status !== 'active' ? 'not-allowed' : 'pointer'
+                    opacity: !['active', 'trialing'].includes(currentUserProfile?.company?.subscription_status) ? 0.5 : 1,
+                    cursor: !['active', 'trialing'].includes(currentUserProfile?.company?.subscription_status) ? 'not-allowed' : 'pointer'
                   }}
                 >
                   <XCircle size={18} />
