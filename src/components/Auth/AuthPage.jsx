@@ -256,46 +256,88 @@ const AuthPage = () => {
           const session = authData.session;
 
           if (!session) {
+            console.error('❌ No session found after signup');
+            sessionStorage.removeItem('payment_redirect_pending');
             throw new Error('No active session. Email confirmation may be required.');
           }
 
-          // Call Edge Function to create checkout session
-          console.log('Calling Edge Function:', `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`);
+          console.log('✅ Session found, access_token available');
 
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`,
-            {
+          // Verify environment variables are set
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+          if (!supabaseUrl || !supabaseAnonKey) {
+            console.error('❌ Missing Supabase environment variables');
+            sessionStorage.removeItem('payment_redirect_pending');
+            throw new Error('Missing Supabase configuration. Please check environment variables.');
+          }
+
+          // Call Edge Function to create checkout session
+          const edgeFunctionUrl = `${supabaseUrl}/functions/v1/create-checkout-session`;
+          console.log('📞 Calling Edge Function:', edgeFunctionUrl);
+          console.log('📦 Request payload:', { coupon_code: couponCode?.trim() || null, plan: selectedPlan });
+
+          let response;
+          try {
+            response = await fetch(edgeFunctionUrl, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${session.access_token}`,
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                'apikey': supabaseAnonKey,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
                 coupon_code: couponCode?.trim() || null,
-                plan: selectedPlan // Send the selected plan to the Edge Function
+                plan: selectedPlan
               })
-            }
-          );
+            });
+          } catch (fetchError) {
+            console.error('❌ Fetch error:', fetchError);
+            sessionStorage.removeItem('payment_redirect_pending');
+            throw new Error(`Network error calling checkout function: ${fetchError.message}`);
+          }
 
-          console.log('Edge Function response status:', response.status);
+          console.log('📨 Edge Function response status:', response.status);
 
           if (!response.ok) {
             const errorText = await response.text();
-            console.error('Edge Function error:', errorText);
-            throw new Error(`Failed to create checkout session: ${response.status} - ${errorText}`);
+            console.error('❌ Edge Function error response:', errorText);
+            sessionStorage.removeItem('payment_redirect_pending');
+            throw new Error(`Failed to create checkout session (${response.status}): ${errorText}`);
           }
 
-          const data = await response.json();
-          console.log('Edge Function response:', data);
+          let data;
+          try {
+            data = await response.json();
+            console.log('📄 Edge Function response data:', data);
+          } catch (parseError) {
+            console.error('❌ Failed to parse response:', parseError);
+            sessionStorage.removeItem('payment_redirect_pending');
+            throw new Error('Invalid response from checkout function');
+          }
 
-          if (data.error || !data.url) {
-            throw new Error(data.error || 'Failed to create checkout session - no URL returned');
+          if (data.error) {
+            console.error('❌ Checkout session error:', data.error);
+            sessionStorage.removeItem('payment_redirect_pending');
+            throw new Error(data.error);
+          }
+
+          if (!data.url) {
+            console.error('❌ No URL in response:', data);
+            sessionStorage.removeItem('payment_redirect_pending');
+            throw new Error('No checkout URL returned. Please contact support.');
           }
 
           // Redirect to Stripe Checkout
-          console.log('Redirecting to Stripe:', data.url);
-          window.location.href = data.url;
+          console.log('✅ Redirecting to Stripe:', data.url);
+          console.log('🚀 About to redirect in 100ms...');
+
+          // Small delay to ensure logs are visible and state is saved
+          setTimeout(() => {
+            console.log('🚀 Executing redirect now...');
+            window.location.href = data.url;
+          }, 100);
         }
       }
     } catch (err) {
