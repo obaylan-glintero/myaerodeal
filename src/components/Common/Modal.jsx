@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart, Clock, ListChecks, CheckCircle2 } from 'lucide-react';
+import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart, Clock, ListChecks, CheckCircle2, Plus } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -1839,12 +1839,26 @@ const LeadDetailView = ({ lead: initialLead, closeModal, openModal }) => {
       )}
 
       {/* Tasks */}
-      {relatedTasks.length > 0 && (
-        <div>
-          <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-semibold flex items-center gap-2" style={{ color: colors.primary }}>
             <ListChecks size={18} />
             Tasks ({relatedTasks.length})
           </h4>
+          <button
+            onClick={() => {
+              closeModal();
+              openModal('task', { relatedTo: { type: 'lead', id: lead.id } });
+            }}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold hover:opacity-90"
+            style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            title="Add Task"
+          >
+            <Plus size={16} />
+            Add Task
+          </button>
+        </div>
+        {relatedTasks.length > 0 && (
           <div className="space-y-2 max-h-60 overflow-y-auto">
             {pendingTasks.map((task) => (
               <div key={task.id} className="flex items-start gap-2 text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
@@ -1900,8 +1914,8 @@ const LeadDetailView = ({ lead: initialLead, closeModal, openModal }) => {
               </>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Initial Notes (from form) */}
       {lead.notes && lead.notes.trim() && (
@@ -2251,12 +2265,26 @@ const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
       )}
 
       {/* Tasks */}
-      {relatedTasks.length > 0 && (
-        <div>
-          <h4 className="font-semibold mb-3 flex items-center gap-2" style={{ color: colors.primary }}>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-semibold flex items-center gap-2" style={{ color: colors.primary }}>
             <ListChecks size={18} />
             Tasks ({relatedTasks.length})
           </h4>
+          <button
+            onClick={() => {
+              closeModal();
+              openModal('task', { relatedTo: { type: 'deal', id: deal.id } });
+            }}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold hover:opacity-90"
+            style={{ backgroundColor: colors.primary, color: colors.secondary }}
+            title="Add Task"
+          >
+            <Plus size={16} />
+            Add Task
+          </button>
+        </div>
+        {relatedTasks.length > 0 && (
           <div className="space-y-2 max-h-60 overflow-y-auto">
             {pendingTasks.map((task) => (
               <div key={task.id} className="flex items-start gap-2 text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
@@ -2312,8 +2340,8 @@ const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
               </>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Notes */}
       <div>
