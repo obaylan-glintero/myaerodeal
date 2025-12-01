@@ -1510,7 +1510,7 @@ export const useStore = create((set, get) => ({
         .from('leads')
         .insert([{
           user_id: currentUser.id,
-          company_id: currentUserProfile?.company_id,
+          company_id: currentUserProfile?.company_id || null,
           name: leadData.name || '',
           company: leadData.company || '',
           aircraft_type: leadData.aircraftType || '',
@@ -1693,7 +1693,7 @@ export const useStore = create((set, get) => ({
         .from('aircraft')
         .insert([{
           user_id: currentUser.id,
-          company_id: currentUserProfile?.company_id,
+          company_id: currentUserProfile?.company_id || null,
           manufacturer: aircraftData.manufacturer || '',
           model: aircraftData.model || '',
           yom: aircraftData.yom,
@@ -1873,7 +1873,7 @@ export const useStore = create((set, get) => ({
       // Build the insert data object, filtering out undefined values
       const insertData = {
         user_id: currentUser.id,
-        company_id: currentUserProfile?.company_id,
+        company_id: currentUserProfile?.company_id || null,
         deal_name: dealData.dealName || '',
         client_name: dealData.clientName || '',
         related_lead: dealData.relatedLead || null,
@@ -2149,7 +2149,7 @@ export const useStore = create((set, get) => ({
         .from('tasks')
         .insert([{
           user_id: currentUser.id,
-          company_id: currentUserProfile?.company_id,
+          company_id: currentUserProfile?.company_id || null,
           title: taskData.title || '',
           description: taskData.description || '',
           due_date: validDueDate,
@@ -2272,7 +2272,7 @@ export const useStore = create((set, get) => ({
         .from('tasks')
         .insert([{
           user_id: currentUser.id,
-          company_id: currentUserProfile?.company_id,
+          company_id: currentUserProfile?.company_id || null,
           title,
           description: `Auto-generated task for ${type}`,
           due_date: taskDueDate,
