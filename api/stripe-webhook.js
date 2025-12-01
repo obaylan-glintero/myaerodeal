@@ -19,22 +19,23 @@ async function getRawBody(req) {
 }
 
 export default async function handler(req, res) {
-  console.log('📥 Webhook received:', req.method, req.url);
-
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Stripe-Signature');
-    return res.status(200).end();
-  }
-
-  // Only accept POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed', method: req.method });
-  }
-
+  // Add error handling wrapper
   try {
+    console.log('📥 Webhook received:', req.method, req.url);
+
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Stripe-Signature');
+      return res.status(200).end();
+    }
+
+    // Only accept POST
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed', method: req.method });
+    }
+
     // Get raw body for Stripe signature verification
     const rawBody = await getRawBody(req);
 
@@ -47,7 +48,13 @@ export default async function handler(req, res) {
 
     if (!supabaseUrl || !supabaseKey) {
       console.error('❌ Missing Supabase credentials');
-      return res.status(500).json({ error: 'Configuration error' });
+      console.error('VITE_SUPABASE_URL:', !!process.env.VITE_SUPABASE_URL);
+      console.error('SUPABASE_URL:', !!process.env.SUPABASE_URL);
+      console.error('SUPABASE_SERVICE_ROLE_KEY:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+      return res.status(500).json({
+        error: 'Configuration error',
+        details: 'Missing Supabase credentials. Check Vercel environment variables.'
+      });
     }
 
     console.log('🚀 Forwarding to Supabase:', `${supabaseUrl}/functions/v1/stripe-webhook`);
@@ -74,7 +81,11 @@ export default async function handler(req, res) {
 
     return res.status(response.status).json(data);
   } catch (error) {
-    console.error('❌ Webhook proxy error:', error);
-    return res.status(500).json({ error: error.message });
+    console.error('❌ Webhook handler error:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
