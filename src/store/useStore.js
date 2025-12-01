@@ -2146,12 +2146,22 @@ export const useStore = create((set, get) => ({
       const validDueDate = taskData.dueDate && taskData.dueDate.trim() !== '' ? taskData.dueDate : null;
 
       // Validate relatedTo - ensure it's either null or has valid type and id
+      console.log('🔍 Validating relatedTo:', taskData.relatedTo);
       let validRelatedTo = null;
       if (taskData.relatedTo && taskData.relatedTo.type && taskData.relatedTo.id && !isNaN(taskData.relatedTo.id) && taskData.relatedTo.id !== '') {
         validRelatedTo = {
           type: taskData.relatedTo.type,
           id: Number(taskData.relatedTo.id)
         };
+        console.log('🔍 RelatedTo validated successfully:', validRelatedTo);
+      } else {
+        console.log('🔍 RelatedTo validation failed:', {
+          hasRelatedTo: !!taskData.relatedTo,
+          hasType: !!taskData.relatedTo?.type,
+          hasId: !!taskData.relatedTo?.id,
+          isNotNaN: !isNaN(taskData.relatedTo?.id),
+          isNotEmpty: taskData.relatedTo?.id !== ''
+        });
       }
 
       // Build insert data with explicit null handling

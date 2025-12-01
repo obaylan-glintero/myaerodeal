@@ -939,6 +939,8 @@ const TaskForm = ({ formData, setFormData }) => {
   const relatedType = formData.relatedTo?.type || 'none';
   const relatedId = formData.relatedTo?.id || '';
 
+  console.log('🔍 TaskForm rendering with:', { formData, relatedType, relatedId });
+
   const inputStyle = {
     backgroundColor: colors.cardBg,
     color: colors.textPrimary,
