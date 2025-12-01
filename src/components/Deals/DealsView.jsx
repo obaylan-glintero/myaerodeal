@@ -1329,3 +1329,4 @@ const NotesSection = ({ notes, onAddNote }) => {
 };
 
 export default DealsView;
+export { DealTaskActions };
