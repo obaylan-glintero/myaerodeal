@@ -1,8 +1,29 @@
+
+
 {
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+
+  "functions": {
+
+    "api/stripe-webhook.js": {
+
+      "memory": 1024,
+
+      "maxDuration": 10
+
     }
+
+  },
+
+  "rewrites": [
+
+    {
+
+      "source": "/api/stripe-webhook",
+
+      "destination": "/api/stripe-webhook.js"
+
+    }
+
   ]
+
 }

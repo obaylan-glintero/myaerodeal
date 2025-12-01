@@ -1,23 +1,3 @@
-// Vercel Serverless Function: Stripe Webhook Proxy
-// This receives Stripe webhooks and forwards them to Supabase with auth
-
-// Disable body parsing so we can get raw body for Stripe signature verification
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-// Helper to get raw body
-async function getRawBody(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', (chunk) => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    req.on('error', reject);
-  });
-}
-
 export default async function handler(req, res) {
   // Add error handling wrapper
   try {
@@ -88,4 +68,3 @@ export default async function handler(req, res) {
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
-}

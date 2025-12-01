@@ -563,7 +563,7 @@ const UserSettings = () => {
                       </div>
                     </div>
                     <button
-                      onClick={() => window.open('https://billing.stripe.com/p/login/test_00000000000000', '_blank')}
+                      onClick={() => window.open('https://billing.stripe.com/p/login/8x28wO44V5iR2nm9bo1oI00', '_blank')}
                       className="px-4 py-2 rounded-lg text-sm font-medium"
                       style={{
                         backgroundColor: colors.primary + '20',
