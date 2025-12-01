@@ -1,35 +1,70 @@
 export default async function handler(req, res) {
+  // Add error handling wrapper
+  try {
+    console.log('📥 Webhook received:', req.method, req.url);
 
-  console.log('📥 Webhook received:', req.method, req.url);
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Stripe-Signature');
+      return res.status(200).end();
+    }
 
- 
+    // Only accept POST
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed', method: req.method });
+    }
 
-  // Only accept POST
+    // Get raw body for Stripe signature verification
+    const rawBody = await getRawBody(req);
 
-  if (req.method !== 'POST') {
+    console.log('📦 Body length:', rawBody.length);
+    console.log('🔑 Stripe signature present:', !!req.headers['stripe-signature']);
 
-    return res.status(405).json({ error: 'Method not allowed' });
+    // Forward request to Supabase Edge Function with authentication
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // Handle CORS preflight
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ Missing Supabase credentials');
+      console.error('VITE_SUPABASE_URL:', !!process.env.VITE_SUPABASE_URL);
+      console.error('SUPABASE_URL:', !!process.env.SUPABASE_URL);
+      console.error('SUPABASE_SERVICE_ROLE_KEY:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+      return res.status(500).json({
+        error: 'Configuration error',
+        details: 'Missing Supabase credentials. Check Vercel environment variables.'
+      });
+    }
 
-  if (req.method === 'OPTIONS') {
+    console.log('🚀 Forwarding to Supabase:', `${supabaseUrl}/functions/v1/stripe-webhook`);
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    const response = await fetch(`${supabaseUrl}/functions/v1/stripe-webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Stripe-Signature': req.headers['stripe-signature'] || '',
+      },
+      body: rawBody,
+    });
 
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    const responseText = await response.text();
+    console.log('📨 Supabase response:', response.status, responseText);
 
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Stripe-Signature');
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = { message: responseText };
+    }
 
-    return res.status(200).end();
-
-  }
-
- 
-
-  // Only accept POST
-
-  if (req.method !== 'POST') {
-
-    return res.status(405).json({ error: 'Method not allowed', method: req.method });
-
+    return res.status(response.status).json(data);
+  } catch (error) {
+    console.error('❌ Webhook handler error:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
