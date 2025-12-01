@@ -52,7 +52,7 @@ function PaymentSuccess() {
               </svg>
               <div className="text-left">
                 <p className="font-medium" style={{ color: colors.text }}>Subscription activated</p>
-                <p className="text-sm" style={{ color: colors.textSecondary }}>$99/month - Cancel anytime</p>
+                <p className="text-sm" style={{ color: colors.textSecondary }}>$49/month - Cancel anytime</p>
               </div>
             </div>
 
