@@ -958,11 +958,20 @@ const TaskForm = ({ formData, setFormData }) => {
   };
 
   const handleRelatedIdChange = (e) => {
-    const newId = parseInt(e.target.value, 10);
-    setFormData({
-      ...formData,
-      relatedTo: { type: relatedType, id: newId }
-    });
+    const value = e.target.value;
+    if (!value || value === '') {
+      // If no selection, keep the type but clear the id
+      setFormData({
+        ...formData,
+        relatedTo: { type: relatedType, id: '' }
+      });
+    } else {
+      const newId = parseInt(value, 10);
+      setFormData({
+        ...formData,
+        relatedTo: { type: relatedType, id: newId }
+      });
+    }
   };
 
   return (
