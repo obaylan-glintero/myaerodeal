@@ -5,6 +5,7 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import SearchableDropdown from './SearchableDropdown';
 import logo from '../../assets/MyAeroDeal_dark.png';
+import { DealTaskActions } from '../Deals/DealsView';
 
 const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
   // Initialize formData with proper defaults for dealFromLead
@@ -2046,7 +2047,7 @@ const LeadDetailView = ({ lead: initialLead, closeModal, openModal }) => {
 
 const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { aircraft, leads, tasks, deals, addNoteToDeal, updateDealStatus, deleteDeal, loadFullDealData, updateTask } = useStore();
+  const { aircraft, leads, tasks, deals, addNoteToDeal, updateDealStatus, deleteDeal, loadFullDealData, updateTask, currentUserProfile } = useStore();
   const [noteText, setNoteText] = useState('');
 
   // Subscribe to live deal data from the store instead of using the static prop
@@ -2402,6 +2403,9 @@ const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
           </div>
         </div>
       </div>
+
+      {/* Gantt Chart and Checklist Actions */}
+      <DealTaskActions deal={deal} tasks={relatedTasks} currentUserProfile={currentUserProfile} />
 
       {/* Action Buttons */}
       <div className="space-y-3 pt-4 border-t" style={{ borderColor: colors.border }}>
