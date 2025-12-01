@@ -924,6 +924,11 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
 
 const TaskForm = ({ formData, setFormData }) => {
   const { colors } = useTheme();
+  const { leads, deals } = useStore();
+
+  // Determine current related type and id from formData.relatedTo
+  const relatedType = formData.relatedTo?.type || 'none';
+  const relatedId = formData.relatedTo?.id || '';
 
   const inputStyle = {
     backgroundColor: colors.cardBg,
@@ -936,6 +941,23 @@ const TaskForm = ({ formData, setFormData }) => {
       color: ${colors.textSecondary};
     }
   `;
+
+  const handleRelatedTypeChange = (e) => {
+    const newType = e.target.value;
+    if (newType === 'none') {
+      setFormData({ ...formData, relatedTo: null });
+    } else {
+      setFormData({ ...formData, relatedTo: { type: newType, id: '' } });
+    }
+  };
+
+  const handleRelatedIdChange = (e) => {
+    const newId = parseInt(e.target.value, 10);
+    setFormData({
+      ...formData,
+      relatedTo: { type: relatedType, id: newId }
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -982,6 +1004,55 @@ const TaskForm = ({ formData, setFormData }) => {
         <option value="pending">Pending</option>
         <option value="completed">Completed</option>
       </select>
+
+      {/* Related To Section */}
+      <div className="border-t pt-4" style={{ borderColor: colors.border }}>
+        <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>
+          Related To (Optional)
+        </label>
+        <select
+          value={relatedType}
+          onChange={handleRelatedTypeChange}
+          className="w-full px-4 py-2 border rounded-lg mb-2"
+          style={inputStyle}
+        >
+          <option value="none">None</option>
+          <option value="lead">Lead</option>
+          <option value="deal">Deal</option>
+        </select>
+
+        {relatedType === 'lead' && (
+          <select
+            value={relatedId}
+            onChange={handleRelatedIdChange}
+            className="w-full px-4 py-2 border rounded-lg"
+            style={inputStyle}
+          >
+            <option value="">Select a Lead</option>
+            {leads.map((lead) => (
+              <option key={lead.id} value={lead.id}>
+                {lead.name} {lead.company ? `(${lead.company})` : ''} - {lead.status}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {relatedType === 'deal' && (
+          <select
+            value={relatedId}
+            onChange={handleRelatedIdChange}
+            className="w-full px-4 py-2 border rounded-lg"
+            style={inputStyle}
+          >
+            <option value="">Select a Deal</option>
+            {deals.map((deal) => (
+              <option key={deal.id} value={deal.id}>
+                {deal.dealName} {deal.clientName ? `- ${deal.clientName}` : ''} ({deal.status})
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
     </div>
   );
 };
