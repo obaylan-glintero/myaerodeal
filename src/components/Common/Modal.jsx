@@ -1045,35 +1045,59 @@ const TaskForm = ({ formData, setFormData }) => {
         </select>
 
         {relatedType === 'lead' && (
-          <select
+          <SearchableDropdown
+            options={leads}
             value={relatedId}
-            onChange={handleRelatedIdChange}
-            className="w-full px-4 py-2 border rounded-lg"
-            style={inputStyle}
-          >
-            <option value="">Select a Lead</option>
-            {leads.map((lead) => (
-              <option key={lead.id} value={lead.id}>
-                {lead.name} {lead.company ? `(${lead.company})` : ''} - {lead.status}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => {
+              const isNumeric = !Number.isNaN(Number(value));
+              const newId = isNumeric ? Number(value) : value;
+              console.log('🔍 Lead selected - value:', value, 'isNumeric:', isNumeric, 'newId:', newId);
+              setFormData({
+                ...formData,
+                relatedTo: { type: relatedType, id: newId }
+              });
+            }}
+            placeholder="Select a Lead"
+            searchPlaceholder="Search by name, company, status..."
+            getOptionValue={(lead) => lead.id}
+            getOptionLabel={(lead) => `${lead.name}${lead.company ? ` (${lead.company})` : ''} - ${lead.status}`}
+            renderOption={(lead) => (
+              <div>
+                <div style={{ fontWeight: 500 }}>{lead.name}</div>
+                <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+                  {lead.company && `${lead.company} • `}{lead.status}
+                </div>
+              </div>
+            )}
+          />
         )}
 
         {relatedType === 'deal' && (
-          <select
+          <SearchableDropdown
+            options={deals}
             value={relatedId}
-            onChange={handleRelatedIdChange}
-            className="w-full px-4 py-2 border rounded-lg"
-            style={inputStyle}
-          >
-            <option value="">Select a Deal</option>
-            {deals.map((deal) => (
-              <option key={deal.id} value={deal.id}>
-                {deal.dealName} {deal.clientName ? `- ${deal.clientName}` : ''} ({deal.status})
-              </option>
-            ))}
-          </select>
+            onChange={(value) => {
+              const isNumeric = !Number.isNaN(Number(value));
+              const newId = isNumeric ? Number(value) : value;
+              console.log('🔍 Deal selected - value:', value, 'isNumeric:', isNumeric, 'newId:', newId);
+              setFormData({
+                ...formData,
+                relatedTo: { type: relatedType, id: newId }
+              });
+            }}
+            placeholder="Select a Deal"
+            searchPlaceholder="Search by deal name, client, status..."
+            getOptionValue={(deal) => deal.id}
+            getOptionLabel={(deal) => `${deal.dealName}${deal.clientName ? ` - ${deal.clientName}` : ''} (${deal.status})`}
+            renderOption={(deal) => (
+              <div>
+                <div style={{ fontWeight: 500 }}>{deal.dealName}</div>
+                <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+                  {deal.clientName && `${deal.clientName} • `}{deal.status}
+                </div>
+              </div>
+            )}
+          />
         )}
       </div>
     </div>
