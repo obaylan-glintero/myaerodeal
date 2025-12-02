@@ -971,7 +971,10 @@ const TaskForm = ({ formData, setFormData }) => {
         relatedTo: { type: relatedType, id: '' }
       });
     } else {
-      const newId = parseInt(value, 10);
+      // Keep as-is for UUID strings, convert to number if numeric
+      const isNumeric = !Number.isNaN(Number(value));
+      const newId = isNumeric ? Number(value) : value;
+      console.log('🔍 handleRelatedIdChange - value:', value, 'isNumeric:', isNumeric, 'newId:', newId);
       setFormData({
         ...formData,
         relatedTo: { type: relatedType, id: newId }
