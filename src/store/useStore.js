@@ -2147,21 +2147,30 @@ export const useStore = create((set, get) => ({
 
       // Validate relatedTo - ensure it's either null or has valid type and id
       console.log('🔍 Validating relatedTo:', taskData.relatedTo);
+      console.log('🔍 relatedTo.id type:', typeof taskData.relatedTo?.id, 'value:', taskData.relatedTo?.id);
       let validRelatedTo = null;
-      if (taskData.relatedTo && taskData.relatedTo.type && taskData.relatedTo.id && !isNaN(taskData.relatedTo.id) && taskData.relatedTo.id !== '') {
-        validRelatedTo = {
-          type: taskData.relatedTo.type,
-          id: Number(taskData.relatedTo.id)
-        };
-        console.log('🔍 RelatedTo validated successfully:', validRelatedTo);
+
+      if (taskData.relatedTo && taskData.relatedTo.type) {
+        const id = taskData.relatedTo.id;
+        // Check if id is a valid number or numeric string (but not empty string)
+        if (id !== null && id !== undefined && id !== '' && !Number.isNaN(Number(id))) {
+          validRelatedTo = {
+            type: taskData.relatedTo.type,
+            id: Number(id)
+          };
+          console.log('🔍 RelatedTo validated successfully:', validRelatedTo);
+        } else {
+          console.log('🔍 RelatedTo validation failed - invalid id:', {
+            id: id,
+            idType: typeof id,
+            isNull: id === null,
+            isUndefined: id === undefined,
+            isEmpty: id === '',
+            numberIsNaN: Number.isNaN(Number(id))
+          });
+        }
       } else {
-        console.log('🔍 RelatedTo validation failed:', {
-          hasRelatedTo: !!taskData.relatedTo,
-          hasType: !!taskData.relatedTo?.type,
-          hasId: !!taskData.relatedTo?.id,
-          isNotNaN: !isNaN(taskData.relatedTo?.id),
-          isNotEmpty: taskData.relatedTo?.id !== ''
-        });
+        console.log('🔍 RelatedTo validation failed - missing relatedTo or type');
       }
 
       // Build insert data with explicit null handling
