@@ -2152,22 +2152,25 @@ export const useStore = create((set, get) => ({
 
       if (taskData.relatedTo && taskData.relatedTo.type) {
         const id = taskData.relatedTo.id;
-        // Check if id is a valid number or numeric string (but not empty string)
-        if (id !== null && id !== undefined && id !== '' && !Number.isNaN(Number(id))) {
-          validRelatedTo = {
-            type: taskData.relatedTo.type,
-            id: Number(id)
-          };
-          console.log('🔍 RelatedTo validated successfully:', validRelatedTo);
+        // Accept both numeric IDs and UUID strings
+        // Valid if: not null/undefined/empty AND (is a number OR is a valid UUID string)
+        if (id !== null && id !== undefined && id !== '') {
+          // Check if it's a number or numeric string
+          const isNumeric = !Number.isNaN(Number(id));
+          // Check if it's a UUID string (basic check: string with dashes and length >= 32)
+          const isUUID = typeof id === 'string' && id.includes('-') && id.length >= 32;
+
+          if (isNumeric || isUUID) {
+            validRelatedTo = {
+              type: taskData.relatedTo.type,
+              id: isNumeric ? Number(id) : id  // Keep as number or UUID string
+            };
+            console.log('🔍 RelatedTo validated successfully:', validRelatedTo, '(isNumeric:', isNumeric, 'isUUID:', isUUID, ')');
+          } else {
+            console.log('🔍 RelatedTo validation failed - invalid id (not numeric or UUID):', { id, idType: typeof id, isNumeric, isUUID });
+          }
         } else {
-          console.log('🔍 RelatedTo validation failed - invalid id:', {
-            id: id,
-            idType: typeof id,
-            isNull: id === null,
-            isUndefined: id === undefined,
-            isEmpty: id === '',
-            numberIsNaN: Number.isNaN(Number(id))
-          });
+          console.log('🔍 RelatedTo validation failed - id is null/undefined/empty');
         }
       } else {
         console.log('🔍 RelatedTo validation failed - missing relatedTo or type');
@@ -2237,13 +2240,24 @@ export const useStore = create((set, get) => ({
       if (updatedData.description !== undefined) dbData.description = updatedData.description;
       if (updatedData.dueDate !== undefined) dbData.due_date = updatedData.dueDate || null;
 
-      // Validate relatedTo - ensure it's either null or has valid type and id
+      // Validate relatedTo - ensure it's either null or has valid type and id (numeric or UUID)
       if (updatedData.relatedTo !== undefined) {
-        if (updatedData.relatedTo && updatedData.relatedTo.type && updatedData.relatedTo.id && !isNaN(updatedData.relatedTo.id) && updatedData.relatedTo.id !== '') {
-          dbData.related_to = {
-            type: updatedData.relatedTo.type,
-            id: Number(updatedData.relatedTo.id)
-          };
+        if (updatedData.relatedTo && updatedData.relatedTo.type) {
+          const id = updatedData.relatedTo.id;
+          if (id !== null && id !== undefined && id !== '') {
+            const isNumeric = !Number.isNaN(Number(id));
+            const isUUID = typeof id === 'string' && id.includes('-') && id.length >= 32;
+            if (isNumeric || isUUID) {
+              dbData.related_to = {
+                type: updatedData.relatedTo.type,
+                id: isNumeric ? Number(id) : id  // Keep as number or UUID string
+              };
+            } else {
+              dbData.related_to = null;
+            }
+          } else {
+            dbData.related_to = null;
+          }
         } else {
           dbData.related_to = null;
         }

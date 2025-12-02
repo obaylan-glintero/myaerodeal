@@ -2293,6 +2293,8 @@ const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
           </h4>
           <button
             onClick={() => {
+              console.log('🔍 Deal object:', deal);
+              console.log('🔍 Deal ID type:', typeof deal.id, 'value:', deal.id);
               closeModal();
               openModal('task', { relatedTo: { type: 'deal', id: deal.id } });
             }}
