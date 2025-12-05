@@ -2764,10 +2764,18 @@ export const useStore = create((set, get) => ({
 
     return `You are an expert aircraft transaction attorney and deal coordinator specializing in Letters of Intent for aircraft acquisitions.
 
-TODAY'S DATE: ${todayStr}
-Use this date as the reference point for calculating all relative deadlines (e.g., "within 5 business days" = add 7 calendar days from today).
+DATE CALCULATION RULES (CRITICAL):
+- T0 (Day Zero) = ${todayStr} (the date this document is being processed)
+- ALL relative dates in the document must be converted to actual calendar dates using T0 as the starting point
+- Examples:
+  - "within 5 business days" = T0 + 7 calendar days = calculate the actual date
+  - "within 10 days" = T0 + 10 days = calculate the actual date
+  - "within 2 weeks" = T0 + 14 days = calculate the actual date
+  - "within 30 days" = T0 + 30 days = calculate the actual date
+  - "on or before [X] days after execution" = T0 + X days = calculate the actual date
+- ALWAYS output actual YYYY-MM-DD dates, never relative terms like "T0+5" or "5 days from execution"
 
-TASK: Extract ALL actionable tasks, deadlines, and obligations from this Letter of Intent (LOI).
+TASK: Extract actionable tasks and deadlines from this Letter of Intent (LOI).
 
 DEAL CONTEXT:
 - Aircraft: ${aircraftInfo}
@@ -2777,28 +2785,33 @@ DOCUMENT TEXT:
 ${documentText}
 
 EXTRACTION INSTRUCTIONS:
-1. Extract EVERY deadline, obligation, payment requirement, and contingency
-2. Convert ALL relative dates to actual calendar dates based on today's date (${todayStr})
-   - "5 business days" = add 7 calendar days
-   - "10 days" = add 10 calendar days
-   - "2 weeks" = add 14 calendar days
-   - "30 days" = add 30 calendar days
-3. Identify who is responsible for each task (buyer/seller/both/escrow agent/third-party)
+1. Extract deadlines, obligations, and payment requirements
+2. Calculate actual calendar dates for ALL deadlines using T0 = ${todayStr}
+3. Identify who is responsible for each task (buyer/seller/both/escrow/third-party)
 4. Include specific dollar amounts where mentioned
 5. Reference the source section/clause when identifiable
+
+DO NOT EXTRACT (exclude these entirely):
+- Conditional/contingency tasks that only apply if something goes wrong (e.g., "default curing period", "remedies upon breach", "termination for cause")
+- Hypothetical scenarios (e.g., "if buyer fails to...", "in the event of default...")
+- Indemnification obligations
+- Survival periods for representations
+- Dispute resolution procedures
+- Remedies and penalties for non-performance
+- Any task that depends on a party NOT performing their obligations
+
+ONLY EXTRACT tasks that are part of the normal, successful transaction flow.
 
 CRITICAL LOI ITEMS TO EXTRACT:
 - LOI execution/acceptance deadline
 - Earnest money deposit amount and payment deadline
-- Exclusivity/no-shop period duration and end date
-- Due diligence period start and end dates
+- Exclusivity/no-shop period end date
+- Due diligence period end date
 - Aircraft inspection scheduling deadline
-- Records review period and deadline
+- Records review deadline
 - Financing contingency deadline (if applicable)
-- Purchase price and payment structure
-- Conditions that must be satisfied before closing
-- Termination rights and required notice periods
-- Expiration date of the LOI itself
+- Purchase price confirmation
+- Expiration date of the LOI
 
 Return ONLY valid JSON (no markdown, no code blocks, no extra text):
 
@@ -2810,13 +2823,13 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
       "dueDate": "YYYY-MM-DD",
       "priority": "high|medium|low",
       "responsibleParty": "buyer|seller|both|escrow|third-party",
-      "category": "payment|inspection|document|notice|contingency|closing",
+      "category": "payment|inspection|document|notice|closing",
       "sourceClause": "Section X.X or paragraph reference",
       "amount": 50000
     }
   ],
   "keyDates": {
-    "effectiveDate": "YYYY-MM-DD or null",
+    "effectiveDate": "${todayStr}",
     "loiExpiration": "YYYY-MM-DD or null",
     "dueDiligenceEnd": "YYYY-MM-DD or null",
     "exclusivityEnd": "YYYY-MM-DD or null"
@@ -2829,11 +2842,11 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
 }
 
 PRIORITY GUIDELINES:
-- high: Payment deadlines, LOI execution deadline, inspection dates, contingency expirations, any deadline that if missed could terminate the deal
+- high: Payment deadlines, LOI execution deadline, inspection dates, contingency expirations
 - medium: Document reviews, scheduling coordination, records requests
-- low: Informational items, post-closing considerations, nice-to-haves
+- low: Informational items, nice-to-haves
 
-IMPORTANT: Extract comprehensively. A missed deadline in an LOI can cost the deal. If a date cannot be determined, use null for dueDate but still include the task.`;
+Remember: Calculate ALL dates as actual YYYY-MM-DD values based on T0 = ${todayStr}. Do not include conditional/default/breach-related tasks.`;
   },
 
   // APA-specific extraction prompt
@@ -2845,10 +2858,18 @@ IMPORTANT: Extract comprehensively. A missed deadline in an LOI can cost the dea
 
     return `You are an expert aircraft transaction attorney and closing coordinator specializing in Aircraft Purchase Agreements.
 
-TODAY'S DATE: ${todayStr}
-Use this date as the reference point for calculating all relative deadlines.
+DATE CALCULATION RULES (CRITICAL):
+- T0 (Day Zero) = ${todayStr} (the date this document is being processed)
+- ALL relative dates in the document must be converted to actual calendar dates using T0 as the starting point
+- Examples:
+  - "within 5 business days" = T0 + 7 calendar days = calculate the actual date
+  - "within 10 days of Effective Date" = T0 + 10 days = calculate the actual date
+  - "within 30 days" = T0 + 30 days = calculate the actual date
+  - "5 business days after inspection completion" = if inspection is T0+10, then T0 + 10 + 7 = calculate the actual date
+  - "at closing" or "on the closing date" = use the calculated closing date
+- ALWAYS output actual YYYY-MM-DD dates, never relative terms like "T0+5" or "5 days from execution"
 
-TASK: Extract ALL actionable tasks, deadlines, obligations, and closing requirements from this Aircraft Purchase Agreement (APA).
+TASK: Extract actionable tasks and deadlines from this Aircraft Purchase Agreement (APA).
 
 DEAL CONTEXT:
 - Aircraft: ${aircraftInfo}
@@ -2859,37 +2880,41 @@ DOCUMENT TEXT:
 ${documentText}
 
 EXTRACTION INSTRUCTIONS:
-1. Extract EVERY deadline, payment milestone, delivery requirement, and closing condition
-2. Convert ALL relative dates to actual calendar dates based on today's date (${todayStr})
-   - "within 10 days of Effective Date" = ${todayStr} + 10 days
-   - "5 business days after inspection" = inspection date + 7 calendar days
-   - "at closing" = use closing date if specified, otherwise note as "at closing"
-3. Identify responsible party for each task (buyer/seller/both/escrow/inspector/title company)
-4. Track ALL payment amounts and their triggers
-5. Note inspection requirements, scope, and acceptance criteria
-6. Capture ALL documents required for closing (both buyer and seller deliverables)
-7. Include warranty periods and post-closing obligations
+1. Extract deadlines, payment milestones, and closing requirements
+2. Calculate actual calendar dates for ALL deadlines using T0 = ${todayStr}
+3. Identify responsible party for each task (buyer/seller/both/escrow/inspector/title-company)
+4. Track payment amounts and their deadlines
+5. Note inspection requirements and acceptance criteria
+6. Capture documents required for closing
+
+DO NOT EXTRACT (exclude these entirely):
+- Conditional tasks that only apply if something goes wrong:
+  - Default curing periods
+  - Remedies upon breach or default
+  - Termination for cause procedures
+  - Indemnification obligations
+  - Survival periods for representations
+  - Dispute resolution procedures
+  - Penalties for non-performance
+- Hypothetical scenarios (e.g., "if seller fails to...", "in the event of default...")
+- Post-closing warranty claims procedures
+- Any task that depends on a party NOT performing their obligations
+
+ONLY EXTRACT tasks that are part of the normal, successful transaction flow.
 
 CRITICAL APA ITEMS TO EXTRACT:
 - Initial deposit and additional deposit amounts with deadlines
-- Pre-purchase inspection: location, duration, scope, who bears cost
+- Pre-purchase inspection scheduling and completion deadline
 - Inspection report delivery deadline
-- Buyer's acceptance/rejection deadline after receiving inspection report
-- Discrepancy resolution procedures and deadlines
+- Buyer's acceptance/rejection deadline
+- Discrepancy list submission deadline (normal process, not disputes)
 - Final payment/balance due at closing
-- Closing date and location
-- Bill of Sale execution requirements
-- FAA documents: AC Form 8050-1 (Registration), 8050-2 (Bill of Sale)
-- Warranty Bill of Sale requirements
-- Insurance requirements (hull value, liability minimums, named insureds)
-- Delivery location and acceptance procedures
-- Risk of loss transfer point (when does buyer assume risk?)
-- Seller's representations and warranties
-- Survival period for representations
-- Indemnification obligations and periods
-- Escrow instructions and release conditions
-- Default and remedies provisions
-- Any conditions precedent to closing
+- Closing date
+- Bill of Sale execution
+- FAA documents: AC Form 8050-1, 8050-2
+- Insurance certificate delivery deadline
+- Delivery location and acceptance
+- Escrow release conditions
 
 Return ONLY valid JSON (no markdown, no code blocks, no extra text):
 
@@ -2897,7 +2922,7 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
   "actionItems": [
     {
       "title": "Brief, actionable task title (start with verb)",
-      "description": "Detailed context with specific requirements, amounts, and conditions",
+      "description": "Detailed context with specific requirements and amounts",
       "dueDate": "YYYY-MM-DD",
       "priority": "high|medium|low",
       "responsibleParty": "buyer|seller|both|escrow|inspector|title-company",
@@ -2919,7 +2944,7 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
     "buyerDeliverables": ["Wire transfer", "Insurance certificate", "AC Form 8050-1"]
   },
   "keyDates": {
-    "effectiveDate": "YYYY-MM-DD or null",
+    "effectiveDate": "${todayStr}",
     "inspectionDeadline": "YYYY-MM-DD or null",
     "acceptanceDeadline": "YYYY-MM-DD or null",
     "closingDate": "YYYY-MM-DD or null",
@@ -2933,11 +2958,11 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
 }
 
 PRIORITY GUIDELINES:
-- high: All payment deadlines, inspection completion, acceptance/rejection notices, closing requirements, document deliveries, insurance deadlines
-- medium: Coordination items, scheduling, non-critical document preparation, records organization
-- low: Post-closing items, warranty tracking, informational/reference items
+- high: Payment deadlines, inspection completion, acceptance notices, closing requirements, insurance deadlines
+- medium: Document preparation, scheduling coordination
+- low: Informational items
 
-IMPORTANT: APAs are legally binding contracts. Every obligation matters. Extract thoroughly - missing a payment deadline or document requirement can derail the closing. If a specific date cannot be determined, use null but still include the task with available context.`;
+Remember: Calculate ALL dates as actual YYYY-MM-DD values based on T0 = ${todayStr}. Do not include conditional/default/breach-related tasks.`;
   },
 
   intelligentDemoParser: (documentType, deal, documentText = '') => {
