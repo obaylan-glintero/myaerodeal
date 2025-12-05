@@ -968,7 +968,16 @@ const TasksSection = ({ dealId, dealName, tasks, onToggleComplete, onUpdateTask,
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingDueDate, setEditingDueDate] = useState('');
 
-  const pendingTasks = tasks.filter(t => t.status === 'pending');
+  // Sort tasks by due date (earliest first, tasks without dates at the end)
+  const sortByDueDate = (a, b) => {
+    if (!a.dueDate && !b.dueDate) return 0;
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  };
+
+  const sortedTasks = [...tasks].sort(sortByDueDate);
+  const pendingTasks = sortedTasks.filter(t => t.status === 'pending');
 
   const handleAddTask = () => {
     if (taskTitle.trim()) {
@@ -1022,7 +1031,7 @@ const TasksSection = ({ dealId, dealName, tasks, onToggleComplete, onUpdateTask,
         style={{ color: colors.primary }}
       >
         <ListTodo size={18} />
-        Tasks ({tasks.length})
+        Tasks ({sortedTasks.length})
         {pendingTasks.length > 0 && (
           <span className="px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700 font-bold">
             {pendingTasks.length} pending
@@ -1034,10 +1043,10 @@ const TasksSection = ({ dealId, dealName, tasks, onToggleComplete, onUpdateTask,
       {showTasks && (
         <div className="space-y-3">
           <div className="space-y-2 max-h-60 overflow-y-auto">
-            {tasks.length === 0 ? (
+            {sortedTasks.length === 0 ? (
               <p className="text-sm italic" style={{ color: colors.textSecondary }}>No tasks yet</p>
             ) : (
-              tasks.map((task) => (
+              sortedTasks.map((task) => (
                 <div
                   key={task.id}
                   className="flex items-start gap-3 p-3 rounded"

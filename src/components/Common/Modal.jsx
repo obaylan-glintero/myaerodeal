@@ -1758,8 +1758,17 @@ const LeadDetailView = ({ lead: initialLead, closeModal, openModal }) => {
 
   // Filter tasks related to this lead
   const relatedTasks = tasks.filter(task => task.relatedTo?.type === 'lead' && task.relatedTo?.id === lead.id);
-  const pendingTasks = relatedTasks.filter(task => task.status === 'pending');
-  const completedTasks = relatedTasks.filter(task => task.status === 'completed');
+
+  // Sort tasks by due date (earliest first, tasks without dates at the end)
+  const sortByDueDate = (a, b) => {
+    if (!a.dueDate && !b.dueDate) return 0;
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  };
+
+  const pendingTasks = relatedTasks.filter(task => task.status === 'pending').sort(sortByDueDate);
+  const completedTasks = relatedTasks.filter(task => task.status === 'completed').sort(sortByDueDate);
 
   const handleAddNote = () => {
     if (noteText.trim()) {
@@ -2088,8 +2097,17 @@ const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
 
   // Filter tasks related to this deal
   const relatedTasks = tasks.filter(task => task.relatedTo?.type === 'deal' && task.relatedTo?.id === deal.id);
-  const pendingTasks = relatedTasks.filter(task => task.status === 'pending');
-  const completedTasks = relatedTasks.filter(task => task.status === 'completed');
+
+  // Sort tasks by due date (earliest first, tasks without dates at the end)
+  const sortByDueDate = (a, b) => {
+    if (!a.dueDate && !b.dueDate) return 0;
+    if (!a.dueDate) return 1;
+    if (!b.dueDate) return -1;
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  };
+
+  const pendingTasks = relatedTasks.filter(task => task.status === 'pending').sort(sortByDueDate);
+  const completedTasks = relatedTasks.filter(task => task.status === 'completed').sort(sortByDueDate);
 
   const handleAddNote = () => {
     if (noteText.trim()) {
