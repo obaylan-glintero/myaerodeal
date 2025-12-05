@@ -2071,7 +2071,7 @@ export const useStore = create((set, get) => ({
     if (!isAuthenticated) {
       set({ deals: deals.map(d => d.id === id ? updatedDeal : d) });
       saveToLocalStorage();
-      get().createAutoTask('deal', id, nextStep.step, followUpDate.toISOString().split('T')[0]);
+      get().createAutoTask('deal', id, `${nextStep.step} - ${deal.dealName}`, followUpDate.toISOString().split('T')[0]);
       return;
     }
 
@@ -2090,7 +2090,7 @@ export const useStore = create((set, get) => ({
       if (error) throw error;
 
       set({ deals: deals.map(d => d.id === id ? updatedDeal : d) });
-      get().createAutoTask('deal', id, nextStep.step, followUpDate.toISOString().split('T')[0]);
+      get().createAutoTask('deal', id, `${nextStep.step} - ${deal.dealName}`, followUpDate.toISOString().split('T')[0]);
     } catch (error) {
       console.error('Error updating deal status:', error);
       throw error;
@@ -2568,7 +2568,7 @@ export const useStore = create((set, get) => ({
     for (const item of actionItems) {
       try {
         await addTask({
-          title: `${deal.dealName}: ${item.title}`,
+          title: `${item.title} - ${deal.dealName}`,
           description: item.description || `Extracted from ${documentType} document`,
           dueDate: item.dueDate || null,
           relatedTo: { type: 'deal', id: dealId },
