@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart, Clock, ListChecks, CheckCircle2, Plus } from 'lucide-react';
+import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, FileBarChart, Clock, ListChecks, CheckCircle2, Plus, Sparkles, Loader2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -2076,8 +2076,10 @@ const LeadDetailView = ({ lead: initialLead, closeModal, openModal }) => {
 
 const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
   const { colors } = useTheme();
-  const { aircraft, leads, tasks, deals, addNoteToDeal, updateDealStatus, deleteDeal, loadFullDealData, updateTask, currentUserProfile } = useStore();
+  const { aircraft, leads, tasks, deals, addNoteToDeal, updateDealStatus, deleteDeal, loadFullDealData, updateTask, currentUserProfile, generateActionItemsFromDocument } = useStore();
   const [noteText, setNoteText] = useState('');
+  const [showDocTypeModal, setShowDocTypeModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Subscribe to live deal data from the store instead of using the static prop
   const deal = deals.find(d => d.id === initialDeal?.id) || initialDeal;
@@ -2109,6 +2111,26 @@ const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
     if (window.confirm(`Are you sure you want to delete "${deal.dealName}"? This action cannot be undone.`)) {
       deleteDeal(deal.id);
       closeModal();
+    }
+  };
+
+  const handleGenerateActionItems = async (docType) => {
+    if (!deal.documentData) {
+      alert('Please upload a document (LOI or APA) to this deal first.\n\nGo to Edit → Upload Deal Document');
+      return;
+    }
+
+    try {
+      setShowDocTypeModal(false);
+      setIsGenerating(true);
+
+      const count = await generateActionItemsFromDocument(deal.id, docType);
+
+      setIsGenerating(false);
+      alert(`Successfully generated ${count} action items from your ${docType} document!\n\n• Tasks created with AI-detected dates and priorities\n• Timeline added to deal\n\nCheck the Tasks section below to see all generated items.`);
+    } catch (error) {
+      setIsGenerating(false);
+      alert(`Error generating action items: ${error.message}\n\nPlease ensure:\n1. A PDF document is uploaded to this deal\n2. Try again or contact support`);
     }
   };
 
@@ -2440,6 +2462,29 @@ const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
 
       {/* Action Buttons */}
       <div className="space-y-3 pt-4 border-t" style={{ borderColor: colors.border }}>
+        {/* AI Generate Action Items Button */}
+        <button
+          onClick={() => deal.documentData ? setShowDocTypeModal(true) : handleGenerateActionItems('LOI')}
+          disabled={isGenerating}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold disabled:opacity-50"
+          style={{
+            backgroundColor: '#8B5CF6',
+            color: '#FFFFFF',
+          }}
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 size={18} className="animate-spin" />
+              Extracting Action Items...
+            </>
+          ) : (
+            <>
+              <Sparkles size={18} />
+              Generate Action Items with AI
+            </>
+          )}
+        </button>
+
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={handleEdit}
@@ -2467,6 +2512,50 @@ const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
           Close
         </button>
       </div>
+
+      {/* Document Type Selection Modal */}
+      {showDocTypeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="rounded-lg shadow-xl max-w-md w-full p-6" style={{ backgroundColor: colors.cardBg }}>
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: colors.primary }}>
+              <Sparkles size={20} />
+              Select Document Type
+            </h3>
+            <p className="mb-6" style={{ color: colors.textSecondary }}>
+              Choose the type of document you uploaded to generate appropriate action items:
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => handleGenerateActionItems('LOI')}
+                className="w-full p-4 border-2 rounded-lg text-left hover:opacity-90"
+                style={{ borderColor: colors.primary, backgroundColor: colors.secondary }}
+              >
+                <p className="font-semibold" style={{ color: colors.primary }}>Letter of Intent (LOI)</p>
+                <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                  Initial deal phase • Deposits, due diligence, exclusivity periods
+                </p>
+              </button>
+              <button
+                onClick={() => handleGenerateActionItems('APA')}
+                className="w-full p-4 border-2 rounded-lg text-left hover:opacity-90"
+                style={{ borderColor: colors.primary, backgroundColor: colors.secondary }}
+              >
+                <p className="font-semibold" style={{ color: colors.primary }}>Aircraft Purchase Agreement (APA)</p>
+                <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                  Full transaction • Inspections, payments, closing requirements
+                </p>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowDocTypeModal(false)}
+              className="w-full mt-4 px-4 py-2 rounded-lg"
+              style={{ border: `1px solid ${colors.border}`, color: colors.textPrimary }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

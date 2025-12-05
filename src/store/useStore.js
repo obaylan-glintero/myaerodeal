@@ -2644,30 +2644,13 @@ export const useStore = create((set, get) => ({
 
     if (GEMINI_API_KEY) {
       try {
-        const prompt = `You are an expert in aircraft transactions. Parse this ${documentType} document and extract ALL action items with dates, priorities, and descriptions. 
+        // Get today's date for calculating relative deadlines
+        const todayStr = new Date().toISOString().split('T')[0];
 
-Document Text:
-${documentText}
-
-Extract every action item, deadline, obligation, and requirement from this document. Only extract action items with solid deliverables. Return ONLY a valid JSON object with this exact format (no markdown, no code blocks):
-
-{
-  "actionItems": [
-    {
-      "title": "Brief action title",
-      "description": "Detailed description with context from document",
-      "dueDate": "YYYY-MM-DD",
-      "priority": "high"
-    }
-  ]
-}
-
-Priority levels:
-- high: Critical deadlines, payments, inspections
-- medium: Important but flexible items
-- low: Nice-to-have or informational items
-
-Return ONLY the JSON object, no other text.`;
+        // Build context-rich prompt based on document type
+        const prompt = documentType === 'LOI'
+          ? get().buildLOIExtractionPrompt(documentText, deal, todayStr)
+          : get().buildAPAExtractionPrompt(documentText, deal, todayStr);
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
@@ -2681,7 +2664,7 @@ Return ONLY the JSON object, no other text.`;
               }]
             }],
             generationConfig: {
-              temperature: 0.2,
+              temperature: 0.1,
               topK: 40,
               topP: 0.95,
               maxOutputTokens: 8192,
@@ -2710,7 +2693,41 @@ Return ONLY the JSON object, no other text.`;
 
         if (parsed.actionItems && Array.isArray(parsed.actionItems)) {
           console.log(`✅ Gemini extracted ${parsed.actionItems.length} action items from ${documentType}`);
-          return parsed.actionItems;
+
+          // Helper to calculate due date from daysFromToday
+          const today = new Date();
+          const calculateDueDate = (daysFromToday) => {
+            if (daysFromToday === null || daysFromToday === undefined || isNaN(daysFromToday)) {
+              return null;
+            }
+            const dueDate = new Date(today);
+            dueDate.setDate(dueDate.getDate() + parseInt(daysFromToday, 10));
+            return dueDate.toISOString().split('T')[0];
+          };
+
+          // Enrich action items and calculate actual due dates
+          const enrichedItems = parsed.actionItems.map(item => {
+            const dueDate = calculateDueDate(item.daysFromToday);
+            return {
+              title: item.title,
+              description: get().buildEnrichedDescription(item),
+              dueDate: dueDate,
+              priority: item.priority || 'medium',
+              responsibleParty: item.responsibleParty || null,
+              category: item.category || null,
+              sourceClause: item.sourceClause || null,
+              amount: item.amount || null
+            };
+          });
+
+          console.log(`📅 Calculated due dates for ${enrichedItems.filter(i => i.dueDate).length} items`);
+
+          // Log extracted deal terms if available
+          if (parsed.dealTerms) {
+            console.log('💰 Deal terms extracted:', parsed.dealTerms);
+          }
+
+          return enrichedItems;
         } else {
           throw new Error('Invalid response format from Gemini');
         }
@@ -2725,6 +2742,188 @@ Return ONLY the JSON object, no other text.`;
 
     // Fallback: Smart text parsing
     return get().intelligentDemoParser(documentType, deal, documentText);
+  },
+
+  // Build enriched description from extracted item fields
+  buildEnrichedDescription: (item) => {
+    let description = item.description || '';
+    const extras = [];
+
+    if (item.responsibleParty) {
+      extras.push(`Responsible: ${item.responsibleParty}`);
+    }
+    if (item.sourceClause) {
+      extras.push(`Source: ${item.sourceClause}`);
+    }
+    if (item.amount) {
+      extras.push(`Amount: $${item.amount.toLocaleString()}`);
+    }
+    if (item.category) {
+      extras.push(`Category: ${item.category}`);
+    }
+
+    if (extras.length > 0) {
+      description += (description ? ' | ' : '') + extras.join(' | ');
+    }
+
+    return description || 'Extracted from document';
+  },
+
+  // LOI-specific extraction prompt
+  buildLOIExtractionPrompt: (documentText, deal, todayStr) => {
+    const aircraftInfo = deal?.aircraft
+      ? `${deal.aircraft.manufacturer || ''} ${deal.aircraft.model || ''} ${deal.aircraft.registration ? `(${deal.aircraft.registration})` : ''}`.trim()
+      : 'Aircraft details pending';
+
+    return `You are an expert aircraft transaction attorney extracting action items from a Letter of Intent (LOI).
+
+TASK: Extract actionable tasks with their deadlines from this LOI document.
+
+DEAL CONTEXT:
+- Aircraft: ${aircraftInfo}
+- Deal Name: ${deal?.dealName || 'Aircraft Transaction'}
+
+DOCUMENT TEXT:
+${documentText}
+
+DEADLINE EXTRACTION RULES:
+- For each task, extract "daysFromToday" as a NUMBER representing calendar days from today
+- Convert business days to calendar days: 5 business days = 7 calendar days
+- Examples:
+  - "within 3 days" → daysFromToday: 3
+  - "within 5 business days" → daysFromToday: 7
+  - "within 10 days" → daysFromToday: 10
+  - "within 2 weeks" → daysFromToday: 14
+  - "within 30 days" → daysFromToday: 30
+  - "immediately" or "upon execution" → daysFromToday: 0
+- If no specific timeframe is mentioned, estimate based on typical LOI timelines
+
+DO NOT EXTRACT:
+- Conditional tasks (default curing, breach remedies, termination for cause)
+- Hypothetical scenarios ("if buyer fails to...", "in the event of default...")
+- Indemnification, dispute resolution, or penalty clauses
+- Any task triggered by non-performance
+
+ONLY EXTRACT tasks from the normal, successful transaction flow.
+
+ITEMS TO EXTRACT:
+- LOI execution/acceptance deadline
+- Earnest money deposit amount and deadline
+- Exclusivity/no-shop period
+- Due diligence period
+- Inspection scheduling
+- Records review deadline
+- Financing contingency deadline
+- LOI expiration
+
+Return ONLY valid JSON:
+
+{
+  "actionItems": [
+    {
+      "title": "Brief task title starting with verb",
+      "description": "Detailed context from document",
+      "daysFromToday": 10,
+      "priority": "high",
+      "responsibleParty": "buyer",
+      "category": "payment",
+      "sourceClause": "Section 3.1",
+      "amount": 50000
+    }
+  ],
+  "dealTerms": {
+    "purchasePrice": null,
+    "depositAmount": null
+  }
+}
+
+PRIORITY: high (payments, execution, inspections) | medium (document reviews) | low (informational)
+RESPONSIBLE PARTY: buyer | seller | both | escrow | third-party
+CATEGORY: payment | inspection | document | notice | closing`;
+  },
+
+  // APA-specific extraction prompt
+  buildAPAExtractionPrompt: (documentText, deal, todayStr) => {
+    const aircraftInfo = deal?.aircraft
+      ? `${deal.aircraft.manufacturer || ''} ${deal.aircraft.model || ''} ${deal.aircraft.registration ? `(${deal.aircraft.registration})` : ''}`.trim()
+      : 'Aircraft details pending';
+    const serialNumber = deal?.aircraft?.serialNumber || 'TBD';
+
+    return `You are an expert aircraft transaction attorney extracting action items from an Aircraft Purchase Agreement (APA).
+
+TASK: Extract actionable tasks with their deadlines from this APA document.
+
+DEAL CONTEXT:
+- Aircraft: ${aircraftInfo}
+- Serial Number: ${serialNumber}
+- Deal Name: ${deal?.dealName || 'Aircraft Transaction'}
+
+DOCUMENT TEXT:
+${documentText}
+
+DEADLINE EXTRACTION RULES:
+- For each task, extract "daysFromToday" as a NUMBER representing calendar days from today
+- Convert business days to calendar days: 5 business days = 7 calendar days
+- Examples:
+  - "within 3 days" → daysFromToday: 3
+  - "within 5 business days" → daysFromToday: 7
+  - "within 10 days" → daysFromToday: 10
+  - "within 2 weeks" → daysFromToday: 14
+  - "within 30 days" → daysFromToday: 30
+  - "within 45 days" → daysFromToday: 45
+  - "within 60 days" → daysFromToday: 60
+  - "at closing" → use the closing daysFromToday value
+  - "immediately" or "upon execution" → daysFromToday: 0
+- For sequential tasks (e.g., "5 days after inspection"), add the days together
+- If no specific timeframe is mentioned, estimate based on typical APA timelines
+
+DO NOT EXTRACT:
+- Conditional tasks (default curing, breach remedies, termination for cause)
+- Hypothetical scenarios ("if seller fails to...", "in the event of default...")
+- Indemnification, survival periods, dispute resolution, penalties
+- Post-closing warranty claims procedures
+- Any task triggered by non-performance
+
+ONLY EXTRACT tasks from the normal, successful transaction flow.
+
+ITEMS TO EXTRACT:
+- Deposit amounts and deadlines
+- Pre-purchase inspection completion
+- Inspection report delivery
+- Buyer acceptance/rejection deadline
+- Discrepancy list submission
+- Final payment at closing
+- Closing date
+- Bill of Sale, FAA documents (8050-1, 8050-2)
+- Insurance certificate delivery
+- Aircraft delivery and acceptance
+- Escrow release
+
+Return ONLY valid JSON:
+
+{
+  "actionItems": [
+    {
+      "title": "Brief task title starting with verb",
+      "description": "Detailed context from document",
+      "daysFromToday": 30,
+      "priority": "high",
+      "responsibleParty": "buyer",
+      "category": "payment",
+      "sourceClause": "Section 4.2",
+      "amount": 150000
+    }
+  ],
+  "dealTerms": {
+    "purchasePrice": null,
+    "depositTotal": null,
+    "balanceAtClosing": null
+  }
+}
+
+PRIORITY: high (payments, inspection, acceptance, closing) | medium (document prep) | low (informational)
+RESPONSIBLE PARTY: buyer | seller | both | escrow | inspector | title-company
+CATEGORY: payment | inspection | document | notice | insurance | registration | delivery | closing`;
   },
 
   intelligentDemoParser: (documentType, deal, documentText = '') => {
