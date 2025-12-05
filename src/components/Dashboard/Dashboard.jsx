@@ -67,32 +67,32 @@ const Dashboard = ({ openModal, setActiveTab }) => {
               .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
               .slice(0, 5)
               .map(lead => (
-              <button
-                key={lead.id}
-                onClick={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('leadDetail', updatedLead))}
-                className="w-full flex justify-between items-center p-3 rounded hover:opacity-80 transition-opacity cursor-pointer"
-                style={{ backgroundColor: colors.secondary }}
-              >
-                <div className="text-left">
-                  <p className="font-medium" style={{ color: colors.textPrimary }}>{lead.name}</p>
-                  <p className="text-sm" style={{ color: colors.textSecondary }}>{lead.company}</p>
-                </div>
-                <span
-                  className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{
-                    backgroundColor:
-                      lead.status === 'Inquiry' ? '#5BC0DE' :
-                      lead.status === 'Presented' ? '#7C3AED' :
-                      lead.status === 'Interested' ? '#F0AD4E' :
-                      lead.status === 'Deal Created' ? '#D9534F' :
-                      lead.status === 'Lost' ? '#6B7280' : '#5BC0DE',
-                    color: '#FFFFFF'
-                  }}
+                <button
+                  key={lead.id}
+                  onClick={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('leadDetail', updatedLead))}
+                  className="w-full flex justify-between items-center p-3 rounded hover:opacity-80 transition-opacity cursor-pointer"
+                  style={{ backgroundColor: colors.secondary }}
                 >
-                  {lead.status}
-                </span>
-              </button>
-            ))}
+                  <div className="text-left">
+                    <p className="font-medium" style={{ color: colors.textPrimary }}>{lead.name}</p>
+                    <p className="text-sm" style={{ color: colors.textSecondary }}>{lead.company}</p>
+                  </div>
+                  <span
+                    className="px-3 py-1 rounded-full text-xs font-semibold"
+                    style={{
+                      backgroundColor:
+                        lead.status === 'Inquiry' ? '#5BC0DE' :
+                          lead.status === 'Presented' ? '#7C3AED' :
+                            lead.status === 'Interested' ? '#F0AD4E' :
+                              lead.status === 'Deal Created' ? '#D9534F' :
+                                lead.status === 'Lost' ? '#6B7280' : '#5BC0DE',
+                      color: '#FFFFFF'
+                    }}
+                  >
+                    {lead.status}
+                  </span>
+                </button>
+              ))}
           </div>
         </div>
 
@@ -126,7 +126,15 @@ const Dashboard = ({ openModal, setActiveTab }) => {
                     </div>
                   </div>
                   <button
-                    onClick={() => updateTask(task.id, { status: 'completed' })}
+                    onClick={async () => {
+                      try {
+                        await updateTask(task.id, { status: 'completed' });
+                        console.log('✅ Task marked as completed');
+                      } catch (error) {
+                        console.error('❌ Failed to update task:', error);
+                        alert('Failed to update task. Please try again.');
+                      }
+                    }}
                     className="ml-2 p-1 rounded"
                     style={{ color: colors.primary }}
                   >

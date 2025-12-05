@@ -2269,14 +2269,23 @@ export const useStore = create((set, get) => ({
 
       console.log('🔍 Sending to database:', dbData);
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('tasks')
         .update(dbData)
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase update error:', error);
+        throw error;
+      }
 
+      console.log('✅ Task updated successfully in database:', data);
+
+      // Update local state
       set({ tasks: tasks.map(task => task.id === id ? { ...task, ...updatedData } : task) });
+
+      console.log('✅ Local state updated successfully');
     } catch (error) {
       console.error('Error updating task:', error);
       throw error;
