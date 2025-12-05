@@ -2762,18 +2762,32 @@ export const useStore = create((set, get) => ({
       ? `${deal.aircraft.manufacturer || ''} ${deal.aircraft.model || ''} ${deal.aircraft.registration ? `(${deal.aircraft.registration})` : ''}`.trim()
       : 'Aircraft details pending';
 
+    // Pre-calculate example dates to show AI exactly what we expect
+    const t0 = new Date(todayStr);
+    const addDays = (days) => {
+      const d = new Date(t0);
+      d.setDate(d.getDate() + days);
+      return d.toISOString().split('T')[0];
+    };
+
     return `You are an expert aircraft transaction attorney and deal coordinator specializing in Letters of Intent for aircraft acquisitions.
 
 DATE CALCULATION RULES (CRITICAL):
-- T0 (Day Zero) = ${todayStr} (the date this document is being processed)
-- ALL relative dates in the document must be converted to actual calendar dates using T0 as the starting point
-- Examples:
-  - "within 5 business days" = T0 + 7 calendar days = calculate the actual date
-  - "within 10 days" = T0 + 10 days = calculate the actual date
-  - "within 2 weeks" = T0 + 14 days = calculate the actual date
-  - "within 30 days" = T0 + 30 days = calculate the actual date
-  - "on or before [X] days after execution" = T0 + X days = calculate the actual date
-- ALWAYS output actual YYYY-MM-DD dates, never relative terms like "T0+5" or "5 days from execution"
+- T0 (Day Zero) = ${todayStr}
+- You MUST convert ALL relative dates to actual YYYY-MM-DD calendar dates
+- Here are the exact calculations:
+  - "within 3 days" → ${addDays(3)}
+  - "within 5 business days" → ${addDays(7)}
+  - "within 7 days" → ${addDays(7)}
+  - "within 10 days" → ${addDays(10)}
+  - "within 14 days" or "2 weeks" → ${addDays(14)}
+  - "within 21 days" or "3 weeks" → ${addDays(21)}
+  - "within 30 days" → ${addDays(30)}
+  - "within 45 days" → ${addDays(45)}
+  - "within 60 days" → ${addDays(60)}
+  - "within 90 days" → ${addDays(90)}
+- For any other number of days, calculate from ${todayStr}
+- NEVER output null for dueDate if a timeframe is mentioned - calculate it
 
 TASK: Extract actionable tasks and deadlines from this Letter of Intent (LOI).
 
@@ -2856,18 +2870,33 @@ Remember: Calculate ALL dates as actual YYYY-MM-DD values based on T0 = ${todayS
       : 'Aircraft details pending';
     const serialNumber = deal?.aircraft?.serialNumber || 'TBD';
 
+    // Pre-calculate example dates to show AI exactly what we expect
+    const t0 = new Date(todayStr);
+    const addDays = (days) => {
+      const d = new Date(t0);
+      d.setDate(d.getDate() + days);
+      return d.toISOString().split('T')[0];
+    };
+
     return `You are an expert aircraft transaction attorney and closing coordinator specializing in Aircraft Purchase Agreements.
 
 DATE CALCULATION RULES (CRITICAL):
-- T0 (Day Zero) = ${todayStr} (the date this document is being processed)
-- ALL relative dates in the document must be converted to actual calendar dates using T0 as the starting point
-- Examples:
-  - "within 5 business days" = T0 + 7 calendar days = calculate the actual date
-  - "within 10 days of Effective Date" = T0 + 10 days = calculate the actual date
-  - "within 30 days" = T0 + 30 days = calculate the actual date
-  - "5 business days after inspection completion" = if inspection is T0+10, then T0 + 10 + 7 = calculate the actual date
-  - "at closing" or "on the closing date" = use the calculated closing date
-- ALWAYS output actual YYYY-MM-DD dates, never relative terms like "T0+5" or "5 days from execution"
+- T0 (Day Zero) = ${todayStr}
+- You MUST convert ALL relative dates to actual YYYY-MM-DD calendar dates
+- Here are the exact calculations:
+  - "within 3 days" → ${addDays(3)}
+  - "within 5 business days" → ${addDays(7)}
+  - "within 7 days" → ${addDays(7)}
+  - "within 10 days" → ${addDays(10)}
+  - "within 14 days" or "2 weeks" → ${addDays(14)}
+  - "within 21 days" or "3 weeks" → ${addDays(21)}
+  - "within 30 days" → ${addDays(30)}
+  - "within 45 days" → ${addDays(45)}
+  - "within 60 days" → ${addDays(60)}
+  - "within 90 days" → ${addDays(90)}
+- For any other number of days, calculate from ${todayStr}
+- NEVER output null for dueDate if a timeframe is mentioned - calculate it
+- For dependent dates (e.g., "5 days after inspection"), first calculate the base date, then add the additional days
 
 TASK: Extract actionable tasks and deadlines from this Aircraft Purchase Agreement (APA).
 
