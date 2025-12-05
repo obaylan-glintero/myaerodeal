@@ -21,6 +21,7 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
     }
     return editingItem || {};
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { colors } = useTheme();
 
   // Update formData when editingItem changes (e.g., when reopening modal with different data)
@@ -49,6 +50,7 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
   } = useStore();
 
   const handleSubmit = async () => {
+    setIsSubmitting(true);
     try {
       if (modalType === 'lead') {
         if (editingItem) {
@@ -96,6 +98,8 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
     } catch (error) {
       console.error('Error submitting form:', error);
       alert(`Error: ${error.message || 'Failed to save changes. Please try again.'}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -137,14 +141,23 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
             <div className="flex gap-4 mt-6">
               <button
                 onClick={handleSubmit}
-                className="flex-1 px-6 py-3 rounded-lg font-semibold"
+                disabled={isSubmitting}
+                className="flex-1 px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: colors.primary, color: colors.secondary }}
               >
-                {editingItem ? 'Update' : 'Create'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    {editingItem ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  editingItem ? 'Update' : 'Create'
+                )}
               </button>
               <button
                 onClick={closeModal}
-                className="flex-1 px-6 py-3 rounded-lg border-2 font-semibold"
+                disabled={isSubmitting}
+                className="flex-1 px-6 py-3 rounded-lg border-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
               >
                 Cancel
@@ -316,6 +329,8 @@ const AircraftForm = ({ formData, setFormData }) => {
   const [isLoadingUrl, setIsLoadingUrl] = React.useState(false);
   const [isExtracting, setIsExtracting] = React.useState(false);
   const [priceError, setPriceError] = React.useState('');
+  const [isDraggingSpec, setIsDraggingSpec] = React.useState(false);
+  const [isDraggingImage, setIsDraggingImage] = React.useState(false);
   const { extractAircraftDataFromPDF } = useStore();
   const { colors } = useTheme();
 
@@ -452,6 +467,73 @@ const AircraftForm = ({ formData, setFormData }) => {
     }
   };
 
+  // Drag and drop handlers for spec sheet
+  const handleSpecDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingSpec(true);
+  };
+
+  const handleSpecDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingSpec(false);
+  };
+
+  const handleSpecDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingSpec(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      const file = files[0];
+      // Check file type
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|doc|docx)$/i)) {
+        alert('Please upload a PDF, DOC, or DOCX file');
+        return;
+      }
+
+      // Trigger the existing handleFileChange with the file
+      const mockEvent = { target: { files: [file] } };
+      await handleFileChange(mockEvent);
+    }
+  };
+
+  // Drag and drop handlers for image
+  const handleImageDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(true);
+  };
+
+  const handleImageDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+  };
+
+  const handleImageDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingImage(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      const file = files[0];
+      // Check if it's an image
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file');
+        return;
+      }
+
+      // Trigger the existing handleImageChange with the file
+      const mockEvent = { target: { files: [file] } };
+      handleImageChange(mockEvent);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <style>{placeholderStyle}</style>
@@ -582,10 +664,23 @@ const AircraftForm = ({ formData, setFormData }) => {
         style={inputStyle}
       />
 
-      <div className="border-2 border-dashed rounded-lg p-6 text-center" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
+      <div
+        className="border-2 border-dashed rounded-lg p-6 text-center transition-colors"
+        style={{
+          borderColor: isDraggingImage ? colors.primary : colors.border,
+          backgroundColor: isDraggingImage ? colors.border : colors.cardBg
+        }}
+        onDragOver={handleImageDragOver}
+        onDragLeave={handleImageDragLeave}
+        onDrop={handleImageDrop}
+      >
         <Upload className="mx-auto mb-2" size={32} style={{ color: colors.primary }} />
-        <p className="text-sm font-semibold mb-1" style={{ color: colors.textPrimary }}>Aircraft Photo</p>
-        <p className="text-xs mb-3" style={{ color: colors.textSecondary }}>Upload image or search automatically</p>
+        <p className="text-sm font-semibold mb-1" style={{ color: colors.textPrimary }}>
+          {isDraggingImage ? 'Drop image here' : 'Aircraft Photo'}
+        </p>
+        <p className="text-xs mb-3" style={{ color: colors.textSecondary }}>
+          {isDraggingImage ? 'Release to upload' : 'Drag & drop, upload, or search automatically'}
+        </p>
 
         {formData.imageData && (
           <div className="mb-3">
@@ -647,11 +742,25 @@ const AircraftForm = ({ formData, setFormData }) => {
         </div>
       </div>
 
-      <div className="border-2 border-dashed rounded-lg p-6 text-center" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
+      <div
+        className="border-2 border-dashed rounded-lg p-6 text-center transition-colors"
+        style={{
+          borderColor: isDraggingSpec ? colors.primary : colors.border,
+          backgroundColor: isDraggingSpec ? colors.border : colors.cardBg
+        }}
+        onDragOver={handleSpecDragOver}
+        onDragLeave={handleSpecDragLeave}
+        onDrop={handleSpecDrop}
+      >
         <Upload className="mx-auto mb-2" size={32} style={{ color: colors.textSecondary }} />
         <p className="text-sm mb-2" style={{ color: colors.textPrimary }}>
-          {isExtracting ? '🤖 AI is extracting data from spec sheet...' : 'Upload Spec Sheet (AI will extract info)'}
+          {isDraggingSpec ? 'Drop spec sheet here' : isExtracting ? '🤖 AI is extracting data from spec sheet...' : 'Upload Spec Sheet (AI will extract info)'}
         </p>
+        {!isDraggingSpec && !isExtracting && (
+          <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+            Drag & drop or click to upload PDF, DOC, or DOCX
+          </p>
+        )}
         {formData.specSheet && !isExtracting && (
           <p className="text-sm mt-2 font-medium" style={{ color: colors.primary }}>
             Selected: {formData.specSheet}
@@ -687,6 +796,7 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
   const fileInputRef = React.useRef(null);
   const { colors } = useTheme();
   const [dealValueError, setDealValueError] = React.useState('');
+  const [isDraggingDoc, setIsDraggingDoc] = React.useState(false);
 
   const inputStyle = {
     backgroundColor: colors.cardBg,
@@ -717,6 +827,40 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
         });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Drag and drop handlers for deal document
+  const handleDocDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingDoc(true);
+  };
+
+  const handleDocDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingDoc(false);
+  };
+
+  const handleDocDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingDoc(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      const file = files[0];
+      // Check file type
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|doc|docx)$/i)) {
+        alert('Please upload a PDF, DOC, or DOCX file');
+        return;
+      }
+
+      // Trigger the existing handleFileChange with the file
+      const mockEvent = { target: { files: [file] } };
+      handleFileChange(mockEvent);
     }
   };
 
@@ -899,9 +1043,25 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
           style={inputStyle}
         />
       </div>
-      <div className="border-2 border-dashed rounded-lg p-6 text-center" style={{ borderColor: colors.border, backgroundColor: colors.cardBg }}>
+      <div
+        className="border-2 border-dashed rounded-lg p-6 text-center transition-colors"
+        style={{
+          borderColor: isDraggingDoc ? colors.primary : colors.border,
+          backgroundColor: isDraggingDoc ? colors.border : colors.cardBg
+        }}
+        onDragOver={handleDocDragOver}
+        onDragLeave={handleDocDragLeave}
+        onDrop={handleDocDrop}
+      >
         <Upload className="mx-auto mb-2" size={32} style={{ color: colors.textSecondary }} />
-        <p className="text-sm mb-2" style={{ color: colors.textPrimary }}>Upload Deal Document (Contract, LOI, etc.)</p>
+        <p className="text-sm mb-2" style={{ color: colors.textPrimary }}>
+          {isDraggingDoc ? 'Drop document here' : 'Upload Deal Document (Contract, LOI, etc.)'}
+        </p>
+        {!isDraggingDoc && (
+          <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+            Drag & drop or click to upload PDF, DOC, or DOCX
+          </p>
+        )}
         {formData.document && (
           <p className="text-sm mt-2 font-medium" style={{ color: colors.primary }}>
             Selected: {formData.document}
