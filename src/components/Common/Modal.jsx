@@ -21,6 +21,7 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
     }
     return editingItem || {};
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { colors } = useTheme();
 
   // Update formData when editingItem changes (e.g., when reopening modal with different data)
@@ -49,6 +50,7 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
   } = useStore();
 
   const handleSubmit = async () => {
+    setIsSubmitting(true);
     try {
       if (modalType === 'lead') {
         if (editingItem) {
@@ -96,6 +98,8 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
     } catch (error) {
       console.error('Error submitting form:', error);
       alert(`Error: ${error.message || 'Failed to save changes. Please try again.'}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -137,14 +141,23 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
             <div className="flex gap-4 mt-6">
               <button
                 onClick={handleSubmit}
-                className="flex-1 px-6 py-3 rounded-lg font-semibold"
+                disabled={isSubmitting}
+                className="flex-1 px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: colors.primary, color: colors.secondary }}
               >
-                {editingItem ? 'Update' : 'Create'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    {editingItem ? 'Updating...' : 'Creating...'}
+                  </>
+                ) : (
+                  editingItem ? 'Update' : 'Create'
+                )}
               </button>
               <button
                 onClick={closeModal}
-                className="flex-1 px-6 py-3 rounded-lg border-2 font-semibold"
+                disabled={isSubmitting}
+                className="flex-1 px-6 py-3 rounded-lg border-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: colors.secondary, borderColor: colors.primary, color: colors.primary }}
               >
                 Cancel
