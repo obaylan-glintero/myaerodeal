@@ -2644,30 +2644,13 @@ export const useStore = create((set, get) => ({
 
     if (GEMINI_API_KEY) {
       try {
-        const prompt = `You are an expert in aircraft transactions. Parse this ${documentType} document and extract ALL action items with dates, priorities, and descriptions. 
+        // Get today's date for calculating relative deadlines
+        const todayStr = new Date().toISOString().split('T')[0];
 
-Document Text:
-${documentText}
-
-Extract every action item, deadline, obligation, and requirement from this document. Only extract action items with solid deliverables. Return ONLY a valid JSON object with this exact format (no markdown, no code blocks):
-
-{
-  "actionItems": [
-    {
-      "title": "Brief action title",
-      "description": "Detailed description with context from document",
-      "dueDate": "YYYY-MM-DD",
-      "priority": "high"
-    }
-  ]
-}
-
-Priority levels:
-- high: Critical deadlines, payments, inspections
-- medium: Important but flexible items
-- low: Nice-to-have or informational items
-
-Return ONLY the JSON object, no other text.`;
+        // Build context-rich prompt based on document type
+        const prompt = documentType === 'LOI'
+          ? get().buildLOIExtractionPrompt(documentText, deal, todayStr)
+          : get().buildAPAExtractionPrompt(documentText, deal, todayStr);
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
           method: 'POST',
@@ -2681,7 +2664,7 @@ Return ONLY the JSON object, no other text.`;
               }]
             }],
             generationConfig: {
-              temperature: 0.2,
+              temperature: 0.1,
               topK: 40,
               topP: 0.95,
               maxOutputTokens: 8192,
@@ -2710,7 +2693,28 @@ Return ONLY the JSON object, no other text.`;
 
         if (parsed.actionItems && Array.isArray(parsed.actionItems)) {
           console.log(`✅ Gemini extracted ${parsed.actionItems.length} action items from ${documentType}`);
-          return parsed.actionItems;
+
+          // Enrich action items with additional context
+          const enrichedItems = parsed.actionItems.map(item => ({
+            title: item.title,
+            description: get().buildEnrichedDescription(item),
+            dueDate: item.dueDate || null,
+            priority: item.priority || 'medium',
+            responsibleParty: item.responsibleParty || null,
+            category: item.category || null,
+            sourceClause: item.sourceClause || null,
+            amount: item.amount || null
+          }));
+
+          // Log extracted key dates and deal terms if available
+          if (parsed.keyDates) {
+            console.log('📅 Key dates extracted:', parsed.keyDates);
+          }
+          if (parsed.dealTerms) {
+            console.log('💰 Deal terms extracted:', parsed.dealTerms);
+          }
+
+          return enrichedItems;
         } else {
           throw new Error('Invalid response format from Gemini');
         }
@@ -2725,6 +2729,215 @@ Return ONLY the JSON object, no other text.`;
 
     // Fallback: Smart text parsing
     return get().intelligentDemoParser(documentType, deal, documentText);
+  },
+
+  // Build enriched description from extracted item fields
+  buildEnrichedDescription: (item) => {
+    let description = item.description || '';
+    const extras = [];
+
+    if (item.responsibleParty) {
+      extras.push(`Responsible: ${item.responsibleParty}`);
+    }
+    if (item.sourceClause) {
+      extras.push(`Source: ${item.sourceClause}`);
+    }
+    if (item.amount) {
+      extras.push(`Amount: $${item.amount.toLocaleString()}`);
+    }
+    if (item.category) {
+      extras.push(`Category: ${item.category}`);
+    }
+
+    if (extras.length > 0) {
+      description += (description ? ' | ' : '') + extras.join(' | ');
+    }
+
+    return description || 'Extracted from document';
+  },
+
+  // LOI-specific extraction prompt
+  buildLOIExtractionPrompt: (documentText, deal, todayStr) => {
+    const aircraftInfo = deal?.aircraft
+      ? `${deal.aircraft.manufacturer || ''} ${deal.aircraft.model || ''} ${deal.aircraft.registration ? `(${deal.aircraft.registration})` : ''}`.trim()
+      : 'Aircraft details pending';
+
+    return `You are an expert aircraft transaction attorney and deal coordinator specializing in Letters of Intent for aircraft acquisitions.
+
+TODAY'S DATE: ${todayStr}
+Use this date as the reference point for calculating all relative deadlines (e.g., "within 5 business days" = add 7 calendar days from today).
+
+TASK: Extract ALL actionable tasks, deadlines, and obligations from this Letter of Intent (LOI).
+
+DEAL CONTEXT:
+- Aircraft: ${aircraftInfo}
+- Deal Name: ${deal?.dealName || 'Aircraft Transaction'}
+
+DOCUMENT TEXT:
+${documentText}
+
+EXTRACTION INSTRUCTIONS:
+1. Extract EVERY deadline, obligation, payment requirement, and contingency
+2. Convert ALL relative dates to actual calendar dates based on today's date (${todayStr})
+   - "5 business days" = add 7 calendar days
+   - "10 days" = add 10 calendar days
+   - "2 weeks" = add 14 calendar days
+   - "30 days" = add 30 calendar days
+3. Identify who is responsible for each task (buyer/seller/both/escrow agent/third-party)
+4. Include specific dollar amounts where mentioned
+5. Reference the source section/clause when identifiable
+
+CRITICAL LOI ITEMS TO EXTRACT:
+- LOI execution/acceptance deadline
+- Earnest money deposit amount and payment deadline
+- Exclusivity/no-shop period duration and end date
+- Due diligence period start and end dates
+- Aircraft inspection scheduling deadline
+- Records review period and deadline
+- Financing contingency deadline (if applicable)
+- Purchase price and payment structure
+- Conditions that must be satisfied before closing
+- Termination rights and required notice periods
+- Expiration date of the LOI itself
+
+Return ONLY valid JSON (no markdown, no code blocks, no extra text):
+
+{
+  "actionItems": [
+    {
+      "title": "Brief, actionable task title (start with verb)",
+      "description": "Detailed context including specific requirements from the document",
+      "dueDate": "YYYY-MM-DD",
+      "priority": "high|medium|low",
+      "responsibleParty": "buyer|seller|both|escrow|third-party",
+      "category": "payment|inspection|document|notice|contingency|closing",
+      "sourceClause": "Section X.X or paragraph reference",
+      "amount": 50000
+    }
+  ],
+  "keyDates": {
+    "effectiveDate": "YYYY-MM-DD or null",
+    "loiExpiration": "YYYY-MM-DD or null",
+    "dueDiligenceEnd": "YYYY-MM-DD or null",
+    "exclusivityEnd": "YYYY-MM-DD or null"
+  },
+  "dealTerms": {
+    "purchasePrice": null,
+    "depositAmount": null,
+    "exclusivityDays": null
+  }
+}
+
+PRIORITY GUIDELINES:
+- high: Payment deadlines, LOI execution deadline, inspection dates, contingency expirations, any deadline that if missed could terminate the deal
+- medium: Document reviews, scheduling coordination, records requests
+- low: Informational items, post-closing considerations, nice-to-haves
+
+IMPORTANT: Extract comprehensively. A missed deadline in an LOI can cost the deal. If a date cannot be determined, use null for dueDate but still include the task.`;
+  },
+
+  // APA-specific extraction prompt
+  buildAPAExtractionPrompt: (documentText, deal, todayStr) => {
+    const aircraftInfo = deal?.aircraft
+      ? `${deal.aircraft.manufacturer || ''} ${deal.aircraft.model || ''} ${deal.aircraft.registration ? `(${deal.aircraft.registration})` : ''}`.trim()
+      : 'Aircraft details pending';
+    const serialNumber = deal?.aircraft?.serialNumber || 'TBD';
+
+    return `You are an expert aircraft transaction attorney and closing coordinator specializing in Aircraft Purchase Agreements.
+
+TODAY'S DATE: ${todayStr}
+Use this date as the reference point for calculating all relative deadlines.
+
+TASK: Extract ALL actionable tasks, deadlines, obligations, and closing requirements from this Aircraft Purchase Agreement (APA).
+
+DEAL CONTEXT:
+- Aircraft: ${aircraftInfo}
+- Serial Number: ${serialNumber}
+- Deal Name: ${deal?.dealName || 'Aircraft Transaction'}
+
+DOCUMENT TEXT:
+${documentText}
+
+EXTRACTION INSTRUCTIONS:
+1. Extract EVERY deadline, payment milestone, delivery requirement, and closing condition
+2. Convert ALL relative dates to actual calendar dates based on today's date (${todayStr})
+   - "within 10 days of Effective Date" = ${todayStr} + 10 days
+   - "5 business days after inspection" = inspection date + 7 calendar days
+   - "at closing" = use closing date if specified, otherwise note as "at closing"
+3. Identify responsible party for each task (buyer/seller/both/escrow/inspector/title company)
+4. Track ALL payment amounts and their triggers
+5. Note inspection requirements, scope, and acceptance criteria
+6. Capture ALL documents required for closing (both buyer and seller deliverables)
+7. Include warranty periods and post-closing obligations
+
+CRITICAL APA ITEMS TO EXTRACT:
+- Initial deposit and additional deposit amounts with deadlines
+- Pre-purchase inspection: location, duration, scope, who bears cost
+- Inspection report delivery deadline
+- Buyer's acceptance/rejection deadline after receiving inspection report
+- Discrepancy resolution procedures and deadlines
+- Final payment/balance due at closing
+- Closing date and location
+- Bill of Sale execution requirements
+- FAA documents: AC Form 8050-1 (Registration), 8050-2 (Bill of Sale)
+- Warranty Bill of Sale requirements
+- Insurance requirements (hull value, liability minimums, named insureds)
+- Delivery location and acceptance procedures
+- Risk of loss transfer point (when does buyer assume risk?)
+- Seller's representations and warranties
+- Survival period for representations
+- Indemnification obligations and periods
+- Escrow instructions and release conditions
+- Default and remedies provisions
+- Any conditions precedent to closing
+
+Return ONLY valid JSON (no markdown, no code blocks, no extra text):
+
+{
+  "actionItems": [
+    {
+      "title": "Brief, actionable task title (start with verb)",
+      "description": "Detailed context with specific requirements, amounts, and conditions",
+      "dueDate": "YYYY-MM-DD",
+      "priority": "high|medium|low",
+      "responsibleParty": "buyer|seller|both|escrow|inspector|title-company",
+      "category": "payment|inspection|document|notice|insurance|registration|delivery|closing",
+      "sourceClause": "Section X.X or Article reference",
+      "amount": 150000
+    }
+  ],
+  "paymentSchedule": [
+    {
+      "milestone": "Initial Deposit",
+      "amount": 50000,
+      "dueDate": "YYYY-MM-DD",
+      "recipient": "escrow"
+    }
+  ],
+  "closingRequirements": {
+    "sellerDeliverables": ["Bill of Sale", "Warranty Bill of Sale", "Logbooks"],
+    "buyerDeliverables": ["Wire transfer", "Insurance certificate", "AC Form 8050-1"]
+  },
+  "keyDates": {
+    "effectiveDate": "YYYY-MM-DD or null",
+    "inspectionDeadline": "YYYY-MM-DD or null",
+    "acceptanceDeadline": "YYYY-MM-DD or null",
+    "closingDate": "YYYY-MM-DD or null",
+    "deliveryDate": "YYYY-MM-DD or null"
+  },
+  "dealTerms": {
+    "purchasePrice": null,
+    "depositTotal": null,
+    "balanceAtClosing": null
+  }
+}
+
+PRIORITY GUIDELINES:
+- high: All payment deadlines, inspection completion, acceptance/rejection notices, closing requirements, document deliveries, insurance deadlines
+- medium: Coordination items, scheduling, non-critical document preparation, records organization
+- low: Post-closing items, warranty tracking, informational/reference items
+
+IMPORTANT: APAs are legally binding contracts. Every obligation matters. Extract thoroughly - missing a payment deadline or document requirement can derail the closing. If a specific date cannot be determined, use null but still include the task with available context.`;
   },
 
   intelligentDemoParser: (documentType, deal, documentText = '') => {
