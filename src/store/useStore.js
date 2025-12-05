@@ -2456,11 +2456,11 @@ export const useStore = create((set, get) => ({
 
     const updatedNotes = [...(lead.timestampedNotes || []), newNote];
 
-    // Update local state immediately - also set status to "Interested"
+    // Update local state immediately
     set({
       leads: leads.map(l =>
         l.id === leadId
-          ? { ...l, timestampedNotes: updatedNotes, status: 'Interested' }
+          ? { ...l, timestampedNotes: updatedNotes }
           : l
       )
     });
@@ -2471,12 +2471,11 @@ export const useStore = create((set, get) => ({
         await supabase
           .from('leads')
           .update({
-            timestamped_notes: updatedNotes,
-            status: 'Interested'
+            timestamped_notes: updatedNotes
           })
           .eq('id', leadId);
 
-        console.log('📝 Lead status updated to "Interested" after adding note');
+        console.log('📝 Note added to lead successfully');
       } catch (error) {
         console.error('Error syncing note to Supabase:', error);
       }
