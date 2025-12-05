@@ -2694,22 +2694,35 @@ export const useStore = create((set, get) => ({
         if (parsed.actionItems && Array.isArray(parsed.actionItems)) {
           console.log(`✅ Gemini extracted ${parsed.actionItems.length} action items from ${documentType}`);
 
-          // Enrich action items with additional context
-          const enrichedItems = parsed.actionItems.map(item => ({
-            title: item.title,
-            description: get().buildEnrichedDescription(item),
-            dueDate: item.dueDate || null,
-            priority: item.priority || 'medium',
-            responsibleParty: item.responsibleParty || null,
-            category: item.category || null,
-            sourceClause: item.sourceClause || null,
-            amount: item.amount || null
-          }));
+          // Helper to calculate due date from daysFromToday
+          const today = new Date();
+          const calculateDueDate = (daysFromToday) => {
+            if (daysFromToday === null || daysFromToday === undefined || isNaN(daysFromToday)) {
+              return null;
+            }
+            const dueDate = new Date(today);
+            dueDate.setDate(dueDate.getDate() + parseInt(daysFromToday, 10));
+            return dueDate.toISOString().split('T')[0];
+          };
 
-          // Log extracted key dates and deal terms if available
-          if (parsed.keyDates) {
-            console.log('📅 Key dates extracted:', parsed.keyDates);
-          }
+          // Enrich action items and calculate actual due dates
+          const enrichedItems = parsed.actionItems.map(item => {
+            const dueDate = calculateDueDate(item.daysFromToday);
+            return {
+              title: item.title,
+              description: get().buildEnrichedDescription(item),
+              dueDate: dueDate,
+              priority: item.priority || 'medium',
+              responsibleParty: item.responsibleParty || null,
+              category: item.category || null,
+              sourceClause: item.sourceClause || null,
+              amount: item.amount || null
+            };
+          });
+
+          console.log(`📅 Calculated due dates for ${enrichedItems.filter(i => i.dueDate).length} items`);
+
+          // Log extracted deal terms if available
           if (parsed.dealTerms) {
             console.log('💰 Deal terms extracted:', parsed.dealTerms);
           }
@@ -2762,34 +2775,9 @@ export const useStore = create((set, get) => ({
       ? `${deal.aircraft.manufacturer || ''} ${deal.aircraft.model || ''} ${deal.aircraft.registration ? `(${deal.aircraft.registration})` : ''}`.trim()
       : 'Aircraft details pending';
 
-    // Pre-calculate example dates to show AI exactly what we expect
-    const t0 = new Date(todayStr);
-    const addDays = (days) => {
-      const d = new Date(t0);
-      d.setDate(d.getDate() + days);
-      return d.toISOString().split('T')[0];
-    };
+    return `You are an expert aircraft transaction attorney extracting action items from a Letter of Intent (LOI).
 
-    return `You are an expert aircraft transaction attorney and deal coordinator specializing in Letters of Intent for aircraft acquisitions.
-
-DATE CALCULATION RULES (CRITICAL):
-- T0 (Day Zero) = ${todayStr}
-- You MUST convert ALL relative dates to actual YYYY-MM-DD calendar dates
-- Here are the exact calculations:
-  - "within 3 days" → ${addDays(3)}
-  - "within 5 business days" → ${addDays(7)}
-  - "within 7 days" → ${addDays(7)}
-  - "within 10 days" → ${addDays(10)}
-  - "within 14 days" or "2 weeks" → ${addDays(14)}
-  - "within 21 days" or "3 weeks" → ${addDays(21)}
-  - "within 30 days" → ${addDays(30)}
-  - "within 45 days" → ${addDays(45)}
-  - "within 60 days" → ${addDays(60)}
-  - "within 90 days" → ${addDays(90)}
-- For any other number of days, calculate from ${todayStr}
-- NEVER output null for dueDate if a timeframe is mentioned - calculate it
-
-TASK: Extract actionable tasks and deadlines from this Letter of Intent (LOI).
+TASK: Extract actionable tasks with their deadlines from this LOI document.
 
 DEAL CONTEXT:
 - Aircraft: ${aircraftInfo}
@@ -2798,69 +2786,60 @@ DEAL CONTEXT:
 DOCUMENT TEXT:
 ${documentText}
 
-EXTRACTION INSTRUCTIONS:
-1. Extract deadlines, obligations, and payment requirements
-2. Calculate actual calendar dates for ALL deadlines using T0 = ${todayStr}
-3. Identify who is responsible for each task (buyer/seller/both/escrow/third-party)
-4. Include specific dollar amounts where mentioned
-5. Reference the source section/clause when identifiable
+DEADLINE EXTRACTION RULES:
+- For each task, extract "daysFromToday" as a NUMBER representing calendar days from today
+- Convert business days to calendar days: 5 business days = 7 calendar days
+- Examples:
+  - "within 3 days" → daysFromToday: 3
+  - "within 5 business days" → daysFromToday: 7
+  - "within 10 days" → daysFromToday: 10
+  - "within 2 weeks" → daysFromToday: 14
+  - "within 30 days" → daysFromToday: 30
+  - "immediately" or "upon execution" → daysFromToday: 0
+- If no specific timeframe is mentioned, estimate based on typical LOI timelines
 
-DO NOT EXTRACT (exclude these entirely):
-- Conditional/contingency tasks that only apply if something goes wrong (e.g., "default curing period", "remedies upon breach", "termination for cause")
-- Hypothetical scenarios (e.g., "if buyer fails to...", "in the event of default...")
-- Indemnification obligations
-- Survival periods for representations
-- Dispute resolution procedures
-- Remedies and penalties for non-performance
-- Any task that depends on a party NOT performing their obligations
+DO NOT EXTRACT:
+- Conditional tasks (default curing, breach remedies, termination for cause)
+- Hypothetical scenarios ("if buyer fails to...", "in the event of default...")
+- Indemnification, dispute resolution, or penalty clauses
+- Any task triggered by non-performance
 
-ONLY EXTRACT tasks that are part of the normal, successful transaction flow.
+ONLY EXTRACT tasks from the normal, successful transaction flow.
 
-CRITICAL LOI ITEMS TO EXTRACT:
+ITEMS TO EXTRACT:
 - LOI execution/acceptance deadline
-- Earnest money deposit amount and payment deadline
-- Exclusivity/no-shop period end date
-- Due diligence period end date
-- Aircraft inspection scheduling deadline
+- Earnest money deposit amount and deadline
+- Exclusivity/no-shop period
+- Due diligence period
+- Inspection scheduling
 - Records review deadline
-- Financing contingency deadline (if applicable)
-- Purchase price confirmation
-- Expiration date of the LOI
+- Financing contingency deadline
+- LOI expiration
 
-Return ONLY valid JSON (no markdown, no code blocks, no extra text):
+Return ONLY valid JSON:
 
 {
   "actionItems": [
     {
-      "title": "Brief, actionable task title (start with verb)",
-      "description": "Detailed context including specific requirements from the document",
-      "dueDate": "YYYY-MM-DD",
-      "priority": "high|medium|low",
-      "responsibleParty": "buyer|seller|both|escrow|third-party",
-      "category": "payment|inspection|document|notice|closing",
-      "sourceClause": "Section X.X or paragraph reference",
+      "title": "Brief task title starting with verb",
+      "description": "Detailed context from document",
+      "daysFromToday": 10,
+      "priority": "high",
+      "responsibleParty": "buyer",
+      "category": "payment",
+      "sourceClause": "Section 3.1",
       "amount": 50000
     }
   ],
-  "keyDates": {
-    "effectiveDate": "${todayStr}",
-    "loiExpiration": "YYYY-MM-DD or null",
-    "dueDiligenceEnd": "YYYY-MM-DD or null",
-    "exclusivityEnd": "YYYY-MM-DD or null"
-  },
   "dealTerms": {
     "purchasePrice": null,
-    "depositAmount": null,
-    "exclusivityDays": null
+    "depositAmount": null
   }
 }
 
-PRIORITY GUIDELINES:
-- high: Payment deadlines, LOI execution deadline, inspection dates, contingency expirations
-- medium: Document reviews, scheduling coordination, records requests
-- low: Informational items, nice-to-haves
-
-Remember: Calculate ALL dates as actual YYYY-MM-DD values based on T0 = ${todayStr}. Do not include conditional/default/breach-related tasks.`;
+PRIORITY: high (payments, execution, inspections) | medium (document reviews) | low (informational)
+RESPONSIBLE PARTY: buyer | seller | both | escrow | third-party
+CATEGORY: payment | inspection | document | notice | closing`;
   },
 
   // APA-specific extraction prompt
@@ -2870,35 +2849,9 @@ Remember: Calculate ALL dates as actual YYYY-MM-DD values based on T0 = ${todayS
       : 'Aircraft details pending';
     const serialNumber = deal?.aircraft?.serialNumber || 'TBD';
 
-    // Pre-calculate example dates to show AI exactly what we expect
-    const t0 = new Date(todayStr);
-    const addDays = (days) => {
-      const d = new Date(t0);
-      d.setDate(d.getDate() + days);
-      return d.toISOString().split('T')[0];
-    };
+    return `You are an expert aircraft transaction attorney extracting action items from an Aircraft Purchase Agreement (APA).
 
-    return `You are an expert aircraft transaction attorney and closing coordinator specializing in Aircraft Purchase Agreements.
-
-DATE CALCULATION RULES (CRITICAL):
-- T0 (Day Zero) = ${todayStr}
-- You MUST convert ALL relative dates to actual YYYY-MM-DD calendar dates
-- Here are the exact calculations:
-  - "within 3 days" → ${addDays(3)}
-  - "within 5 business days" → ${addDays(7)}
-  - "within 7 days" → ${addDays(7)}
-  - "within 10 days" → ${addDays(10)}
-  - "within 14 days" or "2 weeks" → ${addDays(14)}
-  - "within 21 days" or "3 weeks" → ${addDays(21)}
-  - "within 30 days" → ${addDays(30)}
-  - "within 45 days" → ${addDays(45)}
-  - "within 60 days" → ${addDays(60)}
-  - "within 90 days" → ${addDays(90)}
-- For any other number of days, calculate from ${todayStr}
-- NEVER output null for dueDate if a timeframe is mentioned - calculate it
-- For dependent dates (e.g., "5 days after inspection"), first calculate the base date, then add the additional days
-
-TASK: Extract actionable tasks and deadlines from this Aircraft Purchase Agreement (APA).
+TASK: Extract actionable tasks with their deadlines from this APA document.
 
 DEAL CONTEXT:
 - Aircraft: ${aircraftInfo}
@@ -2908,77 +2861,59 @@ DEAL CONTEXT:
 DOCUMENT TEXT:
 ${documentText}
 
-EXTRACTION INSTRUCTIONS:
-1. Extract deadlines, payment milestones, and closing requirements
-2. Calculate actual calendar dates for ALL deadlines using T0 = ${todayStr}
-3. Identify responsible party for each task (buyer/seller/both/escrow/inspector/title-company)
-4. Track payment amounts and their deadlines
-5. Note inspection requirements and acceptance criteria
-6. Capture documents required for closing
+DEADLINE EXTRACTION RULES:
+- For each task, extract "daysFromToday" as a NUMBER representing calendar days from today
+- Convert business days to calendar days: 5 business days = 7 calendar days
+- Examples:
+  - "within 3 days" → daysFromToday: 3
+  - "within 5 business days" → daysFromToday: 7
+  - "within 10 days" → daysFromToday: 10
+  - "within 2 weeks" → daysFromToday: 14
+  - "within 30 days" → daysFromToday: 30
+  - "within 45 days" → daysFromToday: 45
+  - "within 60 days" → daysFromToday: 60
+  - "at closing" → use the closing daysFromToday value
+  - "immediately" or "upon execution" → daysFromToday: 0
+- For sequential tasks (e.g., "5 days after inspection"), add the days together
+- If no specific timeframe is mentioned, estimate based on typical APA timelines
 
-DO NOT EXTRACT (exclude these entirely):
-- Conditional tasks that only apply if something goes wrong:
-  - Default curing periods
-  - Remedies upon breach or default
-  - Termination for cause procedures
-  - Indemnification obligations
-  - Survival periods for representations
-  - Dispute resolution procedures
-  - Penalties for non-performance
-- Hypothetical scenarios (e.g., "if seller fails to...", "in the event of default...")
+DO NOT EXTRACT:
+- Conditional tasks (default curing, breach remedies, termination for cause)
+- Hypothetical scenarios ("if seller fails to...", "in the event of default...")
+- Indemnification, survival periods, dispute resolution, penalties
 - Post-closing warranty claims procedures
-- Any task that depends on a party NOT performing their obligations
+- Any task triggered by non-performance
 
-ONLY EXTRACT tasks that are part of the normal, successful transaction flow.
+ONLY EXTRACT tasks from the normal, successful transaction flow.
 
-CRITICAL APA ITEMS TO EXTRACT:
-- Initial deposit and additional deposit amounts with deadlines
-- Pre-purchase inspection scheduling and completion deadline
-- Inspection report delivery deadline
-- Buyer's acceptance/rejection deadline
-- Discrepancy list submission deadline (normal process, not disputes)
-- Final payment/balance due at closing
+ITEMS TO EXTRACT:
+- Deposit amounts and deadlines
+- Pre-purchase inspection completion
+- Inspection report delivery
+- Buyer acceptance/rejection deadline
+- Discrepancy list submission
+- Final payment at closing
 - Closing date
-- Bill of Sale execution
-- FAA documents: AC Form 8050-1, 8050-2
-- Insurance certificate delivery deadline
-- Delivery location and acceptance
-- Escrow release conditions
+- Bill of Sale, FAA documents (8050-1, 8050-2)
+- Insurance certificate delivery
+- Aircraft delivery and acceptance
+- Escrow release
 
-Return ONLY valid JSON (no markdown, no code blocks, no extra text):
+Return ONLY valid JSON:
 
 {
   "actionItems": [
     {
-      "title": "Brief, actionable task title (start with verb)",
-      "description": "Detailed context with specific requirements and amounts",
-      "dueDate": "YYYY-MM-DD",
-      "priority": "high|medium|low",
-      "responsibleParty": "buyer|seller|both|escrow|inspector|title-company",
-      "category": "payment|inspection|document|notice|insurance|registration|delivery|closing",
-      "sourceClause": "Section X.X or Article reference",
+      "title": "Brief task title starting with verb",
+      "description": "Detailed context from document",
+      "daysFromToday": 30,
+      "priority": "high",
+      "responsibleParty": "buyer",
+      "category": "payment",
+      "sourceClause": "Section 4.2",
       "amount": 150000
     }
   ],
-  "paymentSchedule": [
-    {
-      "milestone": "Initial Deposit",
-      "amount": 50000,
-      "dueDate": "YYYY-MM-DD",
-      "recipient": "escrow"
-    }
-  ],
-  "closingRequirements": {
-    "sellerDeliverables": ["Bill of Sale", "Warranty Bill of Sale", "Logbooks"],
-    "buyerDeliverables": ["Wire transfer", "Insurance certificate", "AC Form 8050-1"]
-  },
-  "keyDates": {
-    "effectiveDate": "${todayStr}",
-    "inspectionDeadline": "YYYY-MM-DD or null",
-    "acceptanceDeadline": "YYYY-MM-DD or null",
-    "closingDate": "YYYY-MM-DD or null",
-    "deliveryDate": "YYYY-MM-DD or null"
-  },
   "dealTerms": {
     "purchasePrice": null,
     "depositTotal": null,
@@ -2986,12 +2921,9 @@ Return ONLY valid JSON (no markdown, no code blocks, no extra text):
   }
 }
 
-PRIORITY GUIDELINES:
-- high: Payment deadlines, inspection completion, acceptance notices, closing requirements, insurance deadlines
-- medium: Document preparation, scheduling coordination
-- low: Informational items
-
-Remember: Calculate ALL dates as actual YYYY-MM-DD values based on T0 = ${todayStr}. Do not include conditional/default/breach-related tasks.`;
+PRIORITY: high (payments, inspection, acceptance, closing) | medium (document prep) | low (informational)
+RESPONSIBLE PARTY: buyer | seller | both | escrow | inspector | title-company
+CATEGORY: payment | inspection | document | notice | insurance | registration | delivery | closing`;
   },
 
   intelligentDemoParser: (documentType, deal, documentText = '') => {
