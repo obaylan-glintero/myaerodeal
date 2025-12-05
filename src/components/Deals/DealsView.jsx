@@ -545,8 +545,17 @@ const DealTaskActions = ({ deal, tasks, currentUserProfile }) => {
       doc.setFillColor(201, 165, 90); // #C9A55A - Refined Gold
       doc.rect(14, 95, (pageWidth - 28) * (progress / 100), 6, 'F');
 
-      // Tasks table
-      const tableData = tasks.map(task => [
+      // Tasks table - sort by due date (earliest first, tasks without dates last)
+      const sortedTasks = [...tasks].sort((a, b) => {
+        // Tasks without due dates go to the end
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        // Sort by due date (earliest first)
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      });
+
+      const tableData = sortedTasks.map(task => [
         task.status === 'completed' ? '☑' : '☐',
         task.title,
         task.dueDate || 'N/A',
@@ -575,10 +584,23 @@ const DealTaskActions = ({ deal, tasks, currentUserProfile }) => {
           cellPadding: 3
         },
         didDrawCell: (data) => {
-          if (data.column.index === 0 && data.cell.section === 'body') {
-            const task = tasks[data.row.index];
+          if (data.cell.section === 'body') {
+            const task = sortedTasks[data.row.index];
             if (task.status === 'completed') {
-              doc.setTextColor(76, 175, 80);
+              // For checkbox column, use green color
+              if (data.column.index === 0) {
+                doc.setTextColor(76, 175, 80);
+              }
+              // For all columns, add strikethrough
+              if (data.column.index >= 1) {
+                const cellX = data.cell.x;
+                const cellY = data.cell.y + data.cell.height / 2;
+                const cellWidth = data.cell.width;
+
+                doc.setDrawColor(128, 128, 128);
+                doc.setLineWidth(0.3);
+                doc.line(cellX + 2, cellY, cellX + cellWidth - 2, cellY);
+              }
             }
           }
         }
