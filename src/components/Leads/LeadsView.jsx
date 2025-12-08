@@ -238,6 +238,7 @@ const LeadsView = ({ openModal }) => {
                 <tr style={{ backgroundColor: colors.secondary, borderBottom: `2px solid ${colors.border}` }}>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Lead</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Aircraft Type</th>
+                  <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Preferred Model</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Budget</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Year Pref.</th>
                   <th className="text-left px-4 py-3 font-semibold" style={{ color: colors.primary }}>Created</th>
@@ -265,6 +266,9 @@ const LeadsView = ({ openModal }) => {
                     </td>
                     <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
                       {lead.aircraftType || 'Not specified'}
+                    </td>
+                    <td className="px-4 py-3" style={{ color: colors.textPrimary }}>
+                      {lead.preferredModel || '-'}
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-medium" style={{ color: colors.textPrimary }}>
@@ -414,14 +418,22 @@ const LeadSummaryCard = ({ lead, colors, onViewDetails, onEdit, onDelete, isLoad
         </div>
       </div>
 
-      {/* Info Boxes - Aircraft Type, Budget, Year Preference */}
+      {/* Info Boxes - Aircraft Type, Preferred Model, Budget, Year Preference */}
       <div className="p-6">
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-4 mb-6">
           {/* Aircraft Type */}
           <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
             <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Aircraft Type</div>
             <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
               {lead.aircraftType || 'Not specified'}
+            </div>
+          </div>
+
+          {/* Preferred Model */}
+          <div className="text-center p-4 rounded-lg" style={{ backgroundColor: colors.secondary }}>
+            <div className="text-xs mb-2" style={{ color: colors.textSecondary }}>Preferred Model</div>
+            <div className="text-sm font-bold" style={{ color: colors.textPrimary }}>
+              {lead.preferredModel || 'Not specified'}
             </div>
           </div>
 
