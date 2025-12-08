@@ -227,6 +227,14 @@ const LeadForm = ({ formData, setFormData }) => {
         <option value="Airliner">Airliner</option>
         <option value="Cargo">Cargo</option>
       </select>
+      <input
+        type="text"
+        placeholder="Preferred Model (e.g., Citation XLS, G650)"
+        value={formData.preferredModel || ''}
+        onChange={(e) => setFormData({ ...formData, preferredModel: e.target.value })}
+        className="w-full px-4 py-2 border rounded-lg"
+        style={inputStyle}
+      />
       <div className="flex gap-4 items-center">
         <label className="flex items-center gap-2" style={{ color: colors.textSecondary }}>
           <input

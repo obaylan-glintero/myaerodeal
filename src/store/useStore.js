@@ -302,6 +302,7 @@ export const useStore = create((set, get) => ({
           budgetKnown: lead.budget_known || false,
           yearPreference: lead.year_preference || { oldest: null, newest: null },
           status: lead.status || 'Inquiry',
+          preferredModel: lead.preferred_model || '',
           presentations: lead.presentations || [],
           timestampedNotes: lead.timestamped_notes || [],
           createdAt: lead.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
@@ -323,6 +324,7 @@ export const useStore = create((set, get) => ({
           budgetKnown: lead.budget_known || false,
           yearPreference: lead.year_preference || { oldest: null, newest: null },
           status: lead.status || 'Inquiry',
+          preferredModel: lead.preferred_model || '',
           notes: lead.notes || '',
           presentations: lead.presentations || [],
           timestampedNotes: lead.timestamped_notes || [],
@@ -764,7 +766,7 @@ export const useStore = create((set, get) => ({
     if (!get().isAuthenticated) return;
 
     // Only fetch minimal fields for refresh
-    const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, presentations, timestamped_notes, created_at';
+    const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, preferred_model, presentations, timestamped_notes, created_at';
     const { data } = await supabase.from('leads').select(leadsMinimalFields);
 
     if (data) {
@@ -778,6 +780,7 @@ export const useStore = create((set, get) => ({
           budgetKnown: lead.budget_known || false,
           yearPreference: lead.year_preference || { oldest: null, newest: null },
           status: lead.status || 'Inquiry',
+          preferredModel: lead.preferred_model || '',
           presentations: lead.presentations || [],
           timestampedNotes: lead.timestamped_notes || [],
           createdAt: lead.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
@@ -802,6 +805,7 @@ export const useStore = create((set, get) => ({
             budgetKnown: dbLead.budget_known || false,
             yearPreference: dbLead.year_preference || { oldest: null, newest: null },
             status: dbLead.status || 'Inquiry',
+            preferredModel: dbLead.preferred_model || '',
             presentations: dbLead.presentations || [],
             timestampedNotes: dbLead.timestamped_notes || []
           };
@@ -1493,6 +1497,7 @@ export const useStore = create((set, get) => ({
         budgetKnown: false,
         yearPreference: { oldest: null, newest: null },
         status: 'Inquiry',
+        preferredModel: '',
         notes: '',
         ...leadData,
         presentations: [],
@@ -1518,6 +1523,7 @@ export const useStore = create((set, get) => ({
           budget_known: leadData.budgetKnown || false,
           year_preference: leadData.yearPreference || { oldest: null, newest: null },
           status: leadData.status || 'Inquiry',
+          preferred_model: leadData.preferredModel || '',
           notes: leadData.notes || '',
           presentations: [],
           timestamped_notes: []
@@ -1536,6 +1542,7 @@ export const useStore = create((set, get) => ({
         budgetKnown: data.budget_known || false,
         yearPreference: data.year_preference || { oldest: null, newest: null },
         status: data.status || 'Inquiry',
+        preferredModel: data.preferred_model || '',
         notes: data.notes || '',
         presentations: data.presentations || [],
         timestampedNotes: data.timestamped_notes || [],
@@ -1584,6 +1591,7 @@ export const useStore = create((set, get) => ({
       if (updatedData.budgetKnown !== undefined) dbData.budget_known = updatedData.budgetKnown;
       if (updatedData.yearPreference !== undefined) dbData.year_preference = updatedData.yearPreference;
       if (updatedData.status !== undefined) dbData.status = updatedData.status;
+      if (updatedData.preferredModel !== undefined) dbData.preferred_model = updatedData.preferredModel;
       if (updatedData.notes !== undefined) dbData.notes = updatedData.notes;
       if (updatedData.presentations !== undefined) dbData.presentations = updatedData.presentations;
       if (updatedData.timestampedNotes !== undefined) dbData.timestamped_notes = updatedData.timestampedNotes;
