@@ -99,7 +99,15 @@ const Dashboard = ({ openModal, setActiveTab }) => {
         <div className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
           <h3 className="text-xl font-semibold mb-4" style={{ color: colors.primary }}>Upcoming Tasks</h3>
           <div className="space-y-3">
-            {tasks.filter(t => t.status === 'pending').slice(0, 5).map(task => {
+            {tasks.filter(t => t.status === 'pending')
+              .sort((a, b) => {
+                if (!a.dueDate && !b.dueDate) return 0;
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+              })
+              .slice(0, 5)
+              .map(task => {
               // Get related lead or deal info
               let relatedInfo = null;
               if (task.relatedTo) {
