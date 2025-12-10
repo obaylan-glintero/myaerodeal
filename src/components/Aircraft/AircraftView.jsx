@@ -556,7 +556,7 @@ const AircraftView = ({ openModal }) => {
                     key={ac.id}
                     className="hover:opacity-80 cursor-pointer"
                     style={{ borderBottom: `1px solid ${colors.border}` }}
-                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
+                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraftDetail', updatedAc))}
                   >
                     <td className="px-4 py-3">
                       <div>
