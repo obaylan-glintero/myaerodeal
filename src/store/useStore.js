@@ -247,7 +247,7 @@ export const useStore = create((set, get) => ({
       console.log('Fetching data from Supabase...');
 
       // Only fetch minimal fields for faster initial load
-      const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, presentations, timestamped_notes, created_at';
+      const leadsMinimalFields = 'id, name, company, aircraft_type, budget, budget_known, year_preference, status, preferred_model, presentations, timestamped_notes, created_at';
       const aircraftMinimalFields = 'id, manufacturer, model, yom, category, location, price, status, seller, image_url, access_type, spec_sheet, summary, presentations, serial_number, registration, created_at';
       const dealsMinimalFields = 'id, deal_name, client_name, related_lead, related_aircraft, deal_value, estimated_closing, status, next_step, follow_up_date, created_at';
 
@@ -1041,6 +1041,7 @@ export const useStore = create((set, get) => ({
           budgetKnown: data.budget_known || false,
           yearPreference: data.year_preference || { oldest: null, newest: null },
           status: data.status || 'Inquiry',
+          preferredModel: data.preferred_model || '',
           notes: data.notes || '',
           presentations: data.presentations || [],
           timestampedNotes: data.timestamped_notes || [],
