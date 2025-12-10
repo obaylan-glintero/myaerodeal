@@ -5,6 +5,7 @@ import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import logo from '../../assets/MyAeroDeal_dark.png';
 import ConfirmDialog from '../Common/ConfirmDialog';
+import { formatLeadWithCompany } from '../../utils/leadFormatters';
 
 const AircraftView = ({ openModal }) => {
   const { aircraft, leads, deleteAircraft, addNoteToAircraft, currentUserProfile, loadFullAircraftData, aircraftLoading } = useStore();
@@ -276,7 +277,7 @@ const AircraftView = ({ openModal }) => {
         doc.setFont(undefined, 'normal');
 
         const presDetails = [
-          `Lead: ${lead?.name || 'Unknown'} (${lead?.company || 'N/A'})`,
+          `Lead: ${lead ? formatLeadWithCompany(lead) : 'Unknown'}`,
           `Date: ${new Date(pres.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
           `Price Given: $${pres.priceGiven ? (pres.priceGiven / 1000000).toFixed(2) + 'M' : 'N/A'}`,
           `Lead Status: ${lead?.status || 'Unknown'}`

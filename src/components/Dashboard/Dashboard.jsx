@@ -3,6 +3,7 @@ import { Users, FileText, Plane, ListTodo, Check } from 'lucide-react';
 import StatCard from '../Common/StatCard';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
+import { formatLeadDisplayName } from '../../utils/leadFormatters';
 
 const Dashboard = ({ openModal, setActiveTab }) => {
   const { leads, aircraft, deals, tasks, updateTask, loadFullLeadData } = useStore();
@@ -74,7 +75,7 @@ const Dashboard = ({ openModal, setActiveTab }) => {
                   style={{ backgroundColor: colors.secondary }}
                 >
                   <div className="text-left">
-                    <p className="font-medium" style={{ color: colors.textPrimary }}>{lead.name}</p>
+                    <p className="font-medium" style={{ color: colors.textPrimary }}>{formatLeadDisplayName(lead)}</p>
                     <p className="text-sm" style={{ color: colors.textSecondary }}>{lead.company}</p>
                   </div>
                   <span
@@ -113,7 +114,7 @@ const Dashboard = ({ openModal, setActiveTab }) => {
               if (task.relatedTo) {
                 if (task.relatedTo.type === 'lead') {
                   const lead = leads.find(l => l.id === task.relatedTo.id);
-                  if (lead) relatedInfo = { type: 'Lead', name: lead.name };
+                  if (lead) relatedInfo = { type: 'Lead', name: formatLeadDisplayName(lead) };
                 } else if (task.relatedTo.type === 'deal') {
                   const deal = deals.find(d => d.id === task.relatedTo.id);
                   if (deal) relatedInfo = { type: 'Deal', name: deal.dealName };

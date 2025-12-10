@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { formatLeadDisplayName } from '../utils/leadFormatters';
 
 // Configure PDF.js worker - use local bundled worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -2448,7 +2449,7 @@ export const useStore = create((set, get) => ({
     }
 
     const aircraftName = ac ? `${ac.manufacturer} ${ac.model}` : 'aircraft';
-    createAutoTask('lead', leadId, `Follow up: ${lead?.name} - Presented ${aircraftName}`);
+    createAutoTask('lead', leadId, `Follow up: ${lead ? formatLeadDisplayName(lead) : 'Lead'} - Presented ${aircraftName}`);
   },
 
   // Notes Actions

@@ -3,6 +3,7 @@ import { Plus, Search, Edit2, Trash2, MessageSquare, Send, ArrowUpDown, LayoutGr
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import ConfirmDialog from '../Common/ConfirmDialog';
+import { formatLeadDisplayName } from '../../utils/leadFormatters';
 
 // Helper to get status colors
 const getLeadStatusColors = (status) => {
@@ -59,7 +60,7 @@ const LeadsView = ({ openModal }) => {
     setDeleteConfirm({
       isOpen: true,
       leadId: lead.id,
-      leadName: lead.name || 'this lead'
+      leadName: formatLeadDisplayName(lead) || 'this lead'
     });
   };
 
@@ -303,7 +304,7 @@ const LeadsView = ({ openModal }) => {
                     <td className="px-4 py-3">
                       <div>
                         <p className="font-semibold" style={{ color: colors.primary }}>
-                          {lead.name}
+                          {formatLeadDisplayName(lead)}
                         </p>
                         <p className="text-sm" style={{ color: colors.textSecondary }}>
                           {lead.company}
@@ -431,7 +432,7 @@ const LeadSummaryCard = ({ lead, colors, onViewDetails, onEdit, onDelete, isLoad
         {/* Lead Name and Company */}
         <div className="absolute bottom-0 left-0 right-0 p-6">
           <h3 className="text-2xl font-bold text-white drop-shadow-md">
-            {lead.name}
+            {formatLeadDisplayName(lead)}
           </h3>
           <p className="text-white text-sm opacity-90">{lead.company}</p>
         </div>
