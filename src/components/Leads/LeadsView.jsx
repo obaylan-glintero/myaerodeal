@@ -252,7 +252,7 @@ const LeadsView = ({ openModal }) => {
                     key={lead.id}
                     className="hover:opacity-80 cursor-pointer"
                     style={{ borderBottom: `1px solid ${colors.border}` }}
-                    onClick={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('lead', updatedLead))}
+                    onClick={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('leadDetail', updatedLead))}
                   >
                     <td className="px-4 py-3">
                       <div>
