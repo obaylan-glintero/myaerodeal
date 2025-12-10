@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Calendar, Trash2, Check, Edit2, Download } from 'lucide-react';
+import { Plus, Calendar, Trash2, Check, Edit2, Download, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import ConfirmDialog from '../Common/ConfirmDialog';
@@ -8,9 +8,22 @@ const TasksView = ({ openModal, setActiveTab }) => {
   const { tasks, updateTask, deleteTask, leads, deals } = useStore();
   const { colors } = useTheme();
   const [calendarView, setCalendarView] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterPriority, setFilterPriority] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, taskId: null, taskTitle: '' });
 
-  const sortedTasks = [...tasks].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  // Filter tasks based on search and filters
+  const filteredTasks = tasks.filter(task => {
+    const matchesSearch = task.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         task.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPriority = filterPriority === 'all' || task.priority === filterPriority;
+    const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
+    return matchesSearch && matchesPriority && matchesStatus;
+  });
+
+  const sortedTasks = [...filteredTasks].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   const pendingTasks = sortedTasks.filter(t => t.status === 'pending');
   const completedTasks = sortedTasks.filter(t => t.status === 'completed');
 
@@ -94,6 +107,83 @@ const TasksView = ({ openModal, setActiveTab }) => {
             <Plus size={20} /> Add Task
           </button>
         </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex-1 min-w-[250px] relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" size={20} style={{ color: colors.textSecondary }} />
+            <input
+              type="text"
+              placeholder="Search by title or description..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-lg"
+              style={{
+                backgroundColor: colors.cardBg,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.border}`
+              }}
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
+            style={{
+              backgroundColor: showFilters ? colors.primary : colors.cardBg,
+              color: showFilters ? colors.secondary : colors.textPrimary,
+              border: `1px solid ${colors.border}`
+            }}
+          >
+            <Filter size={18} />
+            Filters
+            {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
+
+        {showFilters && (
+          <div className="flex flex-wrap gap-4 p-4 rounded-lg" style={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Priority</label>
+              <select
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg"
+                style={{
+                  backgroundColor: colors.secondary,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`
+                }}
+              >
+                <option value="all">All Priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg"
+                style={{
+                  backgroundColor: colors.secondary,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`
+                }}
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="text-sm" style={{ color: colors.textSecondary }}>
+        Showing {sortedTasks.length} of {tasks.length} tasks
       </div>
 
       <div className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
