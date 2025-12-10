@@ -604,6 +604,7 @@ const AircraftForm = ({ formData, setFormData }) => {
         <option value="Ultra-Long Range">Ultra-Long Range</option>
         <option value="Airliner">Airliner</option>
         <option value="Cargo">Cargo</option>
+        <option value="Helicopter">Helicopter</option>
       </select>
       <input
         type="text"
