@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Clock, MessageSquare, Send, FileText, Download, Search, ListChecks, CheckCircle2, ListTodo, BarChart3, LayoutGrid, List, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Clock, MessageSquare, Send, FileText, Download, Search, ListChecks, CheckCircle2, ListTodo, BarChart3, LayoutGrid, List, Loader2, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { jsPDF } from 'jspdf';
@@ -41,6 +41,7 @@ const DealsView = ({ openModal }) => {
   const [showDocTypeModal, setShowDocTypeModal] = useState(false);
   const [selectedDealId, setSelectedDealId] = useState(null);
   const [viewMode, setViewMode] = useState('card');
+  const [showFilters, setShowFilters] = useState(false);
   const [showTimeline, setShowTimeline] = useState({});
   const [editingTimelineItem, setEditingTimelineItem] = useState(null); // { dealId, itemIndex }
   const [editingTimelineDueDate, setEditingTimelineDueDate] = useState('');
@@ -260,43 +261,66 @@ const DealsView = ({ openModal }) => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex-1 min-w-[250px] relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" size={20} style={{ color: colors.textSecondary }} />
-          <input
-            type="text"
-            placeholder="Search by deal name or client..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg"
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex-1 min-w-[250px] relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" size={20} style={{ color: colors.textSecondary }} />
+            <input
+              type="text"
+              placeholder="Search by deal name or client..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-lg"
+              style={{
+                backgroundColor: colors.cardBg,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.border}`
+              }}
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
             style={{
-              backgroundColor: colors.cardBg,
-              color: colors.textPrimary,
+              backgroundColor: showFilters ? colors.primary : colors.cardBg,
+              color: showFilters ? colors.secondary : colors.textPrimary,
               border: `1px solid ${colors.border}`
             }}
-          />
+          >
+            <Filter size={18} />
+            Filters
+            {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
         </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 rounded-lg"
-          style={{
-            backgroundColor: colors.cardBg,
-            color: colors.textPrimary,
-            border: `1px solid ${colors.border}`
-          }}
-        >
-          <option value="all">All Stages</option>
-          <option value="LOI Signed">LOI Signed</option>
-          <option value="Deposit Paid">Deposit Paid</option>
-          <option value="APA Drafted">APA Drafted</option>
-          <option value="APA Signed">APA Signed</option>
-          <option value="PPI Started">PPI Started</option>
-          <option value="Defect Rectifications">Defect Rectifications</option>
-          <option value="Closing">Closing</option>
-          <option value="Closed Won">Closed Won</option>
-          <option value="Closed Lost">Closed Lost</option>
-        </select>
+
+        {showFilters && (
+          <div className="flex flex-wrap gap-4 p-4 rounded-lg" style={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Stage</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg"
+                style={{
+                  backgroundColor: colors.secondary,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`
+                }}
+              >
+                <option value="all">All Stages</option>
+                <option value="LOI Signed">LOI Signed</option>
+                <option value="Deposit Paid">Deposit Paid</option>
+                <option value="APA Drafted">APA Drafted</option>
+                <option value="APA Signed">APA Signed</option>
+                <option value="PPI Started">PPI Started</option>
+                <option value="Defect Rectifications">Defect Rectifications</option>
+                <option value="Closing">Closing</option>
+                <option value="Closed Won">Closed Won</option>
+                <option value="Closed Lost">Closed Lost</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="text-sm" style={{ color: colors.textSecondary }}>
@@ -330,7 +354,7 @@ const DealsView = ({ openModal }) => {
                       key={deal.id}
                       className="hover:opacity-80 cursor-pointer"
                       style={{ borderBottom: `1px solid ${colors.border}` }}
-                      onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('deal', updatedDeal))}
+                      onClick={() => handleActionWithFullDealData(deal.id, (updatedDeal) => openModal('dealDetail', updatedDeal))}
                     >
                       <td className="px-4 py-3">
                         <div>
