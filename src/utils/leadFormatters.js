@@ -21,9 +21,9 @@ export function formatBudget(budget) {
 
 /**
  * Format lead display name for UI
- * Formats as: {Lead Name} - {Preferred Model} - {Budget}
+ * Formats as: {Lead Name} - {Preferred Model or Aircraft Type} - {Budget}
  *
- * @param {Object} lead - Lead object with name, preferredModel, and budget
+ * @param {Object} lead - Lead object with name, preferredModel, aircraftType, and budget
  * @returns {string} Formatted display name
  *
  * Examples:
@@ -33,11 +33,14 @@ export function formatBudget(budget) {
  *   formatLeadDisplayName({ name: "Jane Doe", preferredModel: "Citation X", budget: null })
  *   // Returns: "Jane Doe - Citation X - Unknown"
  *
- *   formatLeadDisplayName({ name: "Bob Wilson", preferredModel: null, budget: 2800000 })
- *   // Returns: "Bob Wilson - $2.8M"
+ *   formatLeadDisplayName({ name: "Bob Wilson", preferredModel: null, aircraftType: "Light Jet", budget: 2800000 })
+ *   // Returns: "Bob Wilson - Light Jet - $2.8M"
  *
- *   formatLeadDisplayName({ name: "Alice Brown", preferredModel: null, budget: null })
- *   // Returns: "Alice Brown"
+ *   formatLeadDisplayName({ name: "Alice Brown", preferredModel: null, aircraftType: "Heavy Jet", budget: null })
+ *   // Returns: "Alice Brown - Heavy Jet - Unknown"
+ *
+ *   formatLeadDisplayName({ name: "Charlie Davis", preferredModel: null, aircraftType: null, budget: null })
+ *   // Returns: "Charlie Davis"
  */
 export function formatLeadDisplayName(lead) {
   if (!lead || !lead.name) {
@@ -46,16 +49,17 @@ export function formatLeadDisplayName(lead) {
 
   const parts = [lead.name];
 
-  // Add preferred model if available
-  if (lead.preferredModel) {
-    parts.push(lead.preferredModel);
+  // Add preferred model if available, otherwise use aircraft type
+  const aircraftInfo = lead.preferredModel || lead.aircraftType;
+  if (aircraftInfo) {
+    parts.push(aircraftInfo);
   }
 
-  // Add budget (or "Unknown" if we have a model but no budget)
+  // Add budget (or "Unknown" if we have aircraft info but no budget)
   if (lead.budget) {
     parts.push(formatBudget(lead.budget));
-  } else if (lead.preferredModel) {
-    // Only add "Unknown" if we have a model but no budget
+  } else if (aircraftInfo) {
+    // Only add "Unknown" if we have aircraft info but no budget
     parts.push('Unknown');
   }
 
@@ -64,14 +68,17 @@ export function formatLeadDisplayName(lead) {
 
 /**
  * Format lead display name with company
- * Formats as: {Lead Name} - {Preferred Model} - {Budget} ({Company})
+ * Formats as: {Lead Name} - {Preferred Model or Aircraft Type} - {Budget} ({Company})
  *
- * @param {Object} lead - Lead object with name, preferredModel, budget, and company
+ * @param {Object} lead - Lead object with name, preferredModel, aircraftType, budget, and company
  * @returns {string} Formatted display name with company
  *
- * Example:
+ * Examples:
  *   formatLeadWithCompany({ name: "John Smith", preferredModel: "G650", budget: 5500000, company: "Acme Corp" })
  *   // Returns: "John Smith - G650 - $5.5M (Acme Corp)"
+ *
+ *   formatLeadWithCompany({ name: "Jane Doe", preferredModel: null, aircraftType: "Light Jet", budget: 3000000, company: "Tech Co" })
+ *   // Returns: "Jane Doe - Light Jet - $3.0M (Tech Co)"
  */
 export function formatLeadWithCompany(lead) {
   if (!lead) {
