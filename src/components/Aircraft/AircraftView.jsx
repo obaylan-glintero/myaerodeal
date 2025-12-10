@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, MessageSquare, Send, FileText, Download, Search, FileBarChart, LayoutGrid, List, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, MessageSquare, Send, FileText, Download, Search, FileBarChart, LayoutGrid, List, Loader2, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -15,6 +15,7 @@ const AircraftView = ({ openModal }) => {
   const [filterStatus, setFilterStatus] = useState('For Sale');
   const [sortBy, setSortBy] = useState('dateNewest');
   const [viewMode, setViewMode] = useState('card');
+  const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, aircraftId: null, aircraftName: '' });
 
   // Helper function to get status colors
@@ -408,96 +409,126 @@ const AircraftView = ({ openModal }) => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex-1 min-w-[250px] relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" size={20} style={{ color: colors.textSecondary }} />
-          <input
-            type="text"
-            placeholder="Search by manufacturer, model, registration..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg"
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex-1 min-w-[250px] relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" size={20} style={{ color: colors.textSecondary }} />
+            <input
+              type="text"
+              placeholder="Search by manufacturer, model, registration..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-lg"
+              style={{
+                backgroundColor: colors.cardBg,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.border}`
+              }}
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
             style={{
-              backgroundColor: colors.cardBg,
-              color: colors.textPrimary,
+              backgroundColor: showFilters ? colors.primary : colors.cardBg,
+              color: showFilters ? colors.secondary : colors.textPrimary,
               border: `1px solid ${colors.border}`
             }}
-          />
-        </div>
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="px-4 py-2 rounded-lg"
-          style={{
-            backgroundColor: colors.cardBg,
-            color: colors.textPrimary,
-            border: `1px solid ${colors.border}`
-          }}
-        >
-          <option value="all">All Categories</option>
-          <option value="Piston">Piston</option>
-          <option value="Turboprop">Turboprop</option>
-          <option value="Light Jet">Light Jet</option>
-          <option value="Midsize Jet">Midsize Jet</option>
-          <option value="Super-Mid Jet">Super-Mid Jet</option>
-          <option value="Heavy Jet">Heavy Jet</option>
-          <option value="Ultra-Long Range">Ultra-Long Range</option>
-          <option value="Airliner">Airliner</option>
-          <option value="Cargo">Cargo</option>
-        </select>
-        {locations.length > 0 && (
+          >
+            <Filter size={18} />
+            Filters
+            {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
           <select
-            value={filterLocation}
-            onChange={(e) => setFilterLocation(e.target.value)}
-            className="px-4 py-2 rounded-lg"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-4 py-2 rounded-lg flex items-center gap-2"
             style={{
               backgroundColor: colors.cardBg,
               color: colors.textPrimary,
               border: `1px solid ${colors.border}`
             }}
           >
-            <option value="all">All Locations</option>
-            {locations.map(loc => (
-              <option key={loc} value={loc}>{loc}</option>
-            ))}
+            <option value="dateNewest">Date: Newest First</option>
+            <option value="dateOldest">Date: Oldest First</option>
+            <option value="manufacturerAsc">Manufacturer: A to Z</option>
+            <option value="manufacturerDesc">Manufacturer: Z to A</option>
+            <option value="modelAsc">Model: A to Z</option>
+            <option value="modelDesc">Model: Z to A</option>
+            <option value="priceHigh">Price: High to Low</option>
+            <option value="priceLow">Price: Low to High</option>
+            <option value="yearNew">Year: Newest First</option>
+            <option value="yearOld">Year: Oldest First</option>
           </select>
+        </div>
+
+        {showFilters && (
+          <div className="flex flex-wrap gap-4 p-4 rounded-lg" style={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Category</label>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg"
+                style={{
+                  backgroundColor: colors.secondary,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`
+                }}
+              >
+                <option value="all">All Categories</option>
+                <option value="Piston">Piston</option>
+                <option value="Turboprop">Turboprop</option>
+                <option value="Light Jet">Light Jet</option>
+                <option value="Midsize Jet">Midsize Jet</option>
+                <option value="Super-Mid Jet">Super-Mid Jet</option>
+                <option value="Heavy Jet">Heavy Jet</option>
+                <option value="Ultra-Long Range">Ultra-Long Range</option>
+                <option value="Airliner">Airliner</option>
+                <option value="Cargo">Cargo</option>
+                <option value="Helicopter">Helicopter</option>
+              </select>
+            </div>
+            {locations.length > 0 && (
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Location</label>
+                <select
+                  value={filterLocation}
+                  onChange={(e) => setFilterLocation(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: colors.secondary,
+                    color: colors.textPrimary,
+                    border: `1px solid ${colors.border}`
+                  }}
+                >
+                  <option value="all">All Locations</option>
+                  {locations.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg"
+                style={{
+                  backgroundColor: colors.secondary,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`
+                }}
+              >
+                <option value="all">All Status</option>
+                <option value="For Sale">For Sale</option>
+                <option value="Not for Sale">Not for Sale</option>
+                <option value="Under Contract">Under Contract</option>
+              </select>
+            </div>
+          </div>
         )}
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 rounded-lg"
-          style={{
-            backgroundColor: colors.cardBg,
-            color: colors.textPrimary,
-            border: `1px solid ${colors.border}`
-          }}
-        >
-          <option value="all">All Status</option>
-          <option value="For Sale">For Sale</option>
-          <option value="Not for Sale">Not for Sale</option>
-          <option value="Under Contract">Under Contract</option>
-        </select>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="px-4 py-2 rounded-lg"
-          style={{
-            backgroundColor: colors.cardBg,
-            color: colors.textPrimary,
-            border: `1px solid ${colors.border}`
-          }}
-        >
-          <option value="dateNewest">Date: Newest First</option>
-          <option value="dateOldest">Date: Oldest First</option>
-          <option value="manufacturerAsc">Manufacturer: A to Z</option>
-          <option value="manufacturerDesc">Manufacturer: Z to A</option>
-          <option value="modelAsc">Model: A to Z</option>
-          <option value="modelDesc">Model: Z to A</option>
-          <option value="priceHigh">Price: High to Low</option>
-          <option value="priceLow">Price: Low to High</option>
-          <option value="yearNew">Year: Newest First</option>
-          <option value="yearOld">Year: Oldest First</option>
-        </select>
       </div>
 
       <div className="text-sm" style={{ color: colors.textSecondary }}>
@@ -525,7 +556,7 @@ const AircraftView = ({ openModal }) => {
                     key={ac.id}
                     className="hover:opacity-80 cursor-pointer"
                     style={{ borderBottom: `1px solid ${colors.border}` }}
-                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraft', updatedAc))}
+                    onClick={() => handleActionWithFullData(ac.id, (updatedAc) => openModal('aircraftDetail', updatedAc))}
                   >
                     <td className="px-4 py-3">
                       <div>
