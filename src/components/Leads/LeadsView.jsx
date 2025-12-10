@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, MessageSquare, Send, ArrowUpDown, LayoutGrid, List, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, MessageSquare, Send, ArrowUpDown, LayoutGrid, List, Loader2, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import ConfirmDialog from '../Common/ConfirmDialog';
@@ -28,8 +28,10 @@ const LeadsView = ({ openModal }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('active');
   const [filterAircraftType, setFilterAircraftType] = useState('all');
+  const [filterPreferredModel, setFilterPreferredModel] = useState('');
   const [sortBy, setSortBy] = useState('statusAsc');
   const [viewMode, setViewMode] = useState('card');
+  const [showFilters, setShowFilters] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, leadId: null, leadName: '' });
 
   // Helper to ensure full aircraft data is loaded before action
@@ -80,7 +82,9 @@ const LeadsView = ({ openModal }) => {
       (filterStatus === 'active' && lead.status !== 'Lost' && lead.status !== 'Deal Created') ||
       lead.status === filterStatus;
     const matchesAircraftType = filterAircraftType === 'all' || lead.aircraftType === filterAircraftType;
-    return matchesSearch && matchesStatus && matchesAircraftType;
+    const matchesPreferredModel = !filterPreferredModel ||
+      lead.preferredModel?.toLowerCase().includes(filterPreferredModel.toLowerCase());
+    return matchesSearch && matchesStatus && matchesAircraftType && matchesPreferredModel;
   });
 
   // Sort leads
@@ -149,81 +153,123 @@ const LeadsView = ({ openModal }) => {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex-1 min-w-[250px] relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" size={20} style={{ color: colors.textSecondary }} />
-          <input
-            type="text"
-            placeholder="Search by name or company..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg"
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex-1 min-w-[250px] relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" size={20} style={{ color: colors.textSecondary }} />
+            <input
+              type="text"
+              placeholder="Search by name or company..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-lg"
+              style={{
+                backgroundColor: colors.cardBg,
+                color: colors.textPrimary,
+                border: `1px solid ${colors.border}`
+              }}
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
+            style={{
+              backgroundColor: showFilters ? colors.primary : colors.cardBg,
+              color: showFilters ? colors.secondary : colors.textPrimary,
+              border: `1px solid ${colors.border}`
+            }}
+          >
+            <Filter size={18} />
+            Filters
+            {showFilters ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-4 py-2 rounded-lg flex items-center gap-2"
             style={{
               backgroundColor: colors.cardBg,
               color: colors.textPrimary,
               border: `1px solid ${colors.border}`
             }}
-          />
+          >
+            <option value="dateNewest">Date: Newest First</option>
+            <option value="dateOldest">Date: Oldest First</option>
+            <option value="nameAsc">Name: A to Z</option>
+            <option value="nameDesc">Name: Z to A</option>
+            <option value="company">Company: A to Z</option>
+            <option value="budgetHigh">Budget: High to Low</option>
+            <option value="budgetLow">Budget: Low to High</option>
+            <option value="statusAsc">Status: Inquiry to Lost</option>
+            <option value="statusDesc">Status: Lost to Inquiry</option>
+          </select>
         </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-4 py-2 rounded-lg"
-          style={{
-            backgroundColor: colors.cardBg,
-            color: colors.textPrimary,
-            border: `1px solid ${colors.border}`
-          }}
-        >
-          <option value="all">All Status</option>
-          <option value="active">All Active Leads</option>
-          <option value="Inquiry">Inquiry</option>
-          <option value="Presented">Presented</option>
-          <option value="Interested">Interested</option>
-          <option value="Deal Created">Deal Created</option>
-          <option value="Lost">Lost</option>
-        </select>
-        <select
-          value={filterAircraftType}
-          onChange={(e) => setFilterAircraftType(e.target.value)}
-          className="px-4 py-2 rounded-lg"
-          style={{
-            backgroundColor: colors.cardBg,
-            color: colors.textPrimary,
-            border: `1px solid ${colors.border}`
-          }}
-        >
-          <option value="all">All Aircraft Types</option>
-          <option value="Piston">Piston</option>
-          <option value="Turboprop">Turboprop</option>
-          <option value="Light Jet">Light Jet</option>
-          <option value="Midsize Jet">Midsize Jet</option>
-          <option value="Super-Mid Jet">Super-Mid Jet</option>
-          <option value="Heavy Jet">Heavy Jet</option>
-          <option value="Ultra-Long Range">Ultra-Long Range</option>
-          <option value="Airliner">Airliner</option>
-          <option value="Cargo">Cargo</option>
-        </select>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="px-4 py-2 rounded-lg flex items-center gap-2"
-          style={{
-            backgroundColor: colors.cardBg,
-            color: colors.textPrimary,
-            border: `1px solid ${colors.border}`
-          }}
-        >
-          <option value="dateNewest">Date: Newest First</option>
-          <option value="dateOldest">Date: Oldest First</option>
-          <option value="nameAsc">Name: A to Z</option>
-          <option value="nameDesc">Name: Z to A</option>
-          <option value="company">Company: A to Z</option>
-          <option value="budgetHigh">Budget: High to Low</option>
-          <option value="budgetLow">Budget: Low to High</option>
-          <option value="statusAsc">Status: Inquiry to Lost</option>
-          <option value="statusDesc">Status: Lost to Inquiry</option>
-        </select>
+
+        {showFilters && (
+          <div className="flex flex-wrap gap-4 p-4 rounded-lg" style={{ backgroundColor: colors.cardBg, border: `1px solid ${colors.border}` }}>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg"
+                style={{
+                  backgroundColor: colors.secondary,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`
+                }}
+              >
+                <option value="all">All Status</option>
+                <option value="active">All Active Leads</option>
+                <option value="Inquiry">Inquiry</option>
+                <option value="Presented">Presented</option>
+                <option value="Interested">Interested</option>
+                <option value="Deal Created">Deal Created</option>
+                <option value="Lost">Lost</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Aircraft Type</label>
+              <select
+                value={filterAircraftType}
+                onChange={(e) => setFilterAircraftType(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg"
+                style={{
+                  backgroundColor: colors.secondary,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`
+                }}
+              >
+                <option value="all">All Aircraft Types</option>
+                <option value="Piston">Piston</option>
+                <option value="Turboprop">Turboprop</option>
+                <option value="Light Jet">Light Jet</option>
+                <option value="Midsize Jet">Midsize Jet</option>
+                <option value="Super-Mid Jet">Super-Mid Jet</option>
+                <option value="Heavy Jet">Heavy Jet</option>
+                <option value="Ultra-Long Range">Ultra-Long Range</option>
+                <option value="Airliner">Airliner</option>
+                <option value="Cargo">Cargo</option>
+                <option value="Helicopter">Helicopter</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.textSecondary }}>Preferred Model</label>
+              <input
+                type="text"
+                placeholder="Search by model (e.g., G650, Citation)"
+                value={filterPreferredModel}
+                onChange={(e) => setFilterPreferredModel(e.target.value)}
+                className="w-full px-4 py-2 rounded-lg"
+                style={{
+                  backgroundColor: colors.secondary,
+                  color: colors.textPrimary,
+                  border: `1px solid ${colors.border}`
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="text-sm" style={{ color: colors.textSecondary }}>
