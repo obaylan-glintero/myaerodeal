@@ -3,6 +3,7 @@ import { Plus, Calendar, Trash2, Check, Edit2, Download, Search, Filter, Chevron
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import ConfirmDialog from '../Common/ConfirmDialog';
+import { formatLeadDisplayName } from '../../utils/leadFormatters';
 
 const TasksView = ({ openModal, setActiveTab }) => {
   const { tasks, updateTask, deleteTask, leads, deals } = useStore();
@@ -238,7 +239,7 @@ const TaskCard = ({ task, onUpdate, onDelete, openModal, setActiveTab, leads, de
 
     if (task.relatedTo.type === 'lead') {
       const lead = leads.find(l => l.id === task.relatedTo.id);
-      return lead ? { type: 'Lead', name: lead.name, company: lead.company, item: lead } : null;
+      return lead ? { type: 'Lead', name: formatLeadDisplayName(lead), company: lead.company, item: lead } : null;
     } else if (task.relatedTo.type === 'deal') {
       const deal = deals.find(d => d.id === task.relatedTo.id);
       return deal ? { type: 'Deal', name: deal.dealName, item: deal } : null;

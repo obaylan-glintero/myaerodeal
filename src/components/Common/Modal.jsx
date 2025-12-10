@@ -6,6 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import SearchableDropdown from './SearchableDropdown';
 import logo from '../../assets/MyAeroDeal_dark.png';
 import { DealTaskActions } from '../Deals/DealsView';
+import { formatLeadDisplayName, formatLeadWithCompany } from '../../utils/leadFormatters';
 
 const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
   // Initialize formData with proper defaults for dealFromLead
@@ -914,22 +915,15 @@ const DealForm = ({ formData, setFormData, editingItem, modalType }) => {
           placeholder="Search by name, company, budget..."
           searchPlaceholder="Search by name, company, budget..."
         getOptionValue={(lead) => lead.id}
-        getOptionLabel={(lead) => {
-          const budgetStr = lead.budgetKnown && lead.budget
-            ? ` - $${(lead.budget / 1000000).toFixed(1)}M`
-            : '';
-          return `${lead.name} - ${lead.company}${budgetStr}`;
-        }}
+        getOptionLabel={(lead) => formatLeadWithCompany(lead)}
         renderOption={(lead) => (
           <div>
             <div style={{ fontSize: '15px', fontWeight: '500' }}>
-              {lead.name} - {lead.company}
+              {formatLeadDisplayName(lead)}
             </div>
-            {lead.budgetKnown && lead.budget && (
-              <div style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '2px' }}>
-                Budget: ${(lead.budget / 1000000).toFixed(1)}M • {lead.aircraftType}
-              </div>
-            )}
+            <div style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '2px' }}>
+              {lead.company}{lead.aircraftType ? ` • ${lead.aircraftType}` : ''}
+            </div>
           </div>
         )}
       />
@@ -1230,10 +1224,10 @@ const TaskForm = ({ formData, setFormData }) => {
             placeholder="Select a Lead"
             searchPlaceholder="Search by name, company, status..."
             getOptionValue={(lead) => lead.id}
-            getOptionLabel={(lead) => `${lead.name}${lead.company ? ` (${lead.company})` : ''} - ${lead.status}`}
+            getOptionLabel={(lead) => `${formatLeadDisplayName(lead)}${lead.company ? ` (${lead.company})` : ''} - ${lead.status}`}
             renderOption={(lead) => (
               <div>
-                <div style={{ fontWeight: 500 }}>{lead.name}</div>
+                <div style={{ fontWeight: 500 }}>{formatLeadDisplayName(lead)}</div>
                 <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
                   {lead.company && `${lead.company} • `}{lead.status}
                 </div>
@@ -1323,22 +1317,15 @@ const PresentationForm = ({ formData, setFormData, modalType, editingItem }) => 
           placeholder="Search by name, company, budget..."
           searchPlaceholder="Search by name, company, budget..."
           getOptionValue={(lead) => lead.id}
-          getOptionLabel={(lead) => {
-            const budgetStr = lead.budgetKnown && lead.budget
-              ? ` - $${(lead.budget / 1000000).toFixed(1)}M`
-              : '';
-            return `${lead.name} - ${lead.company}${budgetStr}`;
-          }}
+          getOptionLabel={(lead) => formatLeadWithCompany(lead)}
           renderOption={(lead) => (
             <div>
               <div style={{ fontSize: '15px', fontWeight: '500' }}>
-                {lead.name} - {lead.company}
+                {formatLeadDisplayName(lead)}
               </div>
-              {lead.budgetKnown && lead.budget && (
-                <div style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '2px' }}>
-                  Budget: ${(lead.budget / 1000000).toFixed(1)}M • {lead.aircraftType}
-                </div>
-              )}
+              <div style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '2px' }}>
+                {lead.company}{lead.aircraftType ? ` • ${lead.aircraftType}` : ''}
+              </div>
             </div>
           )}
         />
@@ -1631,7 +1618,7 @@ const AircraftDetailView = ({ aircraft: initialAircraft, closeModal, openModal }
         doc.setFont(undefined, 'normal');
 
         const presDetails = [
-          `Lead: ${lead?.name || 'Unknown'} (${lead?.company || 'N/A'})`,
+          `Lead: ${lead ? formatLeadWithCompany(lead) : 'Unknown'}`,
           `Date: ${new Date(pres.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`,
           `Price Given: $${pres.priceGiven ? (pres.priceGiven / 1000000).toFixed(2) + 'M' : 'N/A'}`,
           `Lead Status: ${lead?.status || 'Unknown'}`
@@ -1800,7 +1787,7 @@ const AircraftDetailView = ({ aircraft: initialAircraft, closeModal, openModal }
               return (
                 <div key={idx} className="text-sm p-3 rounded" style={{ backgroundColor: colors.secondary }}>
                   <p className="font-medium" style={{ color: colors.primary }}>
-                    {lead?.name || 'Unknown Lead'}
+                    {lead ? formatLeadDisplayName(lead) : 'Unknown Lead'}
                   </p>
                   <p className="text-xs" style={{ color: colors.textSecondary }}>
                     {new Date(pres.date).toLocaleDateString()}
@@ -1957,7 +1944,7 @@ const LeadDetailView = ({ lead: initialLead, closeModal, openModal }) => {
   };
 
   const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete "${lead.name}"? This action cannot be undone.`)) {
+    if (window.confirm(`Are you sure you want to delete "${formatLeadDisplayName(lead)}"? This action cannot be undone.`)) {
       deleteLead(lead.id);
       closeModal();
     }
@@ -1984,7 +1971,7 @@ const LeadDetailView = ({ lead: initialLead, closeModal, openModal }) => {
       <div className="p-6 rounded-lg" style={{
         background: `linear-gradient(135deg, ${lead.status === 'Inquiry' ? '#5BC0DE' : lead.status === 'Presented' ? '#7C3AED' : lead.status === 'Interested' ? '#F0AD4E' : lead.status === 'Deal Created' ? '#D9534F' : '#6B7280'}dd, ${lead.status === 'Inquiry' ? '#5BC0DE' : lead.status === 'Presented' ? '#7C3AED' : lead.status === 'Interested' ? '#F0AD4E' : lead.status === 'Deal Created' ? '#D9534F' : '#6B7280'}99)`
       }}>
-        <h2 className="text-3xl font-bold text-white drop-shadow-md">{lead.name}</h2>
+        <h2 className="text-3xl font-bold text-white drop-shadow-md">{formatLeadDisplayName(lead)}</h2>
         <p className="text-white text-lg opacity-90">{lead.company}</p>
       </div>
 
@@ -2426,7 +2413,7 @@ const DealDetailView = ({ deal: initialDeal, closeModal, openModal }) => {
         <div>
           <label className="text-sm font-semibold" style={{ color: colors.textSecondary }}>Related Lead</label>
           <p className="text-lg font-medium" style={{ color: colors.textPrimary }}>
-            {lead ? `${lead.name} (${lead.company})` : 'Not specified'}
+            {lead ? formatLeadWithCompany(lead) : 'Not specified'}
           </p>
         </div>
         <div>
