@@ -77,7 +77,7 @@ const TasksView = ({ openModal, setActiveTab }) => {
   };
 
   if (calendarView) {
-    return <TasksCalendarView tasks={pendingTasks} onBack={() => setCalendarView(false)} />;
+    return <TasksCalendarView tasks={pendingTasks} onBack={() => setCalendarView(false)} updateTask={updateTask} />;
   }
 
   return (
@@ -341,10 +341,12 @@ const TaskCard = ({ task, onUpdate, onDelete, openModal, setActiveTab, leads, de
   );
 };
 
-const TasksCalendarView = ({ tasks, onBack }) => {
+const TasksCalendarView = ({ tasks, onBack, updateTask }) => {
   const { colors } = useTheme();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  
+  const [draggedTask, setDraggedTask] = useState(null);
+  const [dragOverDate, setDragOverDate] = useState(null);
+
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -352,7 +354,7 @@ const TasksCalendarView = ({ tasks, onBack }) => {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
-    
+
     return { daysInMonth, startingDayOfWeek, year, month };
   };
 
@@ -363,6 +365,50 @@ const TasksCalendarView = ({ tasks, onBack }) => {
   const getTasksForDate = (day) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     return tasks.filter(t => t.dueDate === dateStr);
+  };
+
+  const getDateString = (day) => {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e, task) => {
+    setDraggedTask(task);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', task.id);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTask(null);
+    setDragOverDate(null);
+  };
+
+  const handleDragOver = (e, day) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const dateStr = getDateString(day);
+    if (dragOverDate !== dateStr) {
+      setDragOverDate(dateStr);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    // Only clear if we're leaving the cell entirely
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverDate(null);
+    }
+  };
+
+  const handleDrop = (e, day) => {
+    e.preventDefault();
+    const newDueDate = getDateString(day);
+
+    if (draggedTask && draggedTask.dueDate !== newDueDate) {
+      updateTask(draggedTask.id, { dueDate: newDueDate });
+    }
+
+    setDraggedTask(null);
+    setDragOverDate(null);
   };
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -378,7 +424,10 @@ const TasksCalendarView = ({ tasks, onBack }) => {
         >
           ← Back to List
         </button>
-        <h2 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Task Calendar</h2>
+        <div className="text-center">
+          <h2 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Task Calendar</h2>
+          <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>Drag tasks to reschedule</p>
+        </div>
         <div className="w-32"></div>
       </div>
 
@@ -411,7 +460,11 @@ const TasksCalendarView = ({ tasks, onBack }) => {
           ))}
 
           {blanks.map(i => (
-            <div key={`blank-${i}`} className="p-2 h-24"></div>
+            <div
+              key={`blank-${i}`}
+              className="p-2 h-24"
+              onDragOver={(e) => e.preventDefault()}
+            ></div>
           ))}
 
           {days.map(day => {
@@ -419,21 +472,42 @@ const TasksCalendarView = ({ tasks, onBack }) => {
             const isToday = new Date().getDate() === day &&
                            new Date().getMonth() === month &&
                            new Date().getFullYear() === year;
+            const dateStr = getDateString(day);
+            const isDragOver = dragOverDate === dateStr;
 
             return (
               <div
                 key={day}
-                className={`p-2 h-24 rounded-lg ${isToday ? 'border-2' : ''}`}
-                style={isToday ? { borderColor: colors.primary, backgroundColor: colors.secondary, border: `2px solid ${colors.primary}` } : { backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }}
+                className={`p-2 h-24 rounded-lg transition-all duration-200 ${isToday ? 'border-2' : ''}`}
+                style={{
+                  ...(isToday
+                    ? { borderColor: colors.primary, backgroundColor: colors.secondary, border: `2px solid ${colors.primary}` }
+                    : { backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }),
+                  ...(isDragOver && {
+                    backgroundColor: colors.primary + '20',
+                    border: `2px dashed ${colors.primary}`,
+                    transform: 'scale(1.02)'
+                  })
+                }}
+                onDragOver={(e) => handleDragOver(e, day)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, day)}
               >
                 <div className="font-medium mb-1" style={{ color: colors.textPrimary }}>{day}</div>
                 <div className="space-y-1">
                   {dayTasks.slice(0, 2).map(task => (
                     <div
                       key={task.id}
-                      className="text-xs p-1 rounded truncate"
-                      style={{ backgroundColor: colors.primary, color: colors.secondary }}
-                      title={task.title}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, task)}
+                      onDragEnd={handleDragEnd}
+                      className="text-xs p-1 rounded truncate cursor-grab active:cursor-grabbing transition-opacity"
+                      style={{
+                        backgroundColor: colors.primary,
+                        color: colors.secondary,
+                        opacity: draggedTask?.id === task.id ? 0.5 : 1
+                      }}
+                      title={`${task.title} - Drag to reschedule`}
                     >
                       {task.title}
                     </div>
