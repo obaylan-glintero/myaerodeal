@@ -1216,7 +1216,7 @@ const DealSummaryCard = ({ deal, aircraft, colors, onViewDetails, onEdit, onDele
         </div>
 
         {/* Deal Name and Client */}
-        <div className="absolute bottom-0 left-0 right-0 py-6 pr-6 pl-28">
+        <div className="absolute bottom-0 left-0 right-0 py-6 px-28">
           <h3 className="text-2xl font-bold text-white drop-shadow-md">
             {deal.dealName}
           </h3>

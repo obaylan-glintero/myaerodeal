@@ -446,7 +446,7 @@ const LeadSummaryCard = ({ lead, colors, theme, onViewDetails, onEdit, onDelete,
         </div>
 
         {/* Lead Name and Company */}
-        <div className="absolute bottom-0 left-0 right-0 py-6 pr-6 pl-28">
+        <div className="absolute bottom-0 left-0 right-0 py-6 px-28">
           <h3 className="text-2xl font-bold text-white drop-shadow-md">
             {formatLeadDisplayName(lead)}
           </h3>
