@@ -393,8 +393,8 @@ const DealsView = ({ openModal }) => {
                       </td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-1 rounded text-xs font-semibold" style={{
-                          backgroundColor: colors.secondary,
-                          color: colors.primary
+                          backgroundColor: getDealStatusColors(deal.status).bg,
+                          color: getDealStatusColors(deal.status).text
                         }}>
                           {deal.status}
                         </span>
