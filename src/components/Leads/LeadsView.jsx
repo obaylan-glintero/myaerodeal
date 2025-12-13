@@ -445,16 +445,8 @@ const LeadSummaryCard = ({ lead, colors, theme, onViewDetails, onEdit, onDelete,
           {lead.status}
         </div>
 
-        {/* Lead Name and Company */}
-        <div className="absolute bottom-0 left-0 right-0 py-6 pl-28 pr-24">
-          <h3 className="text-2xl font-bold text-white drop-shadow-md line-clamp-2">
-            {formatLeadDisplayName(lead)}
-          </h3>
-          <p className="text-white text-sm opacity-90 truncate">{lead.company}</p>
-        </div>
-
         {/* Edit and Delete Buttons */}
-        <div className="absolute top-3 left-3 flex gap-2">
+        <div className="absolute top-16 right-3 flex flex-col gap-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -478,6 +470,14 @@ const LeadSummaryCard = ({ lead, colors, theme, onViewDetails, onEdit, onDelete,
           >
             <Trash2 size={18} style={{ color: colors.error }} />
           </button>
+        </div>
+
+        {/* Lead Name and Company */}
+        <div className="absolute bottom-0 left-0 right-0 py-6 px-6 pr-16">
+          <h3 className="text-2xl font-bold text-white drop-shadow-md">
+            {formatLeadDisplayName(lead)}
+          </h3>
+          <p className="text-white text-sm opacity-90">{lead.company}</p>
         </div>
       </div>
 
