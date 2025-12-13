@@ -446,7 +446,7 @@ const LeadSummaryCard = ({ lead, colors, theme, onViewDetails, onEdit, onDelete,
         </div>
 
         {/* Edit and Delete Buttons */}
-        <div className="absolute top-16 right-3 flex flex-col gap-2">
+        <div className="absolute top-16 right-3 flex gap-2">
           <button
             onClick={(e) => {
               e.stopPropagation();

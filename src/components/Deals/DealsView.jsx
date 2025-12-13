@@ -1221,7 +1221,7 @@ const DealSummaryCard = ({ deal, aircraft, colors, onViewDetails, onEdit, onDele
         </div>
 
         {/* Edit and Delete Buttons */}
-        <div className="absolute top-16 right-4 flex flex-col gap-2">
+        <div className="absolute top-16 right-4 flex gap-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
