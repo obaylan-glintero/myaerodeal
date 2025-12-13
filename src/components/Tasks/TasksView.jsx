@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import { Plus, Calendar, Trash2, Check, Edit2, Download, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useToast } from '../../contexts/ToastContext';
 import ConfirmDialog from '../Common/ConfirmDialog';
+import { NoTasksEmpty } from '../Common/EmptyState';
 import { formatLeadDisplayName } from '../../utils/leadFormatters';
+import { getTaskPriorityColors } from '../../utils/colors';
 
 const TasksView = ({ openModal, setActiveTab }) => {
   const { tasks, updateTask, deleteTask, leads, deals } = useStore();
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
+  const toast = useToast();
   const [calendarView, setCalendarView] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -46,6 +50,16 @@ const TasksView = ({ openModal, setActiveTab }) => {
   const handleCancelDelete = () => {
     setDeleteConfirm({ isOpen: false, taskId: null, taskTitle: '' });
   };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterPriority('all');
+    setFilterStatus('all');
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = searchTerm || filterPriority !== 'all' || filterStatus !== 'all';
 
   const exportTasks = () => {
     // Create CSV content
@@ -179,6 +193,21 @@ const TasksView = ({ openModal, setActiveTab }) => {
                 <option value="completed">Completed</option>
               </select>
             </div>
+            {hasActiveFilters && (
+              <div className="flex items-end min-w-[120px]">
+                <button
+                  onClick={clearFilters}
+                  className="w-full px-4 py-2 rounded-lg font-medium transition-colors hover:opacity-80"
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: colors.error,
+                    border: `1px solid ${colors.error}`
+                  }}
+                >
+                  Clear All
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -192,11 +221,12 @@ const TasksView = ({ openModal, setActiveTab }) => {
           Pending Tasks ({pendingTasks.length})
         </h3>
         <div className="space-y-3">
-          {pendingTasks.map(task => (
-            <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={handleDeleteClick} openModal={openModal} setActiveTab={setActiveTab} leads={leads} deals={deals} />
-          ))}
-          {pendingTasks.length === 0 && (
-            <p className="text-center py-8" style={{ color: colors.textSecondary }}>No pending tasks</p>
+          {pendingTasks.length > 0 ? (
+            pendingTasks.map(task => (
+              <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={handleDeleteClick} openModal={openModal} setActiveTab={setActiveTab} leads={leads} deals={deals} theme={theme} toast={toast} />
+            ))
+          ) : (
+            <NoTasksEmpty onAddTask={() => openModal('task')} />
           )}
         </div>
       </div>
@@ -208,7 +238,7 @@ const TasksView = ({ openModal, setActiveTab }) => {
           </h3>
           <div className="space-y-3">
             {completedTasks.slice(0, 10).map(task => (
-              <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={handleDeleteClick} openModal={openModal} setActiveTab={setActiveTab} leads={leads} deals={deals} />
+              <TaskCard key={task.id} task={task} onUpdate={updateTask} onDelete={handleDeleteClick} openModal={openModal} setActiveTab={setActiveTab} leads={leads} deals={deals} theme={theme} toast={toast} />
             ))}
           </div>
         </div>
@@ -229,9 +259,10 @@ const TasksView = ({ openModal, setActiveTab }) => {
   );
 };
 
-const TaskCard = ({ task, onUpdate, onDelete, openModal, setActiveTab, leads, deals }) => {
+const TaskCard = ({ task, onUpdate, onDelete, openModal, setActiveTab, leads, deals, theme, toast }) => {
   const { colors, isDark } = useTheme();
   const isOverdue = new Date(task.dueDate) < new Date() && task.status === 'pending';
+  const priorityColors = getTaskPriorityColors(task.priority, theme);
 
   // Get related lead or deal info
   const getRelatedInfo = () => {
@@ -298,20 +329,28 @@ const TaskCard = ({ task, onUpdate, onDelete, openModal, setActiveTab, leads, de
             <p className="text-sm" style={{ color: colors.textSecondary }}>{task.description}</p>
             <div className="flex gap-3 mt-2 text-xs flex-wrap" style={{ color: colors.textSecondary }}>
               <span>Due: {task.dueDate}</span>
-              <span className={`px-2 py-1 rounded ${
-                task.priority === 'high' ? 'bg-red-100 text-red-700' :
-                task.priority === 'medium' ? 'bg-orange-100 text-orange-700' :
-                'bg-blue-100 text-blue-700'
-              }`}>
+              <span
+                className="px-2 py-1 rounded font-medium"
+                style={{ backgroundColor: priorityColors.bg, color: priorityColors.text }}
+              >
                 {task.priority}
               </span>
               {task.autoGenerated && (
-                <span className="px-2 py-1 rounded bg-purple-100 text-purple-700">Auto</span>
+                <span
+                  className="px-2 py-1 rounded"
+                  style={{ backgroundColor: isDark ? '#4C1D95' : '#EDE9FE', color: isDark ? '#C4B5FD' : '#6D28D9' }}
+                >
+                  Auto
+                </span>
               )}
               {relatedInfo && (
                 <span
                   onClick={handleRelatedClick}
-                  className="px-2 py-1 rounded bg-cyan-100 text-cyan-700 cursor-pointer hover:bg-cyan-200 transition-colors"
+                  className="px-2 py-1 rounded cursor-pointer transition-colors"
+                  style={{
+                    backgroundColor: isDark ? '#164E63' : '#CFFAFE',
+                    color: isDark ? '#67E8F9' : '#0E7490'
+                  }}
                   title={relatedInfo.company ? `Click to view: ${relatedInfo.name} (${relatedInfo.company})` : `Click to view: ${relatedInfo.name}`}
                 >
                   {relatedInfo.type}: {relatedInfo.name}

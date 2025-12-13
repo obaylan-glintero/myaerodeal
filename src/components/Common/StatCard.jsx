@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const StatCard = ({ icon, title, value, total, color, onClick }) => {
+const StatCard = ({ icon, title, subtitle, value, total, color, onClick }) => {
   const { colors } = useTheme();
 
   return (
@@ -14,13 +14,18 @@ const StatCard = ({ icon, title, value, total, color, onClick }) => {
     >
       <div className="flex items-center justify-between mb-4">
         <div style={{ color }}>{icon}</div>
-        {total && (
+        {total !== undefined && (
           <span className="text-sm" style={{ color: colors.textSecondary }}>
             {value} / {total}
           </span>
         )}
       </div>
-      <h3 className="text-sm mb-1" style={{ color: colors.textSecondary }}>{title}</h3>
+      <div className="mb-1">
+        <h3 className="text-sm" style={{ color: colors.textSecondary }}>{title}</h3>
+        {subtitle && (
+          <span className="text-xs" style={{ color: colors.textSecondary, opacity: 0.7 }}>{subtitle}</span>
+        )}
+      </div>
       <p className="text-3xl font-bold" style={{ color }}>{value}</p>
     </div>
   );

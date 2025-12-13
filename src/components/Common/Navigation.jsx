@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plane, FileText, Users, ListTodo, Menu, X, Shield, Sun, Moon } from 'lucide-react';
+import { Plane, FileText, Users, ListTodo, Menu, X, Shield, Sun, Moon, LayoutDashboard } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import logoLight from '../../assets/MyAeroDeal_light.png';
 import logoDark from '../../assets/MyAeroDeal_dark.png';
@@ -13,7 +13,7 @@ const Navigation = ({ activeTab, setActiveTab }) => {
   const logo = isDark ? logoDark : logoLight;
 
   const navItems = [
-    { id: 'dashboard', icon: <FileText size={20} />, label: 'Dashboard' },
+    { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
     { id: 'leads', icon: <Users size={20} />, label: 'Leads' },
     { id: 'aircraft', icon: <Plane size={20} />, label: 'Aircraft' },
     { id: 'deals', icon: <FileText size={20} />, label: 'Deals' },

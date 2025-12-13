@@ -3,6 +3,7 @@ import { X, Upload, MessageSquare, Send, Edit2, Trash2, FileText, Download, File
 import { jsPDF } from 'jspdf';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useToast } from '../../contexts/ToastContext';
 import SearchableDropdown from './SearchableDropdown';
 import logo from '../../assets/MyAeroDeal_dark.png';
 import { DealTaskActions } from '../Deals/DealsView';
@@ -24,6 +25,7 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { colors } = useTheme();
+  const toast = useToast();
 
   // Update formData when editingItem changes (e.g., when reopening modal with different data)
   useEffect(() => {
@@ -95,10 +97,17 @@ const Modal = ({ modalType, editingItem, closeModal, openModal }) => {
         const aircraftId = modalType === 'presentationFromAircraft' ? editingItem.id : formData.aircraftId;
         await presentAircraftToLead(leadId, aircraftId, formData.notes, formData.price);
       }
+
+      // Show success toast based on action type
+      const action = editingItem ? 'updated' : 'created';
+      const itemType = modalType === 'dealFromLead' ? 'Deal' :
+                       modalType === 'presentation' || modalType === 'presentationFromAircraft' ? 'Presentation' :
+                       modalType.charAt(0).toUpperCase() + modalType.slice(1);
+      toast.success(`${itemType} ${action} successfully`);
       closeModal();
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert(`Error: ${error.message || 'Failed to save changes. Please try again.'}`);
+      toast.error(error.message || 'Failed to save changes. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
