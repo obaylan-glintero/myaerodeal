@@ -3,29 +3,13 @@ import { Plus, Search, Edit2, Trash2, MessageSquare, Send, ArrowUpDown, LayoutGr
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import ConfirmDialog from '../Common/ConfirmDialog';
+import { NoLeadsEmpty, NoFilteredLeadsEmpty } from '../Common/EmptyState';
 import { formatLeadDisplayName } from '../../utils/leadFormatters';
-
-// Helper to get status colors
-const getLeadStatusColors = (status) => {
-  switch (status) {
-    case 'Inquiry':
-      return { bg: '#5BC0DE', text: '#FFFFFF' };
-    case 'Presented':
-      return { bg: '#7C3AED', text: '#FFFFFF' };
-    case 'Interested':
-      return { bg: '#F0AD4E', text: '#FFFFFF' };
-    case 'Deal Created':
-      return { bg: '#D9534F', text: '#FFFFFF' };
-    case 'Lost':
-      return { bg: '#6B7280', text: '#FFFFFF' };
-    default:
-      return { bg: '#5BC0DE', text: '#FFFFFF' };
-  }
-};
+import { getLeadStatusColors } from '../../utils/colors';
 
 const LeadsView = ({ openModal }) => {
   const { leads, aircraft, deleteLead, addNoteToLead, loadFullAircraftData, loadFullLeadData, leadsLoading } = useStore();
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('active');
   const [filterAircraftType, setFilterAircraftType] = useState('all');
@@ -73,6 +57,17 @@ const LeadsView = ({ openModal }) => {
   const handleCancelDelete = () => {
     setDeleteConfirm({ isOpen: false, leadId: null, leadName: '' });
   };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilterStatus('active');
+    setFilterAircraftType('all');
+    setFilterPreferredModel('');
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = searchTerm || filterStatus !== 'active' || filterAircraftType !== 'all' || filterPreferredModel;
 
   // Filter leads
   const filteredLeads = leads.filter(lead => {
@@ -269,6 +264,21 @@ const LeadsView = ({ openModal }) => {
                 }}
               />
             </div>
+            {hasActiveFilters && (
+              <div className="flex items-end min-w-[120px]">
+                <button
+                  onClick={clearFilters}
+                  className="w-full px-4 py-2 rounded-lg font-medium transition-colors hover:opacity-80"
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: colors.error,
+                    border: `1px solid ${colors.error}`
+                  }}
+                >
+                  Clear All
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -277,7 +287,16 @@ const LeadsView = ({ openModal }) => {
         Showing {sortedLeads.length} of {leads.length} leads
       </div>
 
-      {viewMode === 'list' ? (
+      {/* Empty States */}
+      {leads.length === 0 ? (
+        <div className="rounded-lg shadow-lg" style={{ backgroundColor: colors.cardBg }}>
+          <NoLeadsEmpty onAddLead={() => openModal('lead')} />
+        </div>
+      ) : sortedLeads.length === 0 ? (
+        <div className="rounded-lg shadow-lg" style={{ backgroundColor: colors.cardBg }}>
+          <NoFilteredLeadsEmpty onClearFilters={clearFilters} />
+        </div>
+      ) : viewMode === 'list' ? (
         <div className="rounded-lg shadow-lg overflow-hidden" style={{ backgroundColor: colors.cardBg }}>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -337,13 +356,8 @@ const LeadsView = ({ openModal }) => {
                     <td className="px-4 py-3">
                       <span className="px-3 py-1 rounded-full text-xs font-semibold"
                         style={{
-                          backgroundColor:
-                            lead.status === 'Inquiry' ? '#5BC0DE' :
-                            lead.status === 'Presented' ? '#7C3AED' :
-                            lead.status === 'Interested' ? '#F0AD4E' :
-                            lead.status === 'Deal Created' ? '#D9534F' :
-                            lead.status === 'Lost' ? '#6B7280' : '#5BC0DE',
-                          color: '#FFFFFF'
+                          backgroundColor: getLeadStatusColors(lead.status, theme).bg,
+                          color: getLeadStatusColors(lead.status, theme).text
                         }}>
                         {lead.status}
                       </span>
@@ -379,17 +393,17 @@ const LeadsView = ({ openModal }) => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {sortedLeads.map(lead => (
             <LeadSummaryCard
               key={lead.id}
               lead={lead}
               colors={colors}
+              theme={theme}
               onViewDetails={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('leadDetail', updatedLead))}
               onEdit={() => handleActionWithFullLeadData(lead.id, (updatedLead) => openModal('lead', updatedLead))}
               onDelete={() => handleDeleteClick(lead)}
               isLoading={leadsLoading.has(lead.id)}
-              getStatusColors={getLeadStatusColors}
             />
           ))}
         </div>
@@ -410,20 +424,22 @@ const LeadsView = ({ openModal }) => {
   );
 };
 
-const LeadSummaryCard = ({ lead, colors, onViewDetails, onEdit, onDelete, isLoading, getStatusColors }) => {
+const LeadSummaryCard = ({ lead, colors, theme, onViewDetails, onEdit, onDelete, isLoading }) => {
+  const statusColors = getLeadStatusColors(lead.status, theme);
+
   return (
     <div className="rounded-lg shadow-lg overflow-hidden relative" style={{ backgroundColor: colors.cardBg }}>
       {/* Header with gradient background */}
       <div
         className="relative w-full h-32 overflow-hidden"
         style={{
-          background: `linear-gradient(135deg, ${getStatusColors(lead.status).bg}dd, ${getStatusColors(lead.status).bg}99)`
+          background: `linear-gradient(135deg, ${statusColors.bg}dd, ${statusColors.bg}99)`
         }}
       >
         {/* Status Badge */}
         <div className="absolute top-4 right-4 px-4 py-2 rounded-lg font-bold text-sm" style={{
-          backgroundColor: getStatusColors(lead.status).bg,
-          color: getStatusColors(lead.status).text,
+          backgroundColor: statusColors.bg,
+          color: statusColors.text,
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
         }}>
           {lead.status}
@@ -438,13 +454,13 @@ const LeadSummaryCard = ({ lead, colors, onViewDetails, onEdit, onDelete, isLoad
         </div>
 
         {/* Edit and Delete Buttons */}
-        <div className="absolute top-4 left-4 flex gap-2">
+        <div className="absolute top-3 left-3 flex gap-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEdit();
             }}
-            className="p-2 rounded-full hover:opacity-80"
+            className="p-2.5 rounded-full hover:opacity-80 min-w-[44px] min-h-[44px] flex items-center justify-center"
             style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
             title="Edit"
             disabled={isLoading}
@@ -456,7 +472,7 @@ const LeadSummaryCard = ({ lead, colors, onViewDetails, onEdit, onDelete, isLoad
               e.stopPropagation();
               onDelete();
             }}
-            className="p-2 rounded-full hover:opacity-80"
+            className="p-2.5 rounded-full hover:opacity-80 min-w-[44px] min-h-[44px] flex items-center justify-center"
             style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
             title="Delete"
           >

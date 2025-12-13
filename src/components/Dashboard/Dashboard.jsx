@@ -1,13 +1,16 @@
 import React from 'react';
-import { Users, FileText, Plane, ListTodo, Check } from 'lucide-react';
+import { Users, FileText, Plane, ListTodo, Check, LayoutDashboard } from 'lucide-react';
 import StatCard from '../Common/StatCard';
 import { useStore } from '../../store/useStore';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useToast } from '../../contexts/ToastContext';
 import { formatLeadDisplayName } from '../../utils/leadFormatters';
+import { getLeadStatusColors, getStatCardColor } from '../../utils/colors';
 
 const Dashboard = ({ openModal, setActiveTab }) => {
   const { leads, aircraft, deals, tasks, updateTask, loadFullLeadData } = useStore();
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
+  const toast = useToast();
 
   const hotLeads = leads.filter(l => l.status === 'Presented').length;
   const activeDeals = deals.filter(d => !['Closed Won', 'Closed Lost'].includes(d.status)).length;
@@ -28,10 +31,11 @@ const Dashboard = ({ openModal, setActiveTab }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           icon={<Users size={32} />}
-          title="Presented"
+          title="Hot Leads"
+          subtitle="Presented"
           value={hotLeads}
           total={leads.length}
-          color={colors.primary}
+          color={getStatCardColor('leads', theme)}
           onClick={() => setActiveTab('leads')}
         />
         <StatCard
@@ -39,14 +43,14 @@ const Dashboard = ({ openModal, setActiveTab }) => {
           title="Active Deals"
           value={activeDeals}
           total={deals.length}
-          color={colors.primary}
+          color={getStatCardColor('deals', theme)}
           onClick={() => setActiveTab('deals')}
         />
         <StatCard
           icon={<Plane size={32} />}
           title="Aircraft Inventory"
           value={totalInventory}
-          color={colors.primary}
+          color={getStatCardColor('aircraft', theme)}
           onClick={() => setActiveTab('aircraft')}
         />
         <StatCard
@@ -54,7 +58,7 @@ const Dashboard = ({ openModal, setActiveTab }) => {
           title="Pending Tasks"
           value={pendingTasks}
           total={tasks.length}
-          color={colors.primary}
+          color={getStatCardColor('tasks', theme)}
           onClick={() => setActiveTab('tasks')}
         />
       </div>
@@ -81,13 +85,8 @@ const Dashboard = ({ openModal, setActiveTab }) => {
                   <span
                     className="px-3 py-1 rounded-full text-xs font-semibold"
                     style={{
-                      backgroundColor:
-                        lead.status === 'Inquiry' ? '#5BC0DE' :
-                          lead.status === 'Presented' ? '#7C3AED' :
-                            lead.status === 'Interested' ? '#F0AD4E' :
-                              lead.status === 'Deal Created' ? '#D9534F' :
-                                lead.status === 'Lost' ? '#6B7280' : '#5BC0DE',
-                      color: '#FFFFFF'
+                      backgroundColor: getLeadStatusColors(lead.status, theme).bg,
+                      color: getLeadStatusColors(lead.status, theme).text
                     }}
                   >
                     {lead.status}
@@ -138,10 +137,10 @@ const Dashboard = ({ openModal, setActiveTab }) => {
                     onClick={async () => {
                       try {
                         await updateTask(task.id, { status: 'completed' });
-                        console.log('✅ Task marked as completed');
+                        toast.success('Task marked as completed');
                       } catch (error) {
-                        console.error('❌ Failed to update task:', error);
-                        alert('Failed to update task. Please try again.');
+                        console.error('Failed to update task:', error);
+                        toast.error('Failed to update task. Please try again.');
                       }
                     }}
                     className="ml-2 p-1 rounded"
@@ -156,18 +155,20 @@ const Dashboard = ({ openModal, setActiveTab }) => {
         </div>
       </div>
 
-      <div className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
+      <div className="rounded-lg shadow-lg p-4 md:p-6" style={{ backgroundColor: colors.cardBg }}>
         <h3 className="text-xl font-semibold mb-4" style={{ color: colors.primary }}>Deal Pipeline</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {['LOI Signed', 'Deposit Paid', 'APA Drafted', 'APA Signed', 'PPI Started', 'Defect Rectifications', 'Closing', 'Closed Won', 'Closed Lost'].map(status => {
-            const count = deals.filter(d => d.status === status).length;
-            return (
-              <div key={status} className="text-center p-4 rounded" style={{ backgroundColor: colors.secondary }}>
-                <p className="text-2xl font-bold" style={{ color: colors.primary }}>{count}</p>
-                <p className="text-xs mt-1 font-medium" style={{ color: colors.textPrimary }}>{status}</p>
-              </div>
-            );
-          })}
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <div className="flex md:grid md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 min-w-max md:min-w-0">
+            {['LOI Signed', 'Deposit Paid', 'APA Drafted', 'APA Signed', 'PPI Started', 'Defect Rectifications', 'Closing', 'Closed Won', 'Closed Lost'].map(status => {
+              const count = deals.filter(d => d.status === status).length;
+              return (
+                <div key={status} className="text-center p-4 rounded min-w-[100px] md:min-w-0" style={{ backgroundColor: colors.secondary }}>
+                  <p className="text-2xl font-bold" style={{ color: colors.primary }}>{count}</p>
+                  <p className="text-xs mt-1 font-medium whitespace-nowrap" style={{ color: colors.textPrimary }}>{status}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
