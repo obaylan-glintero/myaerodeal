@@ -381,10 +381,13 @@ const TaskCard = ({ task, onUpdate, onDelete, openModal, setActiveTab, leads, de
 };
 
 const TasksCalendarView = ({ tasks, onBack, updateTask }) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverDate, setDragOverDate] = useState(null);
+  const [viewMode, setViewMode] = useState('month'); // 'month' or 'week'
+  const [selectedDate, setSelectedDate] = useState(null); // For showing all tasks popover
+  const [hoveredTask, setHoveredTask] = useState(null); // For task tooltip
 
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
@@ -401,8 +404,29 @@ const TasksCalendarView = ({ tasks, onBack, updateTask }) => {
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const blanks = Array.from({ length: startingDayOfWeek }, (_, i) => i);
 
+  // Week view helpers
+  const getWeekDays = () => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - currentDay);
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
+      return day;
+    });
+  };
+
+  const weekDays = getWeekDays();
+
   const getTasksForDate = (day) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return tasks.filter(t => t.dueDate === dateStr);
+  };
+
+  const getTasksForFullDate = (date) => {
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     return tasks.filter(t => t.dueDate === dateStr);
   };
 
@@ -410,11 +434,39 @@ const TasksCalendarView = ({ tasks, onBack, updateTask }) => {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   };
 
+  const getFullDateString = (date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  // Priority color helper
+  const getPriorityColor = (priority) => {
+    const priorityColors = {
+      high: isDark ? '#EF4444' : '#DC2626',
+      medium: isDark ? '#F59E0B' : '#D97706',
+      low: isDark ? '#3B82F6' : '#2563EB',
+    };
+    return priorityColors[priority] || priorityColors.low;
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e, task) => {
     setDraggedTask(task);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', task.id);
+    // Create custom drag image
+    const dragImage = document.createElement('div');
+    dragImage.className = 'px-3 py-2 rounded-lg text-sm font-medium shadow-lg';
+    dragImage.style.cssText = `
+      background-color: ${colors.primary};
+      color: ${colors.secondary};
+      position: absolute;
+      top: -1000px;
+      max-width: 200px;
+    `;
+    dragImage.textContent = task.title;
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, 100, 20);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
   };
 
   const handleDragEnd = () => {
@@ -422,60 +474,226 @@ const TasksCalendarView = ({ tasks, onBack, updateTask }) => {
     setDragOverDate(null);
   };
 
-  const handleDragOver = (e, day) => {
+  const handleDragOver = (e, dateStr) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    const dateStr = getDateString(day);
     if (dragOverDate !== dateStr) {
       setDragOverDate(dateStr);
     }
   };
 
   const handleDragLeave = (e) => {
-    // Only clear if we're leaving the cell entirely
     if (!e.currentTarget.contains(e.relatedTarget)) {
       setDragOverDate(null);
     }
   };
 
-  const handleDrop = (e, day) => {
+  const handleDrop = (e, newDueDate) => {
     e.preventDefault();
-    const newDueDate = getDateString(day);
-
     if (draggedTask && draggedTask.dueDate !== newDueDate) {
       updateTask(draggedTask.id, { dueDate: newDueDate });
     }
-
     setDraggedTask(null);
     setDragOverDate(null);
   };
 
+  // Keyboard navigation
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowLeft') {
+      setCurrentMonth(new Date(year, month - 1));
+    } else if (e.key === 'ArrowRight') {
+      setCurrentMonth(new Date(year, month + 1));
+    }
+  };
+
+  // Navigate to today
+  const goToToday = () => {
+    setCurrentMonth(new Date());
+  };
+
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                      'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // Task Tooltip Component
+  const TaskTooltip = ({ task, position }) => {
+    if (!task) return null;
+    return (
+      <div
+        className="absolute z-50 p-3 rounded-lg shadow-xl max-w-xs pointer-events-none"
+        style={{
+          backgroundColor: colors.cardBg,
+          border: `1px solid ${colors.border}`,
+          left: position?.x || 0,
+          top: position?.y || 0,
+          transform: 'translate(-50%, -100%) translateY(-8px)',
+        }}
+      >
+        <p className="font-semibold text-sm mb-1" style={{ color: colors.textPrimary }}>{task.title}</p>
+        {task.description && (
+          <p className="text-xs mb-2" style={{ color: colors.textSecondary }}>{task.description}</p>
+        )}
+        <div className="flex gap-2 text-xs">
+          <span
+            className="px-2 py-0.5 rounded font-medium"
+            style={{ backgroundColor: getPriorityColor(task.priority) + '20', color: getPriorityColor(task.priority) }}
+          >
+            {task.priority}
+          </span>
+          <span style={{ color: colors.textSecondary }}>Due: {task.dueDate}</span>
+        </div>
+      </div>
+    );
+  };
+
+  // All Tasks Popover for a date
+  const DateTasksPopover = ({ dateStr, tasks, onClose }) => {
+    if (!dateStr || tasks.length === 0) return null;
+    return (
+      <div className="fixed inset-0 z-40" onClick={onClose}>
+        <div
+          className="absolute z-50 p-4 rounded-lg shadow-xl max-w-sm w-full"
+          style={{
+            backgroundColor: colors.cardBg,
+            border: `1px solid ${colors.border}`,
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center mb-3">
+            <h4 className="font-semibold" style={{ color: colors.textPrimary }}>
+              Tasks for {new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </h4>
+            <button
+              onClick={onClose}
+              className="p-1 rounded hover:opacity-70"
+              style={{ color: colors.textSecondary }}
+            >
+              ×
+            </button>
+          </div>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {tasks.map(task => (
+              <div
+                key={task.id}
+                className="p-2 rounded-lg"
+                style={{ backgroundColor: colors.secondary }}
+              >
+                <div className="flex items-start gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                    style={{ backgroundColor: getPriorityColor(task.priority) }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate" style={{ color: colors.textPrimary }}>{task.title}</p>
+                    {task.description && (
+                      <p className="text-xs truncate" style={{ color: colors.textSecondary }}>{task.description}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render task chip with priority indicator
+  const renderTaskChip = (task, showFull = false) => (
+    <div
+      key={task.id}
+      draggable
+      onDragStart={(e) => handleDragStart(e, task)}
+      onDragEnd={handleDragEnd}
+      onMouseEnter={(e) => setHoveredTask({ task, x: e.clientX, y: e.clientY })}
+      onMouseLeave={() => setHoveredTask(null)}
+      className={`text-xs p-1.5 rounded flex items-center gap-1 cursor-grab active:cursor-grabbing transition-all ${
+        draggedTask?.id === task.id ? 'opacity-50 scale-95' : 'hover:scale-[1.02]'
+      }`}
+      style={{
+        backgroundColor: colors.primary,
+        color: colors.secondary,
+      }}
+    >
+      <div
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ backgroundColor: getPriorityColor(task.priority) }}
+      />
+      <span className={showFull ? '' : 'truncate'}>{task.title}</span>
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6" onKeyDown={handleKeyDown} tabIndex={0}>
+      {/* Header */}
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold min-h-[44px]"
           style={{ border: `1px solid ${colors.primary}`, color: colors.primary, backgroundColor: colors.secondary }}
         >
           ← Back to List
         </button>
-        <div className="text-center">
-          <h2 className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Task Calendar</h2>
-          <p className="text-sm mt-1" style={{ color: colors.textSecondary }}>Drag tasks to reschedule</p>
+
+        <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex rounded-lg overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
+            <button
+              onClick={() => setViewMode('month')}
+              className="px-3 py-2 text-sm font-medium min-h-[44px]"
+              style={{
+                backgroundColor: viewMode === 'month' ? colors.primary : colors.cardBg,
+                color: viewMode === 'month' ? colors.secondary : colors.textPrimary
+              }}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setViewMode('week')}
+              className="px-3 py-2 text-sm font-medium min-h-[44px]"
+              style={{
+                backgroundColor: viewMode === 'week' ? colors.primary : colors.cardBg,
+                color: viewMode === 'week' ? colors.secondary : colors.textPrimary,
+                borderLeft: `1px solid ${colors.border}`
+              }}
+            >
+              Week
+            </button>
+          </div>
+
+          {/* Today Button */}
+          <button
+            onClick={goToToday}
+            className="px-3 py-2 rounded-lg text-sm font-medium min-h-[44px]"
+            style={{
+              backgroundColor: colors.cardBg,
+              color: colors.primary,
+              border: `1px solid ${colors.border}`
+            }}
+          >
+            Today
+          </button>
         </div>
-        <div className="w-32"></div>
+
+        <div className="text-center hidden md:block">
+          <h2 className="text-xl font-bold" style={{ color: colors.textPrimary }}>Task Calendar</h2>
+          <p className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
+            Drag tasks to reschedule • Use ← → keys to navigate
+          </p>
+        </div>
       </div>
 
-      <div className="rounded-lg shadow-lg p-6" style={{ backgroundColor: colors.cardBg }}>
+      {/* Calendar Card */}
+      <div className="rounded-lg shadow-lg p-4 md:p-6" style={{ backgroundColor: colors.cardBg }}>
+        {/* Month Navigation */}
         <div className="flex justify-between items-center mb-6">
           <button
             onClick={() => setCurrentMonth(new Date(year, month - 1))}
-            className="p-2 rounded"
-            style={{ color: colors.textPrimary }}
+            className="p-2 rounded-lg hover:opacity-70 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            style={{ backgroundColor: colors.secondary, color: colors.textPrimary }}
           >
             ←
           </button>
@@ -484,82 +702,167 @@ const TasksCalendarView = ({ tasks, onBack, updateTask }) => {
           </h3>
           <button
             onClick={() => setCurrentMonth(new Date(year, month + 1))}
-            className="p-2 rounded"
-            style={{ color: colors.textPrimary }}
+            className="p-2 rounded-lg hover:opacity-70 min-w-[44px] min-h-[44px] flex items-center justify-center"
+            style={{ backgroundColor: colors.secondary, color: colors.textPrimary }}
           >
             →
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-2">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="text-center font-semibold p-2" style={{ color: colors.primary }}>
-              {day}
-            </div>
-          ))}
-
-          {blanks.map(i => (
-            <div
-              key={`blank-${i}`}
-              className="p-2 h-24"
-              onDragOver={(e) => e.preventDefault()}
-            ></div>
-          ))}
-
-          {days.map(day => {
-            const dayTasks = getTasksForDate(day);
-            const isToday = new Date().getDate() === day &&
-                           new Date().getMonth() === month &&
-                           new Date().getFullYear() === year;
-            const dateStr = getDateString(day);
-            const isDragOver = dragOverDate === dateStr;
-
-            return (
-              <div
-                key={day}
-                className={`p-2 h-24 rounded-lg transition-all duration-200 ${isToday ? 'border-2' : ''}`}
-                style={{
-                  ...(isToday
-                    ? { borderColor: colors.primary, backgroundColor: colors.secondary, border: `2px solid ${colors.primary}` }
-                    : { backgroundColor: colors.secondary, border: `1px solid ${colors.border}` }),
-                  ...(isDragOver && {
-                    backgroundColor: colors.primary + '20',
-                    border: `2px dashed ${colors.primary}`,
-                    transform: 'scale(1.02)'
-                  })
-                }}
-                onDragOver={(e) => handleDragOver(e, day)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, day)}
-              >
-                <div className="font-medium mb-1" style={{ color: colors.textPrimary }}>{day}</div>
-                <div className="space-y-1">
-                  {dayTasks.slice(0, 2).map(task => (
-                    <div
-                      key={task.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task)}
-                      onDragEnd={handleDragEnd}
-                      className="text-xs p-1 rounded truncate cursor-grab active:cursor-grabbing transition-opacity"
-                      style={{
-                        backgroundColor: colors.primary,
-                        color: colors.secondary,
-                        opacity: draggedTask?.id === task.id ? 0.5 : 1
-                      }}
-                      title={`${task.title} - Drag to reschedule`}
-                    >
-                      {task.title}
-                    </div>
-                  ))}
-                  {dayTasks.length > 2 && (
-                    <div className="text-xs" style={{ color: colors.textSecondary }}>+{dayTasks.length - 2} more</div>
-                  )}
-                </div>
+        {viewMode === 'month' ? (
+          /* Month View */
+          <div className="grid grid-cols-7 gap-1 md:gap-2">
+            {/* Day Headers */}
+            {dayNames.map(day => (
+              <div key={day} className="text-center font-semibold p-2 text-xs md:text-sm" style={{ color: colors.primary }}>
+                <span className="hidden md:inline">{day}</span>
+                <span className="md:hidden">{day.charAt(0)}</span>
               </div>
-            );
-          })}
+            ))}
+
+            {/* Empty cells before first day */}
+            {blanks.map(i => (
+              <div
+                key={`blank-${i}`}
+                className="p-1 md:p-2 h-20 md:h-28"
+                onDragOver={(e) => e.preventDefault()}
+              />
+            ))}
+
+            {/* Day cells */}
+            {days.map(day => {
+              const dayTasks = getTasksForDate(day);
+              const isToday = new Date().getDate() === day &&
+                             new Date().getMonth() === month &&
+                             new Date().getFullYear() === year;
+              const dateStr = getDateString(day);
+              const isDragOver = dragOverDate === dateStr;
+
+              return (
+                <div
+                  key={day}
+                  className={`p-1 md:p-2 h-20 md:h-28 rounded-lg transition-all duration-200 overflow-hidden`}
+                  style={{
+                    backgroundColor: isDragOver ? colors.primary + '20' : colors.secondary,
+                    border: isToday
+                      ? `2px solid ${colors.primary}`
+                      : isDragOver
+                      ? `2px dashed ${colors.primary}`
+                      : `1px solid ${colors.border}`,
+                    transform: isDragOver ? 'scale(1.02)' : 'scale(1)'
+                  }}
+                  onDragOver={(e) => handleDragOver(e, dateStr)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, dateStr)}
+                >
+                  <div
+                    className={`font-medium mb-1 text-xs md:text-sm ${isToday ? 'flex items-center justify-center w-6 h-6 rounded-full' : ''}`}
+                    style={{
+                      color: isToday ? colors.secondary : colors.textPrimary,
+                      backgroundColor: isToday ? colors.primary : 'transparent'
+                    }}
+                  >
+                    {day}
+                  </div>
+                  <div className="space-y-1">
+                    {dayTasks.slice(0, 2).map(task => renderTaskChip(task))}
+                    {dayTasks.length > 2 && (
+                      <button
+                        onClick={() => setSelectedDate({ dateStr, tasks: dayTasks })}
+                        className="text-xs font-medium w-full text-left hover:underline"
+                        style={{ color: colors.primary }}
+                      >
+                        +{dayTasks.length - 2} more
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Week View */
+          <div className="space-y-4">
+            <div className="grid grid-cols-7 gap-2">
+              {weekDays.map((date, index) => {
+                const dayTasks = getTasksForFullDate(date);
+                const isToday = date.toDateString() === new Date().toDateString();
+                const dateStr = getFullDateString(date);
+                const isDragOver = dragOverDate === dateStr;
+
+                return (
+                  <div key={index} className="space-y-2">
+                    {/* Day Header */}
+                    <div className="text-center pb-2" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                      <div className="text-xs font-medium" style={{ color: colors.textSecondary }}>
+                        {dayNames[index]}
+                      </div>
+                      <div
+                        className={`text-lg font-bold ${isToday ? 'flex items-center justify-center w-8 h-8 rounded-full mx-auto' : ''}`}
+                        style={{
+                          color: isToday ? colors.secondary : colors.textPrimary,
+                          backgroundColor: isToday ? colors.primary : 'transparent'
+                        }}
+                      >
+                        {date.getDate()}
+                      </div>
+                    </div>
+
+                    {/* Tasks Column */}
+                    <div
+                      className="min-h-[200px] p-2 rounded-lg transition-all"
+                      style={{
+                        backgroundColor: isDragOver ? colors.primary + '20' : colors.secondary,
+                        border: isDragOver ? `2px dashed ${colors.primary}` : `1px solid ${colors.border}`
+                      }}
+                      onDragOver={(e) => handleDragOver(e, dateStr)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, dateStr)}
+                    >
+                      <div className="space-y-2">
+                        {dayTasks.map(task => renderTaskChip(task, true))}
+                        {dayTasks.length === 0 && (
+                          <p className="text-xs text-center py-4" style={{ color: colors.textSecondary }}>
+                            No tasks
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 justify-center text-xs" style={{ color: colors.textSecondary }}>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getPriorityColor('high') }} />
+          High Priority
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getPriorityColor('medium') }} />
+          Medium Priority
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getPriorityColor('low') }} />
+          Low Priority
         </div>
       </div>
+
+      {/* Task Tooltip */}
+      {hoveredTask && <TaskTooltip task={hoveredTask.task} position={{ x: hoveredTask.x, y: hoveredTask.y }} />}
+
+      {/* Date Tasks Popover */}
+      {selectedDate && (
+        <DateTasksPopover
+          dateStr={selectedDate.dateStr}
+          tasks={selectedDate.tasks}
+          onClose={() => setSelectedDate(null)}
+        />
+      )}
     </div>
   );
 };
