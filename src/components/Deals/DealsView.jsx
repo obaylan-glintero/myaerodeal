@@ -37,7 +37,7 @@ const DealsView = ({ openModal }) => {
   const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask, currentUserProfile, loadFullDealData, dealsLoading } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('active');
   const [showDocTypeModal, setShowDocTypeModal] = useState(false);
   const [selectedDealId, setSelectedDealId] = useState(null);
   const [viewMode, setViewMode] = useState('card');
@@ -219,7 +219,11 @@ const DealsView = ({ openModal }) => {
   const filteredDeals = deals.filter(deal => {
     const matchesSearch = deal.dealName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          deal.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || deal.status === filterStatus;
+    const matchesStatus = filterStatus === 'all'
+      ? true
+      : filterStatus === 'active'
+        ? deal.status !== 'Closed Won' && deal.status !== 'Closed Lost'
+        : deal.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -307,6 +311,7 @@ const DealsView = ({ openModal }) => {
                   border: `1px solid ${colors.border}`
                 }}
               >
+                <option value="active">Active Deals</option>
                 <option value="all">All Stages</option>
                 <option value="LOI Signed">LOI Signed</option>
                 <option value="Deposit Paid">Deposit Paid</option>
