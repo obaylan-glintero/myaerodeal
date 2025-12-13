@@ -37,7 +37,7 @@ const DealsView = ({ openModal }) => {
   const { deals, leads, aircraft, tasks, updateDeal, updateDealStatus, deleteDeal, addNoteToDeal, generateActionItemsFromDocument, updateTask, addTask, currentUserProfile, loadFullDealData, dealsLoading } = useStore();
   const { colors } = useTheme();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('active');
   const [showDocTypeModal, setShowDocTypeModal] = useState(false);
   const [selectedDealId, setSelectedDealId] = useState(null);
   const [viewMode, setViewMode] = useState('card');
@@ -219,7 +219,11 @@ const DealsView = ({ openModal }) => {
   const filteredDeals = deals.filter(deal => {
     const matchesSearch = deal.dealName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          deal.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || deal.status === filterStatus;
+    const matchesStatus = filterStatus === 'all'
+      ? true
+      : filterStatus === 'active'
+        ? deal.status !== 'Closed Won' && deal.status !== 'Closed Lost'
+        : deal.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -307,6 +311,7 @@ const DealsView = ({ openModal }) => {
                   border: `1px solid ${colors.border}`
                 }}
               >
+                <option value="active">Active Deals</option>
                 <option value="all">All Stages</option>
                 <option value="LOI Signed">LOI Signed</option>
                 <option value="Deposit Paid">Deposit Paid</option>
@@ -1215,22 +1220,14 @@ const DealSummaryCard = ({ deal, aircraft, colors, onViewDetails, onEdit, onDele
           {deal.status}
         </div>
 
-        {/* Deal Name and Client */}
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          <h3 className="text-2xl font-bold text-white drop-shadow-md">
-            {deal.dealName}
-          </h3>
-          <p className="text-white text-sm opacity-90">{deal.clientName}</p>
-        </div>
-
         {/* Edit and Delete Buttons */}
-        <div className="absolute top-4 left-4 flex gap-2">
+        <div className="absolute top-16 right-4 flex gap-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEdit();
             }}
-            className="p-2 rounded-full hover:opacity-80"
+            className="p-2 rounded-full hover:opacity-80 min-w-[40px] min-h-[40px] flex items-center justify-center"
             style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
             title="Edit"
             disabled={isLoading}
@@ -1242,12 +1239,20 @@ const DealSummaryCard = ({ deal, aircraft, colors, onViewDetails, onEdit, onDele
               e.stopPropagation();
               onDelete();
             }}
-            className="p-2 rounded-full hover:opacity-80"
+            className="p-2 rounded-full hover:opacity-80 min-w-[40px] min-h-[40px] flex items-center justify-center"
             style={{ backgroundColor: colors.cardBg, opacity: 0.95 }}
             title="Delete"
           >
             <Trash2 size={18} style={{ color: colors.error }} />
           </button>
+        </div>
+
+        {/* Deal Name and Client */}
+        <div className="absolute bottom-0 left-0 right-0 py-6 px-6 pr-16">
+          <h3 className="text-2xl font-bold text-white drop-shadow-md">
+            {deal.dealName}
+          </h3>
+          <p className="text-white text-sm opacity-90">{deal.clientName}</p>
         </div>
       </div>
 
